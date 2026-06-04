@@ -173,7 +173,7 @@ export default function AdminPage() {
         position: 'sticky', top: 0, zIndex: 50,
         padding: '1rem 1.5rem',
       }}>
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
+        <div style={{ maxWidth: '42rem', margin: '0 auto', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <p className="serif" style={{ fontSize: '1.25rem', lineHeight: 1, color: 'var(--text)', fontWeight: 600 }}>ברבר בודפשט</p>
             <p style={{ fontSize: '0.65rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--amber)', marginTop: '0.2rem', fontWeight: 700 }}>לוח ניהול</p>
@@ -188,7 +188,7 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <div className="max-w-2xl mx-auto px-4 py-8">
+      <div style={{ maxWidth: '42rem', margin: '0 auto', width: '100%', padding: '2rem 1rem' }}>
         {/* Today's revenue card */}
         {todayAppts.length > 0 && (
           <div className="animate-fade-in" style={{
