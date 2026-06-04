@@ -88,9 +88,9 @@ export default function BookPage() {
               ['שם', name],
               ['טלפון', phone],
             ].map(([l, v]) => (
-              <div key={l} className="flex justify-between items-center" style={{ fontSize: '0.875rem' }}>
-                <span style={{ color: 'var(--text-dim)', fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600 }}>{l}</span>
-                <span style={{ fontWeight: 600, color: 'var(--text)' }}>{v}</span>
+              <div key={l} className="flex justify-between items-start" style={{ fontSize: '0.875rem', gap: '0.75rem' }}>
+                <span style={{ color: 'var(--text-dim)', fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600, flexShrink: 0, paddingTop: 2 }}>{l}</span>
+                <span style={{ fontWeight: 600, color: 'var(--text)', wordBreak: 'break-word', textAlign: 'left', minWidth: 0 }}>{v}</span>
               </div>
             ))}
             <div className="divider" style={{ margin: '0.25rem 0' }} />
@@ -110,24 +110,24 @@ export default function BookPage() {
 
   return (
     <div className="page-bg min-h-screen px-4 py-10">
-      <div className="max-w-md mx-auto">
+      <div className="max-w-md mx-auto" style={{ minWidth: 0 }}>
 
         {/* Back + title */}
         <div className="flex items-center gap-4 mb-10 animate-fade-in">
           <button
             className="btn-ghost"
             onClick={() => { if (stepIndex === 0) router.push('/'); else setStep(STEPS[stepIndex - 1]); }}
-            style={{ padding: '0.5rem', borderRadius: '50%', width: 40, height: 40, background: 'rgba(28,25,23,0.06)' }}
+            style={{ padding: '0.5rem', borderRadius: '50%', width: 40, height: 40, flexShrink: 0, background: 'rgba(28,25,23,0.06)' }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </button>
-          <div>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <p style={{ fontSize: '0.65rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--amber)', marginBottom: '0.125rem', fontWeight: 700 }}>
               קביעת תור
             </p>
-            <h1 className="serif" style={{ fontSize: '1.5rem', fontWeight: 500, color: 'var(--text)' }}>{STEP_LABELS[step]}</h1>
+            <h1 className="serif" style={{ fontSize: '1.5rem', fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{STEP_LABELS[step]}</h1>
           </div>
         </div>
 
@@ -163,13 +163,13 @@ export default function BookPage() {
                     className={`glass-card ${service === s.id ? 'card-selected' : ''}`}
                     style={{ padding: '1.25rem 1.5rem', textAlign: 'right', width: '100%', cursor: 'pointer', background: service === s.id ? undefined : '#fff', border: '1px solid var(--glass-border)' }}
                   >
-                    <div className="flex justify-between items-center">
-                      <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontSize: '1.05rem', fontFamily: 'var(--font-display)', fontWeight: 500, marginBottom: '0.25rem', color: 'var(--text)' }}>{s.name}</p>
+                    <div className="flex justify-between items-center" style={{ gap: '0.75rem' }}>
+                      <div style={{ textAlign: 'right', flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '1.05rem', fontFamily: 'var(--font-display)', fontWeight: 500, marginBottom: '0.25rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</p>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', letterSpacing: '0.05em' }}>{s.duration} דקות</p>
                       </div>
-                      <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                        <span className="serif" style={{ color: 'var(--amber)', fontSize: '1.375rem', fontWeight: 600 }}>{s.price}</span>
+                      <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                        <span className="serif" style={{ color: 'var(--amber)', fontSize: '1.375rem', fontWeight: 600, whiteSpace: 'nowrap' }}>{s.price}</span>
                         {service === s.id && (
                           <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--amber)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
@@ -307,9 +307,9 @@ export default function BookPage() {
                 ].map(([l, v], i) => (
                   <div key={l}>
                     {i > 0 && <div className="divider" style={{ margin: '0.75rem 0' }} />}
-                    <div className="flex justify-between items-center">
-                      <span style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 700 }}>{l}</span>
-                      <span style={{ fontWeight: 600, fontSize: '0.9375rem', color: 'var(--text)' }}>{v}</span>
+                    <div className="flex justify-between items-start" style={{ gap: '0.75rem' }}>
+                      <span style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 700, flexShrink: 0, paddingTop: 2 }}>{l}</span>
+                      <span style={{ fontWeight: 600, fontSize: '0.9375rem', color: 'var(--text)', wordBreak: 'break-word', textAlign: 'left', minWidth: 0 }}>{v}</span>
                     </div>
                   </div>
                 ))}

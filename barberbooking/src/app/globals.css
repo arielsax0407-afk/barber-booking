@@ -283,10 +283,11 @@ body {
 }
 
 .step-line {
-  width: 40px;
+  flex: 1;
+  max-width: 40px;
+  min-width: 8px;
   height: 1.5px;
   background: rgba(28,25,23,0.10);
-  flex-shrink: 0;
 }
 .step-line.done {
   background: linear-gradient(90deg, var(--amber), rgba(212,144,10,0.25));
