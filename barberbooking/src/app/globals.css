@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+:root {
+  --gold: #c9a84c;
+  --gold-light: #e8c97a;
+  --dark: #0d0d0d;
+  --dark-card: #1a1a1a;
+  --dark-border: #2a2a2a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  direction: rtl;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--dark);
+  color: #f0f0f0;
+}
+
+.gold { color: var(--gold); }
+.bg-gold { background: var(--gold); }
+.border-gold { border-color: var(--gold); }
+
+.btn-gold {
+  background: var(--gold);
+  color: #0d0d0d;
+  font-weight: 700;
+  padding: 0.75rem 2rem;
+  border-radius: 0.5rem;
+  transition: background 0.2s;
+  cursor: pointer;
+  border: none;
+  font-size: 1rem;
+}
+
+.btn-gold:hover { background: var(--gold-light); }
+.btn-gold:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.card {
+  background: var(--dark-card);
+  border: 1px solid var(--dark-border);
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+}
+
+.card-selected {
+  border-color: var(--gold);
+  background: #1f1a0e;
+}
+
+.step-indicator {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.step-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--dark-border);
+  transition: background 0.2s;
+}
+
+.step-dot.active { background: var(--gold); }
+.step-dot.done { background: #6b6b6b; }
+
+input[type="text"], input[type="tel"] {
+  background: #111;
+  border: 1px solid var(--dark-border);
+  color: #f0f0f0;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  width: 100%;
+  font-size: 1rem;
+  direction: rtl;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+input::placeholder { color: #555; }
