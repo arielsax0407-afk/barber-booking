@@ -1,71 +1,185 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase, Appointment } from '@/lib/supabase';
-import { SERVICES } from '@/lib/services';
+import { SERVICES, TIME_SLOTS } from '@/lib/services';
 
-const STATUS = {
-  pending:  { label: 'ממתין', badge: 'badge-pending' },
-  approved: { label: 'מאושר', badge: 'badge-approved' },
-  rejected: { label: 'נדחה',  badge: 'badge-rejected' },
-} as const;
+// ── Dark-gold admin palette (independent from public site) ───
+
+const G   = '#c9a84c';
+const GL  = '#e8c97a';
+const GD  = '#a07830';
+const GG  = 'rgba(201,168,76,0.12)';
+const B0  = '#070707';
+const B1  = '#0e0e0e';
+const B2  = '#151515';
+const B3  = '#1d1d1d';
+const B4  = '#272727';
+const T   = '#f5f0e8';
+const TM  = 'rgba(245,240,232,0.55)';
+const TD  = 'rgba(245,240,232,0.28)';
+const BDR = 'rgba(255,255,255,0.07)';
+const BDRG= 'rgba(201,168,76,0.20)';
+const R   = 12;
+const RL  = 18;
+
+// ── Constants ────────────────────────────────────────────────
 
 const PRICE_MAP: Record<string, number> = {
   haircut: 60, beard: 40, 'haircut-beard': 90, kids: 40, fade: 70,
 };
 
-function getToday() {
-  return new Date().toISOString().split('T')[0];
-}
+const S_CFG = {
+  pending:  { label: 'ממתין',  color: '#f59e0b', bg: 'rgba(245,158,11,0.14)',  bdr: 'rgba(245,158,11,0.30)' },
+  approved: { label: 'מאושר', color: '#22c55e', bg: 'rgba(34,197,94,0.14)',   bdr: 'rgba(34,197,94,0.30)'  },
+  rejected: { label: 'נדחה',  color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   bdr: 'rgba(239,68,68,0.25)'  },
+} as const;
 
-function formatDate(d: string) {
-  const [y, m, day] = d.split('-');
-  const months = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+const DAY_NAMES = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
+const DAY_FULL  = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+
+type DayHours = { open: boolean; from: string; to: string };
+const DEFAULT_HOURS: Record<number, DayHours> = {
+  0: { open: true,  from: '09:00', to: '19:00' },
+  1: { open: true,  from: '09:00', to: '19:00' },
+  2: { open: true,  from: '09:00', to: '19:00' },
+  3: { open: true,  from: '09:00', to: '19:00' },
+  4: { open: true,  from: '09:00', to: '19:00' },
+  5: { open: true,  from: '09:00', to: '14:00' },
+  6: { open: false, from: '09:00', to: '14:00' },
+};
+
+const WA_TEMPLATES = {
+  approve:   (a: Appointment) => `שלום ${a.name}! 🎉\nהתור שלך אושר:\n✂️ ${svcName(a.service)}\n📅 ${fmtDate(a.date)}\n⏰ ${a.time}\n\nמחכים לך ב-ברבר בודפשט! 💈`,
+  reject:    (a: Appointment) => `שלום ${a.name},\nמצטערים, לא נוכל לקבל אותך בזמן שביקשת.\nאנחנו מזמינים אותך לקבוע תור חדש דרך האתר.\nתודה! 🙏`,
+  reschedule:(a: Appointment) => `שלום ${a.name},\nנשמח לשנות את התור שלך.\nאנא היכנס לאתר וקבע תור חדש.\nתודה! 💈`,
+};
+
+// ── Helpers ───────────────────────────────────────────────────
+
+function svcName(id: string) { return SERVICES.find(s => s.id === id)?.name ?? id; }
+
+function fmtDate(d: string) {
+  if (!d) return '';
+  const [, m, day] = d.split('-');
+  const months = ['ינו','פבר','מרץ','אפר','מאי','יוני','יולי','אוג','ספט','אוק','נוב','דצמ'];
   return `${parseInt(day)} ${months[parseInt(m) - 1]}`;
 }
 
-function groupByDate(appts: Appointment[]) {
-  return appts.reduce<Record<string, Appointment[]>>((acc, a) => {
-    (acc[a.date] = acc[a.date] || []).push(a); return acc;
-  }, {});
+function getToday() { return new Date().toISOString().split('T')[0]; }
+
+function getWeekDays(ref: string): string[] {
+  const d = new Date(ref);
+  const sun = new Date(d);
+  sun.setDate(d.getDate() - d.getDay());
+  return Array.from({ length: 7 }, (_, i) => {
+    const dt = new Date(sun);
+    dt.setDate(sun.getDate() + i);
+    return dt.toISOString().split('T')[0];
+  });
 }
 
-function buildWhatsAppLink(a: Appointment) {
-  const svc = SERVICES.find((s) => s.id === a.service)?.name ?? a.service;
-  const [y, m, day] = a.date.split('-');
-  const months = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
-  const dateStr = `${parseInt(day)} ${months[parseInt(m) - 1]} ${y}`;
-  const msg = `שלום ${a.name}! 🎉\nהתור שלך אושר:\n✂️ ${svc}\n📅 ${dateStr}\n⏰ ${a.time}\n\nמחכים לך ב-ברבר בודפשט!`;
+function waLink(a: Appointment, template: (a: Appointment) => string) {
+  const msg = template(a);
   const phone = a.phone.replace(/\D/g, '');
-  const intlPhone = phone.startsWith('0') ? '972' + phone.slice(1) : phone;
-  return `https://wa.me/${intlPhone}?text=${encodeURIComponent(msg)}`;
+  const intl = phone.startsWith('0') ? '972' + phone.slice(1) : phone;
+  return `https://wa.me/${intl}?text=${encodeURIComponent(msg)}`;
 }
 
+function playChime() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    [[880, 0], [1108, 0.18], [880, 0.36]].forEach(([freq, t]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + t);
+      gain.gain.setValueAtTime(0.22, ctx.currentTime + t);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.35);
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + 0.35);
+    });
+  } catch {}
+}
+
+function exportCSV(appts: Appointment[]) {
+  const h = ['שם','טלפון','שירות','תאריך','שעה','סטטוס','מחיר'];
+  const rows = appts.map(a => [
+    a.name, a.phone, svcName(a.service), a.date, a.time,
+    S_CFG[a.status as keyof typeof S_CFG]?.label ?? a.status,
+    `₪${PRICE_MAP[a.service] ?? 0}`,
+  ]);
+  const csv = [h, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const el = Object.assign(document.createElement('a'), { href: url, download: `תורים_${getToday()}.csv` });
+  document.body.appendChild(el); el.click();
+  document.body.removeChild(el); URL.revokeObjectURL(url);
+}
+
+// ── Types ─────────────────────────────────────────────────────
+
+type Tab = 'dashboard' | 'appointments' | 'calendar' | 'settings';
 type Filter = 'all' | 'pending' | 'approved' | 'rejected';
 
+interface TabProps {
+  appointments: Appointment[];
+  blockedSlots: { date: string; time: string }[];
+  updateStatus: (id: string, s: 'approved' | 'rejected' | 'pending') => void;
+  blockSlot: (date: string, time: string) => void;
+  unblockSlot: (date: string, time: string) => void;
+  hours: Record<number, DayHours>;
+  setHours: (h: Record<number, DayHours>) => void;
+  returningPhones: Set<string>;
+  today: string;
+  loading: boolean;
+}
+
+// ── Main ──────────────────────────────────────────────────────
+
 export default function AdminPage() {
-  const [authed, setAuthed] = useState(false);
+  const [authed, setAuthed]   = useState(false);
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [blockedSlots, setBlockedSlots] = useState<{ date: string; time: string }[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filter, setFilter] = useState<Filter>('all');
+  const [tab, setTab]         = useState<Tab>('dashboard');
+  const [hours, setHoursState] = useState<Record<number, DayHours>>(DEFAULT_HOURS);
+  const prevCountRef = useRef(0);
+
+  useEffect(() => {
+    try {
+      const s = localStorage.getItem('barber_hours');
+      if (s) setHoursState(JSON.parse(s));
+    } catch {}
+  }, []);
+
+  function setHours(h: Record<number, DayHours>) {
+    setHoursState(h);
+    localStorage.setItem('barber_hours', JSON.stringify(h));
+  }
 
   async function login() {
     const res = await fetch('/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password }),
     });
-    if (res.ok) { setAuthed(true); loadAppointments(); }
+    if (res.ok) { setAuthed(true); loadAll(); }
     else setAuthError('סיסמה שגויה');
   }
 
-  async function loadAppointments() {
+  async function loadAll() {
     setLoading(true);
-    const { data } = await supabase.from('appointments').select('*')
-      .order('date', { ascending: true }).order('time', { ascending: true });
-    setAppointments((data as Appointment[]) ?? []);
+    const [{ data: appts }, { data: blocked }] = await Promise.all([
+      supabase.from('appointments').select('*').order('date').order('time'),
+      supabase.from('blocked_slots').select('date,time'),
+    ]);
+    const sorted = (appts as Appointment[]) ?? [];
+    setAppointments(sorted);
+    setBlockedSlots(blocked ?? []);
+    prevCountRef.current = sorted.length;
     setLoading(false);
   }
 
@@ -74,374 +188,939 @@ export default function AdminPage() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, status }),
     });
-    setAppointments((prev) => prev.map((a) => a.id === id ? { ...a, status } : a));
+    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+  }
+
+  async function blockSlot(date: string, time: string) {
+    await supabase.from('blocked_slots').upsert({ date, time });
+    setBlockedSlots(prev => [...prev, { date, time }]);
+  }
+
+  async function unblockSlot(date: string, time: string) {
+    await supabase.from('blocked_slots').delete().eq('date', date).eq('time', time);
+    setBlockedSlots(prev => prev.filter(s => !(s.date === date && s.time === time)));
   }
 
   useEffect(() => {
     if (!authed) return;
-    const ch = supabase.channel('appts')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, loadAppointments)
-      .subscribe();
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+    const ch = supabase.channel('admin_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, payload => {
+        if (payload.eventType === 'INSERT') {
+          const nw = payload.new as Appointment;
+          setAppointments(prev => {
+            const next = [...prev, nw].sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+            if (next.length > prevCountRef.current) {
+              playChime();
+              if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                new Notification('תור חדש! 💈', { body: `${nw.name} · ${fmtDate(nw.date)} ${nw.time}` });
+              }
+            }
+            prevCountRef.current = next.length;
+            return next;
+          });
+        } else {
+          loadAll();
+        }
+      }).subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [authed]);
 
-  /* ── Login ─────────────────────────────────────────────── */
+  /* ── Login screen ─────────────────────────────────────── */
   if (!authed) return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '1.5rem',
-      background: 'linear-gradient(135deg, #FAF8F4 0%, #F0E8D8 100%)',
-    }}>
-      <div className="animate-fade-up" style={{
-        width: '100%', maxWidth: 380, padding: '2.5rem',
-        background: '#fff',
-        borderRadius: 'var(--radius-lg)',
-        boxShadow: '0 4px 24px rgba(28,25,23,0.10), 0 1px 4px rgba(28,25,23,0.06)',
-        border: '1px solid rgba(28,25,23,0.07)',
-      }}>
-        {/* Logo */}
+    <div style={{ minHeight: '100vh', background: `radial-gradient(ellipse 80% 50% at 50% -10%, ${GG} 0%, transparent 70%), ${B0}`, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+      <div style={{ width: '100%', maxWidth: 360, background: 'rgba(255,255,255,0.03)', border: `1px solid ${BDR}`, borderRadius: RL, padding: '2.5rem', backdropFilter: 'blur(20px)' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: '50%',
-            background: 'linear-gradient(135deg, var(--amber-dark), var(--amber-light))',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 1rem',
-            boxShadow: '0 4px 16px rgba(212,144,10,0.30)',
-          }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <div style={{ width: 54, height: 54, margin: '0 auto 0.875rem', borderRadius: '50%', background: `linear-gradient(135deg,${GD},${GL})`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 24px ${GG}` }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
-              <line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/>
-              <line x1="8.12" y1="8.12" x2="12" y2="12"/>
+              <line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>
             </svg>
           </div>
-          <div className="serif" style={{ fontSize: '1.6rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.2rem' }}>
-            ברבר בודפשט
-          </div>
-          <p style={{ fontSize: '0.7rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 600 }}>
-            פאנל ניהול
-          </p>
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 600, color: T }}>ברבר בודפשט</p>
+          <p style={{ fontSize: '0.65rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: G, marginTop: '0.25rem' }}>פאנל ניהול</p>
         </div>
-
-        <div className="divider" />
-
+        <div style={{ height: 1, background: `linear-gradient(90deg,transparent,${BDR},transparent)`, marginBottom: '1.5rem' }} />
         <div style={{ marginBottom: '1.25rem' }}>
-          <label className="input-label">סיסמת ספר</label>
-          <input
-            type="password"
-            className="input-field"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && login()}
-            autoFocus
-          />
+          <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: TM, marginBottom: '0.5rem' }}>סיסמת ספר</label>
+          <input type="password" placeholder="••••••••" value={password}
+            onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && login()} autoFocus
+            style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: `1px solid ${BDR}`, borderRadius: R, padding: '0.875rem 1rem', color: T, fontSize: '1rem', outline: 'none', direction: 'rtl' }} />
         </div>
-
-        {authError && (
-          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 10, padding: '0.625rem 1rem', marginBottom: '1rem', color: '#991B1B', fontSize: '0.8rem', textAlign: 'center', fontWeight: 500 }}>
-            {authError}
-          </div>
-        )}
-
-        <button className="btn-primary" onClick={login} style={{ width: '100%' }}>
+        {authError && <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '0.625rem 1rem', marginBottom: '1rem', color: '#ef4444', fontSize: '0.8rem', textAlign: 'center' }}>{authError}</div>}
+        <button onClick={login} style={{ width: '100%', padding: '0.875rem', background: `linear-gradient(135deg,${GD},${GL})`, border: 'none', borderRadius: R, color: '#080808', fontSize: '0.875rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', boxShadow: `0 4px 16px ${GG}` }}>
           כניסה
         </button>
       </div>
     </div>
   );
 
-  const counts = { all: appointments.length, pending: 0, approved: 0, rejected: 0 };
-  appointments.forEach((a) => { counts[a.status as keyof typeof counts]++; });
-
   const today = getToday();
-  const todayAppts = appointments.filter(a => a.date === today);
-  const todayRevenue = todayAppts.filter(a => a.status === 'approved').reduce((s, a) => s + (PRICE_MAP[a.service] ?? 0), 0);
-  const todayPending = todayAppts.filter(a => a.status === 'pending').length;
+  const returningPhones = (() => {
+    const c: Record<string, number> = {};
+    appointments.forEach(a => { c[a.phone] = (c[a.phone] ?? 0) + 1; });
+    return new Set(Object.keys(c).filter(p => c[p] > 1));
+  })();
 
-  const displayed = filter === 'all' ? appointments : appointments.filter((a) => a.status === filter);
-  const grouped = groupByDate(displayed);
-  const dates = Object.keys(grouped).sort();
+  const props: TabProps = { appointments, blockedSlots, updateStatus, blockSlot, unblockSlot, hours, setHours, returningPhones, today, loading };
 
-  /* ── Dashboard ─────────────────────────────────────────── */
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      {/* Header */}
-      <header style={{
-        borderBottom: '1px solid rgba(28,25,23,0.08)',
-        background: 'rgba(250,248,244,0.96)',
-        backdropFilter: 'blur(20px)',
-        position: 'sticky', top: 0, zIndex: 50,
-        padding: '1rem 1.5rem',
-      }}>
-        <div style={{ maxWidth: '42rem', margin: '0 auto', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: B0, color: T, direction: 'rtl', fontFamily: 'var(--font-body)' }}>
+      <Sidebar tab={tab} setTab={setTab} onLogout={() => setAuthed(false)} onExport={() => exportCSV(appointments)} pendingCount={appointments.filter(a => a.status === 'pending').length} />
+      <main style={{ flex: 1, overflow: 'auto', paddingBottom: '4.5rem' }}>
+        {tab === 'dashboard'    && <DashboardTab    {...props} />}
+        {tab === 'appointments' && <AppointmentsTab {...props} />}
+        {tab === 'calendar'     && <CalendarTab     {...props} />}
+        {tab === 'settings'     && <SettingsTab     {...props} />}
+      </main>
+      <MobileNav tab={tab} setTab={setTab} pendingCount={appointments.filter(a => a.status === 'pending').length} />
+    </div>
+  );
+}
+
+// ── Sidebar ───────────────────────────────────────────────────
+
+function Sidebar({ tab, setTab, onLogout, onExport, pendingCount }: {
+  tab: Tab; setTab: (t: Tab) => void;
+  onLogout: () => void; onExport: () => void; pendingCount: number;
+}) {
+  const items: { id: Tab; icon: string; label: string }[] = [
+    { id: 'dashboard',    icon: '▦', label: 'לוח בקרה' },
+    { id: 'appointments', icon: '≡', label: 'תורים' },
+    { id: 'calendar',     icon: '◫', label: 'לוח שנה' },
+    { id: 'settings',     icon: '⚙', label: 'הגדרות' },
+  ];
+  return (
+    <aside style={{ width: 200, background: B1, borderLeft: `1px solid ${BDR}`, display: 'flex', flexDirection: 'column', padding: '1.5rem 0', position: 'sticky', top: 0, height: '100vh', flexShrink: 0 }}
+      className="admin-sidebar">
+      {/* Brand */}
+      <div style={{ padding: '0 1.25rem 1.5rem', borderBottom: `1px solid ${BDR}` }}>
+        <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 600, color: T }}>ברבר</p>
+        <p style={{ fontSize: '0.6rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: G, marginTop: '0.1rem' }}>Management</p>
+      </div>
+      {/* Nav */}
+      <nav style={{ flex: 1, padding: '1rem 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+        {items.map(item => (
+          <button key={item.id} onClick={() => setTab(item.id)} style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem',
+            padding: '0.75rem 1rem', borderRadius: R, border: 'none', cursor: 'pointer',
+            background: tab === item.id ? `rgba(201,168,76,0.12)` : 'transparent',
+            color: tab === item.id ? GL : TM,
+            fontSize: '0.875rem', fontWeight: tab === item.id ? 600 : 400,
+            transition: 'all 0.2s', textAlign: 'right', position: 'relative',
+          }}>
+            <span style={{ fontSize: '1rem', width: 20, textAlign: 'center' }}>{item.icon}</span>
+            <span>{item.label}</span>
+            {item.id === 'appointments' && pendingCount > 0 && (
+              <span style={{ marginRight: 'auto', background: '#f59e0b', color: '#080808', fontSize: '0.6rem', fontWeight: 700, borderRadius: 999, padding: '0.1rem 0.45rem', minWidth: 18, textAlign: 'center' }}>{pendingCount}</span>
+            )}
+            {tab === item.id && <div style={{ position: 'absolute', left: 0, top: '20%', bottom: '20%', width: 3, background: G, borderRadius: 2 }} />}
+          </button>
+        ))}
+      </nav>
+      {/* Footer actions */}
+      <div style={{ padding: '0 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', borderTop: `1px solid ${BDR}`, paddingTop: '1rem' }}>
+        <button onClick={onExport} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 1rem', borderRadius: R, border: 'none', cursor: 'pointer', background: 'transparent', color: TM, fontSize: '0.8rem', textAlign: 'right' }}>
+          <span>↓</span><span>ייצוא CSV</span>
+        </button>
+        <button onClick={onLogout} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 1rem', borderRadius: R, border: 'none', cursor: 'pointer', background: 'transparent', color: 'rgba(239,68,68,0.6)', fontSize: '0.8rem', textAlign: 'right' }}>
+          <span>⏻</span><span>יציאה</span>
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+function MobileNav({ tab, setTab, pendingCount }: { tab: Tab; setTab: (t: Tab) => void; pendingCount: number }) {
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.id = 'admin-responsive';
+    if (!document.getElementById('admin-responsive')) {
+      style.textContent = `
+        @media (max-width: 640px) {
+          .admin-sidebar { display: none !important; }
+          .admin-mobile-nav { display: block !important; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    return () => { document.getElementById('admin-responsive')?.remove(); };
+  }, []);
+  const items: { id: Tab; icon: string; label: string }[] = [
+    { id: 'dashboard', icon: '▦', label: 'ראשי' },
+    { id: 'appointments', icon: '≡', label: 'תורים' },
+    { id: 'calendar', icon: '◫', label: 'לוח שנה' },
+    { id: 'settings', icon: '⚙', label: 'הגדרות' },
+  ];
+  return (
+    <nav style={{ display: 'none', position: 'fixed', bottom: 0, left: 0, right: 0, background: B1, borderTop: `1px solid ${BDR}`, zIndex: 50 }} className="admin-mobile-nav">
+      <div style={{ display: 'flex' }}>
+        {items.map(item => (
+          <button key={item.id} onClick={() => setTab(item.id)} style={{
+            flex: 1, padding: '0.75rem 0.25rem', border: 'none', cursor: 'pointer',
+            background: 'transparent', color: tab === item.id ? G : TD,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', position: 'relative',
+          }}>
+            <span style={{ fontSize: '1.1rem' }}>{item.icon}</span>
+            <span style={{ fontSize: '0.55rem', letterSpacing: '0.05em' }}>{item.label}</span>
+            {item.id === 'appointments' && pendingCount > 0 && (
+              <span style={{ position: 'absolute', top: 4, right: 'calc(50% - 20px)', background: '#f59e0b', color: '#080808', fontSize: '0.5rem', fontWeight: 700, borderRadius: 999, padding: '0.1rem 0.35rem' }}>{pendingCount}</span>
+            )}
+          </button>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+// ── Dashboard Tab ─────────────────────────────────────────────
+
+function DashboardTab({ appointments, updateStatus, returningPhones, today, loading }: TabProps) {
+  const weekDays = getWeekDays(today);
+  const weekAppts = appointments.filter(a => weekDays.includes(a.date));
+  const monthAppts = appointments.filter(a => a.date.startsWith(today.slice(0, 7)));
+  const todayAppts = appointments.filter(a => a.date === today);
+  const pendingToday = todayAppts.filter(a => a.status === 'pending');
+  const weekRevenue = weekAppts.filter(a => a.status === 'approved').reduce((s, a) => s + (PRICE_MAP[a.service] ?? 0), 0);
+  const weekApproved = weekAppts.filter(a => a.status === 'approved').length;
+  const weekRate = weekAppts.length ? Math.round(weekApproved / weekAppts.length * 100) : 0;
+
+  const svcCount: Record<string, number> = {};
+  appointments.forEach(a => { svcCount[a.service] = (svcCount[a.service] ?? 0) + 1; });
+  const maxSvc = Math.max(...Object.values(svcCount), 1);
+
+  const hrCount: Record<string, number> = {};
+  for (let h = 9; h < 19; h++) hrCount[`${h}:00`] = 0;
+  appointments.forEach(a => { const k = a.time.split(':')[0] + ':00'; if (k in hrCount) hrCount[k]++; });
+  const maxHr = Math.max(...Object.values(hrCount), 1);
+
+  async function approveAllPendingToday() {
+    await Promise.all(pendingToday.map(a => fetch('/api/admin/update-status', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: a.id, status: 'approved' }),
+    })));
+    pendingToday.forEach(a => updateStatus(a.id, 'approved'));
+  }
+
+  const kpi = [
+    { label: 'תורים היום', value: todayAppts.length, sub: `${pendingToday.length} ממתינים`, color: G },
+    { label: 'הכנסות השבוע', value: `₪${weekRevenue}`, sub: `${weekAppts.length} תורים`, color: GL },
+    { label: 'תורים בחודש', value: monthAppts.length, sub: `${monthAppts.filter(a => a.status === 'approved').length} מאושרים`, color: G },
+    { label: 'אחוז אישור', value: `${weekRate}%`, sub: 'השבוע', color: weekRate >= 80 ? '#22c55e' : G },
+  ];
+
+  return (
+    <div style={{ padding: '2rem 1.5rem', maxWidth: '900px', margin: '0 auto', width: '100%' }}>
+      <div style={{ marginBottom: '2rem' }}>
+        <p style={{ fontSize: '0.65rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: G, marginBottom: '0.25rem' }}>שלום, ספר ✂️</p>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 500, color: T }}>לוח בקרה</h1>
+      </div>
+
+      {/* Approve all banner */}
+      {pendingToday.length > 0 && (
+        <div style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.28)', borderRadius: RL, padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
           <div>
-            <p className="serif" style={{ fontSize: '1.25rem', lineHeight: 1, color: 'var(--text)', fontWeight: 600 }}>ברבר בודפשט</p>
-            <p style={{ fontSize: '0.65rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--amber)', marginTop: '0.2rem', fontWeight: 700 }}>לוח ניהול</p>
+            <p style={{ fontWeight: 600, color: T, fontSize: '0.9rem' }}>⚡ {pendingToday.length} תורים ממתינים לאישור היום</p>
+            <p style={{ color: TM, fontSize: '0.78rem', marginTop: 2 }}>לחץ לאשר את כולם בבת אחת</p>
           </div>
-          <button
-            className="btn-ghost"
-            onClick={() => setAuthed(false)}
-            style={{ fontSize: '0.75rem', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}
-          >
-            יציאה
+          <button onClick={approveAllPendingToday} style={{ padding: '0.6rem 1.25rem', background: '#f59e0b', border: 'none', borderRadius: R, color: '#080808', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            אשר הכל
           </button>
         </div>
-      </header>
+      )}
 
-      <div style={{ maxWidth: '42rem', margin: '0 auto', width: '100%', padding: '2rem 1rem' }}>
-        {/* Today's revenue card */}
-        {todayAppts.length > 0 && (
-          <div className="animate-fade-in" style={{
-            background: 'linear-gradient(135deg, rgba(212,144,10,0.09), rgba(212,144,10,0.04))',
-            border: '1.5px solid rgba(212,144,10,0.22)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '1.25rem 1.5rem',
-            marginBottom: '1.25rem',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem',
-          }}>
-            <div>
-              <p style={{ fontSize: '0.65rem', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--amber)', fontWeight: 700, marginBottom: 4 }}>
-                📅 היום
-              </p>
-              <p className="serif" style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>
-                {todayAppts.length} תורים
-              </p>
-              {todayPending > 0 && (
-                <p style={{ fontSize: '0.78rem', color: '#92400E', marginTop: 5, fontWeight: 600 }}>
-                  ⚠️ {todayPending} ממתינים לאישור
-                </p>
-              )}
-            </div>
-            <div style={{ textAlign: 'left' }}>
-              <p style={{ fontSize: '0.65rem', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 700, marginBottom: 4 }}>
-                הכנסות מאושרות
-              </p>
-              <p className="serif" style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--amber)', lineHeight: 1 }}>
-                ₪{todayRevenue}
-              </p>
-            </div>
+      {/* KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+        {kpi.map(k => (
+          <div key={k.label} style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, padding: '1.25rem 1.5rem' }}>
+            <p style={{ fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: TM, marginBottom: '0.5rem' }}>{k.label}</p>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', fontWeight: 600, color: k.color, lineHeight: 1 }}>{k.value}</p>
+            <p style={{ fontSize: '0.72rem', color: TD, marginTop: '0.375rem' }}>{k.sub}</p>
           </div>
-        )}
+        ))}
+      </div>
 
-        {/* Stats row */}
-        <div className="grid gap-3 mb-8 animate-fade-up" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-          {[
-            { key: 'pending',  label: 'ממתינים', color: '#92400E', bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.28)', numColor: '#D97706' },
-            { key: 'approved', label: 'מאושרים', color: '#065F46', bg: 'rgba(16,185,129,0.10)', border: 'rgba(16,185,129,0.26)', numColor: '#059669' },
-            { key: 'rejected', label: 'נדחו',    color: '#991B1B', bg: 'rgba(239,68,68,0.09)',  border: 'rgba(239,68,68,0.22)',   numColor: '#DC2626' },
-          ].map(({ key, label, color, bg, border, numColor }) => (
-            <div key={key} style={{
-              padding: '1.125rem', textAlign: 'center',
-              background: bg, border: `1px solid ${border}`,
-              borderRadius: 'var(--radius-lg)',
-              transition: 'var(--transition)',
-            }}>
-              <div style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', fontWeight: 600, color: numColor, lineHeight: 1 }}>
-                {counts[key as keyof typeof counts]}
+      {/* Charts row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+        {/* Popular services */}
+        <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, padding: '1.5rem' }}>
+          <p style={{ fontSize: '0.7rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: G, marginBottom: '1.25rem' }}>שירותים פופולריים</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {SERVICES.map(s => {
+              const cnt = svcCount[s.id] ?? 0;
+              const pct = cnt / maxSvc * 100;
+              return (
+                <div key={s.id}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                    <span style={{ fontSize: '0.8rem', color: T }}>{s.name}</span>
+                    <span style={{ fontSize: '0.75rem', color: G, fontWeight: 600 }}>{cnt}</span>
+                  </div>
+                  <div style={{ height: 5, background: B4, borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: `linear-gradient(90deg,${GD},${GL})`, borderRadius: 3, transition: 'width 0.8s ease' }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Busiest hours */}
+        <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, padding: '1.5rem' }}>
+          <p style={{ fontSize: '0.7rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: G, marginBottom: '1.25rem' }}>שעות עמוסות</p>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.3rem', height: 80 }}>
+            {Object.entries(hrCount).map(([hr, cnt]) => (
+              <div key={hr} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+                <div style={{ width: '100%', background: cnt > 0 ? `rgba(201,168,76,${0.2 + (cnt / maxHr) * 0.75})` : B4, borderRadius: '2px 2px 0 0', height: `${Math.max(4, (cnt / maxHr) * 72)}px`, transition: 'height 0.8s ease' }} />
+                <span style={{ fontSize: '0.45rem', color: TD, whiteSpace: 'nowrap' }}>{hr.replace(':00', '')}</span>
               </div>
-              <div style={{ fontSize: '0.65rem', letterSpacing: '0.1em', textTransform: 'uppercase', color, marginTop: '0.375rem', fontWeight: 700 }}>{label}</div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent pending */}
+      {appointments.filter(a => a.status === 'pending').length > 0 && (
+        <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, padding: '1.5rem' }}>
+          <p style={{ fontSize: '0.7rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: G, marginBottom: '1.25rem' }}>ממתינים לאישור</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {appointments.filter(a => a.status === 'pending').slice(0, 4).map(a => (
+              <div key={a.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.75rem 1rem', background: B3, borderRadius: R, border: `1px solid ${BDR}` }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: '0.875rem', fontWeight: 600, color: T, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</p>
+                  <p style={{ fontSize: '0.72rem', color: TM }}>{fmtDate(a.date)} · {a.time} · {svcName(a.service)}</p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
+                  <a href={waLink(a, WA_TEMPLATES.approve)} target="_blank" rel="noopener noreferrer"
+                    onClick={() => updateStatus(a.id, 'approved')}
+                    style={{ padding: '0.4rem 0.875rem', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.28)', borderRadius: 8, color: '#22c55e', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
+                    אשר
+                  </a>
+                  <button onClick={() => updateStatus(a.id, 'rejected')}
+                    style={{ padding: '0.4rem 0.75rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 8, color: '#ef4444', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
+                    דחה
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Appointments Tab ──────────────────────────────────────────
+
+function AppointmentsTab({ appointments, updateStatus, returningPhones, today }: TabProps) {
+  const [filter, setFilter] = useState<Filter>('all');
+  const [search, setSearch] = useState('');
+  const [svcFilter, setSvcFilter] = useState('all');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<'list' | 'swipe'>('list');
+  const [swipeIdx, setSwipeIdx] = useState(0);
+  const [swipeDrag, setSwipeDrag] = useState(0);
+  const [swipeDir, setSwipeDir] = useState<'left' | 'right' | null>(null);
+  const dragStart = useRef(0);
+  const isDragging = useRef(false);
+
+  const pending = appointments.filter(a => a.status === 'pending');
+
+  let filtered = appointments;
+  if (filter !== 'all') filtered = filtered.filter(a => a.status === filter);
+  if (search.trim()) {
+    const q = search.trim().toLowerCase();
+    filtered = filtered.filter(a => a.name.toLowerCase().includes(q) || a.phone.includes(q));
+  }
+  if (svcFilter !== 'all') filtered = filtered.filter(a => a.service === svcFilter);
+  if (fromDate) filtered = filtered.filter(a => a.date >= fromDate);
+  if (toDate) filtered = filtered.filter(a => a.date <= toDate);
+
+  const grouped: Record<string, Appointment[]> = filtered.reduce((acc, a) => {
+    (acc[a.date] ??= []).push(a); return acc;
+  }, {} as Record<string, Appointment[]>);
+  const dates = Object.keys(grouped).sort();
+
+  function toggleSelect(id: string) {
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+  function selectAll() { setSelected(new Set(filtered.map(a => a.id))); }
+  function clearSelect() { setSelected(new Set()); }
+
+  function bulkApprove() {
+    selected.forEach(id => updateStatus(id, 'approved'));
+    clearSelect();
+  }
+  function bulkReject() {
+    selected.forEach(id => updateStatus(id, 'rejected'));
+    clearSelect();
+  }
+
+  // Swipe logic
+  const currentSwipe = pending[swipeIdx];
+
+  function swipeAction(dir: 'right' | 'left') {
+    if (!currentSwipe) return;
+    setSwipeDir(dir);
+    setTimeout(() => {
+      updateStatus(currentSwipe.id, dir === 'right' ? 'approved' : 'rejected');
+      setSwipeDrag(0);
+      setSwipeDir(null);
+      setSwipeIdx(0);
+    }, 300);
+  }
+
+  function handleDragStart(x: number) {
+    isDragging.current = true;
+    dragStart.current = x;
+  }
+  function handleDragMove(x: number) {
+    if (!isDragging.current) return;
+    setSwipeDrag(x - dragStart.current);
+  }
+  function handleDragEnd() {
+    if (!isDragging.current) return;
+    isDragging.current = false;
+    if (swipeDrag > 80) swipeAction('right');
+    else if (swipeDrag < -80) swipeAction('left');
+    else setSwipeDrag(0);
+  }
+
+  const counts = { all: appointments.length, pending: pending.length, approved: appointments.filter(a => a.status === 'approved').length, rejected: appointments.filter(a => a.status === 'rejected').length };
+  const filterTabs: { id: Filter; label: string; color: string }[] = [
+    { id: 'all',      label: `הכל (${counts.all})`,          color: G },
+    { id: 'pending',  label: `ממתינים (${counts.pending})`,   color: '#f59e0b' },
+    { id: 'approved', label: `מאושרים (${counts.approved})`,  color: '#22c55e' },
+    { id: 'rejected', label: `נדחו (${counts.rejected})`,     color: '#ef4444' },
+  ];
+
+  return (
+    <div style={{ padding: '2rem 1.5rem', maxWidth: '900px', margin: '0 auto', width: '100%' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem', gap: '1rem', flexWrap: 'wrap' }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 500, color: T }}>תורים</h1>
+        {pending.length > 0 && (
+          <button onClick={() => setViewMode(v => v === 'list' ? 'swipe' : 'list')} style={{ padding: '0.5rem 1.25rem', background: viewMode === 'swipe' ? GG : B3, border: `1px solid ${viewMode === 'swipe' ? BDRG : BDR}`, borderRadius: R, color: viewMode === 'swipe' ? GL : TM, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+            {viewMode === 'swipe' ? '≡ רשימה' : '⟺ אישור מהיר'}
+          </button>
+        )}
+      </div>
+
+      {/* Search + filters */}
+      <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, padding: '1.25rem', marginBottom: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+        <div style={{ position: 'relative' }}>
+          <span style={{ position: 'absolute', right: '0.875rem', top: '50%', transform: 'translateY(-50%)', color: TD, fontSize: '0.875rem', pointerEvents: 'none' }}>🔍</span>
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="חפש לפי שם או טלפון..."
+            style={{ width: '100%', background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.75rem 2.5rem 0.75rem 1rem', color: T, fontSize: '0.875rem', outline: 'none', direction: 'rtl' }} />
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <select value={svcFilter} onChange={e => setSvcFilter(e.target.value)}
+            style={{ background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.5rem 0.875rem', color: T, fontSize: '0.8rem', cursor: 'pointer', direction: 'rtl' }}>
+            <option value="all">כל השירותים</option>
+            {SERVICES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
+            style={{ background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.5rem 0.875rem', color: T, fontSize: '0.8rem', cursor: 'pointer' }} />
+          <span style={{ color: TM, alignSelf: 'center', fontSize: '0.8rem' }}>עד</span>
+          <input type="date" value={toDate} onChange={e => setToDate(e.target.value)}
+            style={{ background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.5rem 0.875rem', color: T, fontSize: '0.8rem', cursor: 'pointer' }} />
+          {(fromDate || toDate || svcFilter !== 'all' || search) && (
+            <button onClick={() => { setSearch(''); setSvcFilter('all'); setFromDate(''); setToDate(''); }}
+              style={{ padding: '0.5rem 0.875rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: R, color: '#ef4444', fontSize: '0.75rem', cursor: 'pointer' }}>
+              נקה
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Filter tabs */}
+      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+        {filterTabs.map(f => (
+          <button key={f.id} onClick={() => setFilter(f.id)} style={{
+            padding: '0.45rem 1rem', borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
+            background: filter === f.id ? `rgba(201,168,76,0.15)` : B3,
+            color: filter === f.id ? GL : TM,
+            outline: filter === f.id ? `1px solid ${BDRG}` : `1px solid ${BDR}`,
+          }}>{f.label}</button>
+        ))}
+        {selected.size > 0 && (
+          <button onClick={selectAll} style={{ padding: '0.45rem 0.875rem', borderRadius: 999, border: `1px solid ${BDR}`, background: 'transparent', color: TM, fontSize: '0.75rem', cursor: 'pointer' }}>
+            בחר הכל
+          </button>
+        )}
+      </div>
+
+      {/* Bulk actions */}
+      {selected.size > 0 && (
+        <div style={{ background: GG, border: `1px solid ${BDRG}`, borderRadius: RL, padding: '0.875rem 1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <span style={{ color: GL, fontWeight: 600, fontSize: '0.875rem' }}>{selected.size} נבחרו</span>
+          <button onClick={bulkApprove} style={{ padding: '0.45rem 1rem', background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, color: '#22c55e', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>✓ אשר הכל</button>
+          <button onClick={bulkReject} style={{ padding: '0.45rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, color: '#ef4444', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>✗ דחה הכל</button>
+          <button onClick={clearSelect} style={{ marginRight: 'auto', padding: '0.45rem 0.875rem', background: 'transparent', border: `1px solid ${BDR}`, borderRadius: 8, color: TM, fontSize: '0.75rem', cursor: 'pointer' }}>ביטול</button>
+        </div>
+      )}
+
+      {/* Swipe view */}
+      {viewMode === 'swipe' && pending.length > 0 && (
+        <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, padding: '2rem', marginBottom: '1.5rem', textAlign: 'center' }}>
+          <p style={{ fontSize: '0.65rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: G, marginBottom: '1rem' }}>
+            אישור מהיר · {swipeIdx + 1} / {pending.length}
+          </p>
+          {currentSwipe ? (
+            <>
+              <div
+                onMouseDown={e => handleDragStart(e.clientX)}
+                onMouseMove={e => handleDragMove(e.clientX)}
+                onMouseUp={handleDragEnd}
+                onMouseLeave={handleDragEnd}
+                onTouchStart={e => handleDragStart(e.touches[0].clientX)}
+                onTouchMove={e => handleDragMove(e.touches[0].clientX)}
+                onTouchEnd={handleDragEnd}
+                style={{
+                  maxWidth: 380, margin: '0 auto 1.5rem',
+                  background: B3, border: `1px solid ${BDR}`, borderRadius: RL, padding: '1.75rem',
+                  cursor: 'grab', userSelect: 'none',
+                  transform: `translateX(${swipeDir === 'right' ? 400 : swipeDir === 'left' ? -400 : swipeDrag}px) rotate(${swipeDrag * 0.04}deg)`,
+                  transition: swipeDir || !isDragging.current ? 'transform 0.3s ease, opacity 0.3s ease' : 'none',
+                  opacity: swipeDir ? 0 : Math.max(0.4, 1 - Math.abs(swipeDrag) / 300),
+                  position: 'relative',
+                }}>
+                {Math.abs(swipeDrag) > 40 && (
+                  <div style={{
+                    position: 'absolute', top: 12, left: swipeDrag > 0 ? 'auto' : 12, right: swipeDrag > 0 ? 12 : 'auto',
+                    background: swipeDrag > 0 ? 'rgba(34,197,94,0.9)' : 'rgba(239,68,68,0.9)',
+                    color: '#fff', fontWeight: 700, fontSize: '0.85rem', padding: '0.3rem 0.875rem', borderRadius: 8,
+                  }}>
+                    {swipeDrag > 0 ? '✓ אשר' : '✗ דחה'}
+                  </div>
+                )}
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 600, color: T, marginBottom: '0.5rem' }}>{currentSwipe.name}</p>
+                <p style={{ color: TM, fontSize: '0.85rem', marginBottom: '0.25rem' }}>{svcName(currentSwipe.service)} · ₪{PRICE_MAP[currentSwipe.service]}</p>
+                <p style={{ color: G, fontWeight: 600, fontSize: '0.9rem' }}>{fmtDate(currentSwipe.date)} · {currentSwipe.time}</p>
+                <p style={{ color: TD, fontSize: '0.78rem', marginTop: '0.375rem' }}>{currentSwipe.phone}</p>
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                <button onClick={() => swipeAction('left')} style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(239,68,68,0.12)', border: '1.5px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '1.2rem', cursor: 'pointer', fontWeight: 700 }}>✗</button>
+                <button onClick={() => swipeAction('right')} style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(34,197,94,0.12)', border: '1.5px solid rgba(34,197,94,0.3)', color: '#22c55e', fontSize: '1.2rem', cursor: 'pointer', fontWeight: 700 }}>✓</button>
+              </div>
+              <p style={{ color: TD, fontSize: '0.7rem', marginTop: '0.875rem' }}>גרור ימינה לאישור · שמאלה לדחייה</p>
+            </>
+          ) : (
+            <p style={{ color: TM, padding: '2rem' }}>אין תורים ממתינים 🎉</p>
+          )}
+        </div>
+      )}
+
+      {/* List view */}
+      {viewMode === 'list' && (dates.length === 0
+        ? <div style={{ textAlign: 'center', padding: '4rem 0', color: TD }}>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: TM, marginBottom: '0.5rem' }}>אין תורים</p>
+            <p style={{ fontSize: '0.875rem' }}>לא נמצאו תורים לפי הסינון שנבחר</p>
+          </div>
+        : dates.map(date => (
+            <div key={date} style={{ marginBottom: '2rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.875rem' }}>
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 600, color: date === today ? G : T }}>
+                  {date === today ? '📅 היום' : fmtDate(date)}
+                </p>
+                <div style={{ flex: 1, height: 1, background: BDR }} />
+                <span style={{ fontSize: '0.7rem', color: TD }}>{grouped[date].length} תורים</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                {grouped[date].map(a => (
+                  <FullAppCard key={a.id} appt={a} selected={selected.has(a.id)} onToggle={() => toggleSelect(a.id)}
+                    onUpdate={updateStatus} isReturning={returningPhones.has(a.phone)} />
+                ))}
+              </div>
+            </div>
+          ))
+      )}
+    </div>
+  );
+}
+
+// ── Calendar Tab ──────────────────────────────────────────────
+
+function CalendarTab({ appointments, updateStatus }: TabProps) {
+  const [weekRef, setWeekRef] = useState(getToday());
+  const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
+  const weekDays = getWeekDays(weekRef);
+  const today = getToday();
+
+  function prevWeek() {
+    const d = new Date(weekRef); d.setDate(d.getDate() - 7);
+    setWeekRef(d.toISOString().split('T')[0]);
+  }
+  function nextWeek() {
+    const d = new Date(weekRef); d.setDate(d.getDate() + 7);
+    setWeekRef(d.toISOString().split('T')[0]);
+  }
+
+  const HOURS = Array.from({ length: 11 }, (_, i) => `${i + 9}:00`);
+  const TOTAL_MIN = 10 * 60; // 9:00–19:00
+
+  function apptTop(time: string) {
+    const [h, m] = time.split(':').map(Number);
+    return ((h - 9) * 60 + m) / TOTAL_MIN * 100;
+  }
+  function apptHeight(serviceId: string) {
+    const dur = SERVICES.find(s => s.id === serviceId)?.duration ?? 30;
+    return dur / TOTAL_MIN * 100;
+  }
+
+  return (
+    <div style={{ padding: '1.5rem', maxWidth: '960px', margin: '0 auto', width: '100%' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 500, color: T }}>לוח שנה</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button onClick={prevWeek} style={{ padding: '0.5rem 1rem', background: B3, border: `1px solid ${BDR}`, borderRadius: R, color: TM, cursor: 'pointer', fontSize: '0.9rem' }}>‹</button>
+          <span style={{ fontSize: '0.85rem', color: T, fontWeight: 500, minWidth: 120, textAlign: 'center' }}>
+            {fmtDate(weekDays[0])} – {fmtDate(weekDays[6])}
+          </span>
+          <button onClick={nextWeek} style={{ padding: '0.5rem 1rem', background: B3, border: `1px solid ${BDR}`, borderRadius: R, color: TM, cursor: 'pointer', fontSize: '0.9rem' }}>›</button>
+          <button onClick={() => setWeekRef(getToday())} style={{ padding: '0.5rem 0.875rem', background: GG, border: `1px solid ${BDRG}`, borderRadius: R, color: GL, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
+            היום
+          </button>
+        </div>
+      </div>
+
+      {/* Calendar grid */}
+      <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, overflow: 'hidden' }}>
+        {/* Day headers */}
+        <div style={{ display: 'grid', gridTemplateColumns: '44px repeat(7, 1fr)', borderBottom: `1px solid ${BDR}` }}>
+          <div />
+          {weekDays.map((day, i) => {
+            const isToday = day === today;
+            const cnt = appointments.filter(a => a.date === day).length;
+            return (
+              <div key={day} style={{ padding: '0.875rem 0.25rem', textAlign: 'center', borderRight: i > 0 ? `1px solid ${BDR}` : 'none', background: isToday ? GG : 'transparent' }}>
+                <p style={{ fontSize: '0.65rem', letterSpacing: '0.1em', color: isToday ? G : TD, textTransform: 'uppercase', marginBottom: '0.2rem' }}>{DAY_NAMES[i]}</p>
+                <p style={{ fontSize: '1rem', fontWeight: 700, color: isToday ? GL : T }}>{parseInt(day.split('-')[2])}</p>
+                {cnt > 0 && <div style={{ width: 6, height: 6, borderRadius: '50%', background: isToday ? G : GD, margin: '0.2rem auto 0' }} />}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Time grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: '44px repeat(7, 1fr)', height: 520, overflowY: 'auto' }}>
+          {/* Time axis */}
+          <div style={{ position: 'relative' }}>
+            {HOURS.map((h, i) => (
+              <div key={h} style={{ position: 'absolute', top: `${i / 10 * 100}%`, right: 0, left: 0, display: 'flex', alignItems: 'flex-start', paddingRight: '0.375rem' }}>
+                <span style={{ fontSize: '0.55rem', color: TD }}>{h}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Day columns */}
+          {weekDays.map((day, di) => {
+            const dayAppts = appointments.filter(a => a.date === day);
+            const isToday = day === today;
+            return (
+              <div key={day} style={{ position: 'relative', borderRight: di > 0 ? `1px solid ${BDR}` : 'none', background: isToday ? 'rgba(201,168,76,0.02)' : 'transparent', minHeight: '100%' }}>
+                {/* Hour lines */}
+                {HOURS.map((_, hi) => (
+                  <div key={hi} style={{ position: 'absolute', top: `${hi / 10 * 100}%`, left: 0, right: 0, height: 1, background: BDR }} />
+                ))}
+                {/* Appointments */}
+                {dayAppts.map(a => {
+                  const cfg = S_CFG[a.status as keyof typeof S_CFG];
+                  return (
+                    <div key={a.id} onClick={() => setSelectedAppt(a === selectedAppt ? null : a)}
+                      style={{
+                        position: 'absolute',
+                        top: `${apptTop(a.time)}%`,
+                        height: `${apptHeight(a.service)}%`,
+                        left: '2px', right: '2px',
+                        background: cfg.bg, border: `1px solid ${cfg.bdr}`,
+                        borderRadius: 5, padding: '0.2rem 0.35rem',
+                        cursor: 'pointer', overflow: 'hidden',
+                        transition: 'transform 0.15s ease',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.transform = 'scaleX(0.96)')}
+                      onMouseLeave={e => (e.currentTarget.style.transform = 'scaleX(1)')}
+                    >
+                      <p style={{ fontSize: '0.55rem', fontWeight: 700, color: cfg.color, lineHeight: 1.2, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{a.time}</p>
+                      <p style={{ fontSize: '0.55rem', color: T, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{a.name}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Appointment detail panel */}
+      {selectedAppt && (
+        <div style={{ marginTop: '1rem', background: B2, border: `1px solid ${BDRG}`, borderRadius: RL, padding: '1.5rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+          <div>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: T, marginBottom: '0.375rem' }}>{selectedAppt.name}</p>
+            <p style={{ color: TM, fontSize: '0.85rem' }}>{svcName(selectedAppt.service)} · ₪{PRICE_MAP[selectedAppt.service]} · {fmtDate(selectedAppt.date)} {selectedAppt.time}</p>
+            <p style={{ color: TD, fontSize: '0.78rem', marginTop: '0.25rem' }}>{selectedAppt.phone}</p>
+            <span style={{ display: 'inline-block', marginTop: '0.5rem', padding: '0.2rem 0.75rem', borderRadius: 999, fontSize: '0.65rem', fontWeight: 700, background: S_CFG[selectedAppt.status as keyof typeof S_CFG].bg, color: S_CFG[selectedAppt.status as keyof typeof S_CFG].color, border: `1px solid ${S_CFG[selectedAppt.status as keyof typeof S_CFG].bdr}` }}>
+              {S_CFG[selectedAppt.status as keyof typeof S_CFG].label}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' }}>
+            {selectedAppt.status === 'pending' && <>
+              <a href={waLink(selectedAppt, WA_TEMPLATES.approve)} target="_blank" rel="noopener noreferrer"
+                onClick={() => { updateStatus(selectedAppt.id, 'approved'); setSelectedAppt(null); }}
+                style={{ padding: '0.5rem 1.125rem', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, color: '#22c55e', fontSize: '0.8rem', fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}>
+                ✓ אשר
+              </a>
+              <button onClick={() => { updateStatus(selectedAppt.id, 'rejected'); setSelectedAppt(null); }}
+                style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 8, color: '#ef4444', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+                ✗ דחה
+              </button>
+            </>}
+            <a href={waLink(selectedAppt, WA_TEMPLATES.reschedule)} target="_blank" rel="noopener noreferrer"
+              style={{ padding: '0.5rem 1rem', background: B4, border: `1px solid ${BDR}`, borderRadius: 8, color: TM, fontSize: '0.78rem', textDecoration: 'none' }}>
+              📅 שנה תור
+            </a>
+            <button onClick={() => setSelectedAppt(null)} style={{ padding: '0.5rem 0.75rem', background: 'transparent', border: `1px solid ${BDR}`, borderRadius: 8, color: TD, fontSize: '0.8rem', cursor: 'pointer' }}>✕</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Settings Tab ──────────────────────────────────────────────
+
+function SettingsTab({ appointments, hours, setHours, blockedSlots, blockSlot, unblockSlot }: TabProps) {
+  const [blockDate, setBlockDate] = useState('');
+  const [blockTime, setBlockTime] = useState('');
+  const [blockMode, setBlockMode] = useState<'day' | 'slot'>('day');
+
+  async function handleBlock() {
+    if (!blockDate) return;
+    if (blockMode === 'day') {
+      await Promise.all(TIME_SLOTS.map(t => blockSlot(blockDate, t)));
+    } else if (blockTime) {
+      blockSlot(blockDate, blockTime);
+    }
+    setBlockDate('');
+    setBlockTime('');
+  }
+
+  const blockedDates = [...new Set(blockedSlots.map(s => s.date))].sort();
+
+  return (
+    <div style={{ padding: '2rem 1.5rem', maxWidth: '720px', margin: '0 auto', width: '100%' }}>
+      <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 500, color: T, marginBottom: '2rem' }}>הגדרות</h1>
+
+      {/* Working hours */}
+      <Section title="שעות עבודה" icon="⏰">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {Array.from({ length: 7 }, (_, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.875rem 1.125rem', background: B3, borderRadius: R, border: `1px solid ${BDR}` }}>
+              <span style={{ width: 52, fontSize: '0.85rem', color: T, fontWeight: 600 }}>{DAY_FULL[i]}</span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input type="checkbox" checked={hours[i].open}
+                  onChange={e => setHours({ ...hours, [i]: { ...hours[i], open: e.target.checked } })}
+                  style={{ accentColor: G, width: 16, height: 16, cursor: 'pointer' }} />
+                <span style={{ fontSize: '0.75rem', color: hours[i].open ? GL : TD }}>{hours[i].open ? 'פתוח' : 'סגור'}</span>
+              </label>
+              {hours[i].open && <>
+                <input type="time" value={hours[i].from}
+                  onChange={e => setHours({ ...hours, [i]: { ...hours[i], from: e.target.value } })}
+                  style={{ background: B4, border: `1px solid ${BDR}`, borderRadius: 6, padding: '0.35rem 0.625rem', color: T, fontSize: '0.8rem', cursor: 'pointer' }} />
+                <span style={{ color: TD, fontSize: '0.75rem' }}>–</span>
+                <input type="time" value={hours[i].to}
+                  onChange={e => setHours({ ...hours, [i]: { ...hours[i], to: e.target.value } })}
+                  style={{ background: B4, border: `1px solid ${BDR}`, borderRadius: 6, padding: '0.35rem 0.625rem', color: T, fontSize: '0.8rem', cursor: 'pointer' }} />
+              </>}
             </div>
           ))}
         </div>
+      </Section>
 
-        {/* Filter tabs */}
-        <div className="flex gap-2 mb-6 animate-fade-in overflow-x-auto" style={{ paddingBottom: 4 }}>
-          {(['all', 'pending', 'approved', 'rejected'] as Filter[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              style={{
-                padding: '0.5rem 1.125rem',
-                borderRadius: 999,
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                letterSpacing: '0.07em',
-                textTransform: 'uppercase',
-                whiteSpace: 'nowrap',
-                cursor: 'pointer',
-                transition: 'var(--transition)',
-                background: filter === f ? 'linear-gradient(135deg, var(--amber-dark), var(--amber-light))' : '#fff',
-                border: filter === f ? '1.5px solid var(--amber)' : '1.5px solid rgba(28,25,23,0.10)',
-                color: filter === f ? '#fff' : 'var(--text-muted)',
-                boxShadow: filter === f ? 'var(--shadow-amber)' : 'none',
-              }}
-            >
-              {f === 'all' ? 'הכל' : STATUS[f].label}
-              <span style={{ marginRight: 6, opacity: 0.75 }}>({counts[f]})</span>
+      {/* Block dates / slots */}
+      <Section title="חסימת תאריכים / שעות" icon="🚫">
+        <div style={{ display: 'flex', gap: '0.625rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          {(['day', 'slot'] as const).map(m => (
+            <button key={m} onClick={() => setBlockMode(m)} style={{ padding: '0.45rem 1rem', borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, background: blockMode === m ? GG : B4, color: blockMode === m ? GL : TM, outline: blockMode === m ? `1px solid ${BDRG}` : `1px solid ${BDR}` }}>
+              {m === 'day' ? 'חסום יום שלם' : 'חסום שעה ספציפית'}
             </button>
           ))}
         </div>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+          <input type="date" value={blockDate} onChange={e => setBlockDate(e.target.value)}
+            style={{ background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.6rem 0.875rem', color: T, fontSize: '0.875rem', cursor: 'pointer' }} />
+          {blockMode === 'slot' && (
+            <select value={blockTime} onChange={e => setBlockTime(e.target.value)}
+              style={{ background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.6rem 0.875rem', color: T, fontSize: '0.875rem', cursor: 'pointer', direction: 'rtl' }}>
+              <option value="">בחר שעה</option>
+              {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          )}
+          <button onClick={handleBlock} disabled={!blockDate} style={{ padding: '0.6rem 1.25rem', background: `linear-gradient(135deg,${GD},${GL})`, border: 'none', borderRadius: R, color: '#080808', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', opacity: blockDate ? 1 : 0.4 }}>
+            חסום
+          </button>
+        </div>
 
-        {/* Content */}
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-            <div style={{ width: 28, height: 28, border: '2.5px solid var(--amber)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto', animation: 'spin-slow 0.8s linear infinite' }} />
-          </div>
-        ) : dates.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-dim)' }}>
-            <p className="serif" style={{ fontSize: '1.5rem', fontWeight: 400, marginBottom: '0.5rem', color: 'var(--text)' }}>אין תורים</p>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>לא נמצאו תורים בקטגוריה זו</p>
-          </div>
-        ) : (
-          dates.map((date) => {
-            const isToday = date === today;
-            return (
-            <div key={date} className="mb-8 animate-fade-up">
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem',
-                ...(isToday && { background: 'rgba(212,144,10,0.06)', borderRadius: 12, padding: '0.75rem 1rem', margin: '0 -1rem 0.75rem -1rem' }),
-              }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    {isToday && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--amber)', display: 'inline-block', boxShadow: '0 0 6px rgba(212,144,10,0.6)', flexShrink: 0 }} />}
-                    <p className="serif" style={{ fontSize: '1.25rem', fontWeight: 700, color: isToday ? 'var(--amber)' : 'var(--text)' }}>
-                      {isToday ? 'היום' : formatDate(date)}
-                    </p>
+        {/* Blocked dates list */}
+        {blockedDates.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: 220, overflowY: 'auto' }}>
+            {blockedDates.map(date => {
+              const slots = blockedSlots.filter(s => s.date === date);
+              const isFullDay = slots.length >= TIME_SLOTS.length;
+              return (
+                <div key={date} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.625rem 1rem', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.16)', borderRadius: R, gap: '1rem' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ fontSize: '0.875rem', color: T, fontWeight: 500 }}>{fmtDate(date)}</span>
+                    <span style={{ fontSize: '0.72rem', color: TD, marginRight: '0.625rem' }}>
+                      {isFullDay ? '· יום שלם חסום' : `· ${slots.length} שעות חסומות`}
+                    </span>
                   </div>
-                  <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', letterSpacing: '0.1em', fontWeight: 600 }}>
-                    {grouped[date].length} {grouped[date].length === 1 ? 'תור' : 'תורים'}
-                  </p>
+                  <button onClick={() => slots.forEach(s => unblockSlot(s.date, s.time))}
+                    style={{ padding: '0.3rem 0.75rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 6, color: '#ef4444', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>
+                    שחרר
+                  </button>
                 </div>
-                <div style={{ flex: 1, height: 1, background: isToday ? 'rgba(212,144,10,0.20)' : 'rgba(28,25,23,0.09)' }} />
-              </div>
-              <div className="flex flex-col gap-3">
-                {grouped[date].map((a) => <AppCard key={a.id} appt={a} onUpdate={updateStatus} />)}
+              );
+            })}
+          </div>
+        )}
+      </Section>
+
+      {/* WhatsApp templates */}
+      <Section title="תבניות WhatsApp" icon="💬">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+          {[
+            { key: 'approve', label: 'אישור תור' },
+            { key: 'reject', label: 'דחיית תור' },
+            { key: 'reschedule', label: 'שינוי תור' },
+          ].map(({ key, label }) => (
+            <div key={key}>
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: G, marginBottom: '0.375rem' }}>{label}</p>
+              <div style={{ padding: '0.75rem 1rem', background: B3, border: `1px solid ${BDR}`, borderRadius: R, fontSize: '0.8rem', color: TM, lineHeight: 1.65, whiteSpace: 'pre-wrap', direction: 'rtl' }}>
+                {WA_TEMPLATES[key as keyof typeof WA_TEMPLATES]({
+                  id: '', name: '[שם לקוח]', phone: '', service: 'haircut',
+                  date: new Date().toISOString().split('T')[0], time: '10:00', status: 'pending', created_at: ''
+                })}
               </div>
             </div>
-            );
-          })
-        )}
-      </div>
-
-      <style>{`@keyframes spin-slow { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
-}
-
-function AppCard({ appt: a, onUpdate }: {
-  appt: Appointment;
-  onUpdate: (id: string, status: 'approved' | 'rejected' | 'pending') => void;
-}) {
-  const svc = SERVICES.find((s) => s.id === a.service)?.name ?? a.service;
-  const st = STATUS[a.status];
-
-  return (
-    <div style={{
-      background: '#fff',
-      border: '1px solid rgba(28,25,23,0.08)',
-      borderRadius: 'var(--radius-lg)',
-      padding: '1.25rem 1.5rem',
-      boxShadow: 'var(--shadow-card)',
-      transition: 'var(--transition)',
-    }}>
-      {/* Top row */}
-      <div className="flex justify-between items-start mb-3">
-        <div>
-          <p style={{ fontSize: '1.05rem', fontFamily: 'var(--font-display)', fontWeight: 600, marginBottom: '0.2rem', color: 'var(--text)' }}>{a.name}</p>
-          <a
-            href={`tel:${a.phone}`}
-            style={{ fontSize: '0.8rem', color: 'var(--text-muted)', letterSpacing: '0.03em', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 11.7 19.79 19.79 0 01.01 3.1 2 2 0 012 .92h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
-            </svg>
-            {a.phone}
-          </a>
+          ))}
         </div>
-        <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
-          <p className="serif" style={{ fontSize: '1.3rem', fontWeight: 600, lineHeight: 1, color: 'var(--amber)' }}>{a.time}</p>
-          <span className={`badge ${st.badge}`}>{st.label}</span>
-        </div>
-      </div>
+      </Section>
 
-      {/* Service */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '1rem' }}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
-          <line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/>
-          <line x1="8.12" y1="8.12" x2="12" y2="12"/>
-        </svg>
-        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>{svc}</span>
-      </div>
-
-      {/* Actions */}
-      {a.status === 'pending' && (
-        <div className="flex gap-2">
-          <a
-            href={buildWhatsAppLink(a)}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => onUpdate(a.id, 'approved')}
-            style={{
-              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              padding: '0.65rem', borderRadius: 'var(--radius)',
-              background: 'rgba(16,185,129,0.10)', border: '1.5px solid rgba(16,185,129,0.28)',
-              color: '#065F46', fontSize: '0.8rem', fontWeight: 700,
-              letterSpacing: '0.04em', textDecoration: 'none', cursor: 'pointer',
-              transition: 'var(--transition)',
-            }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-            </svg>
-            אשר + שלח
-          </a>
-          <button
-            onClick={() => onUpdate(a.id, 'rejected')}
-            style={{
-              flex: 1, padding: '0.65rem', borderRadius: 'var(--radius)',
-              background: 'rgba(239,68,68,0.08)', border: '1.5px solid rgba(239,68,68,0.22)',
-              color: '#991B1B', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
-              transition: 'var(--transition)',
-            }}
-          >
-            דחה
-          </button>
-        </div>
-      )}
-
-      {a.status === 'approved' && (
-        <div className="flex gap-2">
-          <a
-            href={buildWhatsAppLink(a)}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              padding: '0.65rem', borderRadius: 'var(--radius)',
-              background: 'rgba(16,185,129,0.08)', border: '1.5px solid rgba(16,185,129,0.22)',
-              color: '#065F46', fontSize: '0.8rem', textDecoration: 'none', fontWeight: 600,
-            }}
-          >
-            שלח הודעת WhatsApp
-          </a>
-          <button
-            onClick={() => onUpdate(a.id, 'rejected')}
-            style={{
-              padding: '0.65rem 1rem', borderRadius: 'var(--radius)',
-              background: '#fff', border: '1.5px solid rgba(28,25,23,0.10)',
-              color: 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer',
-              fontWeight: 600,
-            }}
-          >
-            בטל
-          </button>
-        </div>
-      )}
-
-      {a.status === 'rejected' && (
-        <button
-          onClick={() => onUpdate(a.id, 'pending')}
-          style={{
-            width: '100%', padding: '0.65rem', borderRadius: 'var(--radius)',
-            background: '#fff', border: '1.5px solid rgba(28,25,23,0.10)',
-            color: 'var(--text-muted)', fontSize: '0.8rem', cursor: 'pointer',
-            transition: 'var(--transition)', fontWeight: 600,
-          }}
-        >
-          שחזר לממתין
+      {/* Export */}
+      <Section title="ייצוא נתונים" icon="📤">
+        <p style={{ fontSize: '0.85rem', color: TM, marginBottom: '1rem' }}>ייצא את כל התורים לקובץ Excel/CSV</p>
+        <button onClick={() => exportCSV(appointments)} style={{ padding: '0.75rem 1.5rem', background: GG, border: `1px solid ${BDRG}`, borderRadius: R, color: GL, fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer' }}>
+          ↓ ייצוא CSV
         </button>
-      )}
+      </Section>
     </div>
   );
 }
+
+// ── Section wrapper ───────────────────────────────────────────
+
+function Section({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
+  return (
+    <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, padding: '1.5rem', marginBottom: '1.25rem' }}>
+      <p style={{ fontSize: '0.7rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: G, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <span>{icon}</span>{title}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+// ── Full App Card ─────────────────────────────────────────────
+
+function FullAppCard({ appt: a, selected, onToggle, onUpdate, isReturning }: {
+  appt: Appointment; selected: boolean; onToggle: () => void;
+  onUpdate: (id: string, s: 'approved' | 'rejected' | 'pending') => void;
+  isReturning: boolean;
+}) {
+  const cfg = S_CFG[a.status as keyof typeof S_CFG];
+  return (
+    <div style={{ background: selected ? 'rgba(201,168,76,0.06)' : B2, border: `1px solid ${selected ? BDRG : BDR}`, borderRadius: RL, padding: '1.125rem 1.25rem', transition: 'all 0.2s' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+        {/* Checkbox */}
+        <div onClick={onToggle} style={{
+          width: 18, height: 18, borderRadius: 4, flexShrink: 0, marginTop: 2, cursor: 'pointer',
+          background: selected ? G : 'transparent',
+          border: `1.5px solid ${selected ? G : BDR}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {selected && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke="#080808" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.375rem' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', fontWeight: 600, color: T, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</p>
+                {isReturning && <span style={{ fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.08em', padding: '0.1rem 0.45rem', background: GG, border: `1px solid ${BDRG}`, borderRadius: 999, color: GL }}>חוזר ✦</span>}
+              </div>
+              <a href={`tel:${a.phone}`} style={{ fontSize: '0.78rem', color: TM, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                📞 {a.phone}
+              </a>
+            </div>
+            <div style={{ flexShrink: 0, textAlign: 'left' }}>
+              <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', fontWeight: 600, color: G, lineHeight: 1 }}>{a.time}</p>
+              <span style={{ display: 'inline-block', marginTop: 4, padding: '0.15rem 0.6rem', borderRadius: 999, fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.bdr}` }}>
+                {cfg.label}
+              </span>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.875rem' }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={G} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
+              <line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>
+            </svg>
+            <span style={{ fontSize: '0.8rem', color: TM }}>{svcName(a.service)}</span>
+            <span style={{ fontSize: '0.72rem', color: TD }}>· ₪{PRICE_MAP[a.service] ?? 0}</span>
+          </div>
+
+          {/* Actions */}
+          {a.status === 'pending' && (
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <a href={waLink(a, WA_TEMPLATES.approve)} target="_blank" rel="noopener noreferrer"
+                onClick={() => onUpdate(a.id, 'approved')}
+                style={{ flex: 1, minWidth: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '0.55rem', borderRadius: 8, background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.28)', color: '#22c55e', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', cursor: 'pointer' }}>
+                <span>✓</span> אשר + שלח
+              </a>
+              <button onClick={() => onUpdate(a.id, 'rejected')}
+                style={{ flex: 1, minWidth: 80, padding: '0.55rem', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', color: '#ef4444', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                ✗ דחה
+              </button>
+              <a href={waLink(a, WA_TEMPLATES.reschedule)} target="_blank" rel="noopener noreferrer"
+                style={{ padding: '0.55rem 0.875rem', borderRadius: 8, background: B4, border: `1px solid ${BDR}`, color: TM, fontSize: '0.75rem', textDecoration: 'none' }}>
+                📅
+              </a>
+            </div>
+          )}
+
+          {a.status === 'approved' && (
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <a href={waLink(a, WA_TEMPLATES.approve)} target="_blank" rel="noopener noreferrer"
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '0.5rem', borderRadius: 8, background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.18)', color: '#22c55e', fontSize: '0.75rem', textDecoration: 'none' }}>
+                💬 שלח WhatsApp
+              </a>
+              <button onClick={() => onUpdate(a.id, 'rejected')} style={{ padding: '0.5rem 0.875rem', borderRadius: 8, background: B4, border: `1px solid ${BDR}`, color: TM, fontSize: '0.75rem', cursor: 'pointer' }}>בטל</button>
+            </div>
+          )}
+
+          {a.status === 'rejected' && (
+            <button onClick={() => onUpdate(a.id, 'pending')} style={{ padding: '0.5rem 1.25rem', borderRadius: 8, background: B4, border: `1px solid ${BDR}`, color: TM, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+              שחזר לממתין
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
