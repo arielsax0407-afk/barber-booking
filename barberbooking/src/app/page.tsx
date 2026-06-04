@@ -187,8 +187,8 @@ export default function HomePage() {
       </div>
 
       {/* ── Services ─────────────────────────────────────── */}
-      <section className="px-6 py-24 max-w-4xl mx-auto">
-        <div className="text-center mb-16">
+      <section style={{ padding: '6rem 1.5rem', maxWidth: '56rem', margin: '0 auto', width: '100%' }}>
+        <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
           <p style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--red)', marginBottom: '1rem', fontWeight: 600 }}>השירותים שלנו</p>
           <h2 className="display display-lg" style={{ color: 'var(--text)' }}>
             <span style={{ fontStyle: 'italic' }}>האמנות</span>{' '}שלנו
@@ -244,7 +244,7 @@ export default function HomePage() {
           <img src="/images/clipper2.png" alt="" style={{ width: '100%' }} />
         </div>
 
-        <div style={{ maxWidth: 960, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: '60rem', margin: '0 auto', width: '100%', position: 'relative', zIndex: 1 }}>
           <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
             <p style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--red)', fontWeight: 600, marginBottom: '0.75rem' }}>פשוט ומהיר</p>
             <h2 className="display display-lg" style={{ color: 'var(--text)' }}>
@@ -271,7 +271,7 @@ export default function HomePage() {
 
       {/* ── Gallery ──────────────────────────────────────── */}
       <section style={{ padding: '5rem 1.5rem', background: 'var(--bg)' }}>
-        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+        <div style={{ maxWidth: '60rem', margin: '0 auto', width: '100%' }}>
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
             <p style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--red)', fontWeight: 600, marginBottom: '0.75rem' }}>הגלריה שלנו</p>
             <h2 className="display display-lg" style={{ color: 'var(--text)' }}>
@@ -303,8 +303,8 @@ export default function HomePage() {
       <TestimonialsSection />
 
       {/* ── Why us ───────────────────────────────────────── */}
-      <section style={{ background: 'var(--bg-2)', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)' }} className="px-6 py-24">
-        <div className="max-w-4xl mx-auto grid gap-12" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+      <section style={{ background: 'var(--bg-2)', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)', padding: '6rem 1.5rem' }}>
+        <div style={{ maxWidth: '56rem', margin: '0 auto', display: 'grid', gap: '3rem', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
           {[
             { icon: '✦', title: 'מקצועיות', body: 'כל ספר עבר הכשרה מקצועית ומביא איתו שנים של ניסיון' },
             { icon: '◈', title: 'אווירה', body: 'מרחב מוקפד ואינטימי שיגרום לכם להרגיש מלכים' },
@@ -320,8 +320,8 @@ export default function HomePage() {
       </section>
 
       {/* ── Final CTA ────────────────────────────────────── */}
-      <section className="px-6 py-32 text-center" style={{ background: 'linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%)' }}>
-        <div className="max-w-xl mx-auto">
+      <section style={{ padding: '8rem 1.5rem', textAlign: 'center', background: 'linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%)' }}>
+        <div style={{ maxWidth: '36rem', margin: '0 auto' }}>
           <p className="serif" style={{ fontSize: '0.8rem', letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: '1.5rem', color: 'var(--red)', fontWeight: 500 }}>מוכן?</p>
           <h2 className="display display-lg mb-8" style={{ color: 'var(--text)' }}>
             קבע את התור{' '}<span style={{ fontStyle: 'italic', fontWeight: 300 }}>שלך</span>
