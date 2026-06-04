@@ -82,15 +82,34 @@ export default function AdminPage() {
     <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '1.5rem',
-      background: `radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,168,76,0.06), transparent 70%), #080808`,
+      background: 'linear-gradient(135deg, #FAF8F4 0%, #F0E8D8 100%)',
     }}>
-      <div className="glass-card animate-fade-up" style={{ width: '100%', maxWidth: 380, padding: '2.5rem' }}>
+      <div className="animate-fade-up" style={{
+        width: '100%', maxWidth: 380, padding: '2.5rem',
+        background: '#fff',
+        borderRadius: 'var(--radius-lg)',
+        boxShadow: '0 4px 24px rgba(28,25,23,0.10), 0 1px 4px rgba(28,25,23,0.06)',
+        border: '1px solid rgba(28,25,23,0.07)',
+      }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div className="serif gold-gradient" style={{ fontSize: '1.75rem', fontWeight: 400, marginBottom: '0.25rem' }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: '50%',
+            background: 'linear-gradient(135deg, var(--amber-dark), var(--amber-light))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 1rem',
+            boxShadow: '0 4px 16px rgba(212,144,10,0.30)',
+          }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
+              <line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/>
+              <line x1="8.12" y1="8.12" x2="12" y2="12"/>
+            </svg>
+          </div>
+          <div className="serif" style={{ fontSize: '1.6rem', fontWeight: 600, color: 'var(--text)', marginBottom: '0.2rem' }}>
             ברבר בודפשט
           </div>
-          <p style={{ fontSize: '0.7rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--text-dim)' }}>
+          <p style={{ fontSize: '0.7rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 600 }}>
             פאנל ניהול
           </p>
         </div>
@@ -111,7 +130,7 @@ export default function AdminPage() {
         </div>
 
         {authError && (
-          <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '0.625rem 1rem', marginBottom: '1rem', color: '#ef4444', fontSize: '0.8rem', textAlign: 'center' }}>
+          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 10, padding: '0.625rem 1rem', marginBottom: '1rem', color: '#991B1B', fontSize: '0.8rem', textAlign: 'center', fontWeight: 500 }}>
             {authError}
           </div>
         )}
@@ -132,24 +151,24 @@ export default function AdminPage() {
 
   /* ── Dashboard ─────────────────────────────────────────── */
   return (
-    <div style={{ minHeight: '100vh', background: '#080808' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       {/* Header */}
       <header style={{
-        borderBottom: '1px solid var(--glass-border)',
-        background: 'rgba(8,8,8,0.9)',
+        borderBottom: '1px solid rgba(28,25,23,0.08)',
+        background: 'rgba(250,248,244,0.96)',
         backdropFilter: 'blur(20px)',
         position: 'sticky', top: 0, zIndex: 50,
         padding: '1rem 1.5rem',
       }}>
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <div>
-            <p className="serif gold-gradient" style={{ fontSize: '1.25rem', lineHeight: 1 }}>ברבר בודפשט</p>
-            <p style={{ fontSize: '0.65rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-dim)', marginTop: '0.2rem' }}>לוח ניהול</p>
+            <p className="serif" style={{ fontSize: '1.25rem', lineHeight: 1, color: 'var(--text)', fontWeight: 600 }}>ברבר בודפשט</p>
+            <p style={{ fontSize: '0.65rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--amber)', marginTop: '0.2rem', fontWeight: 700 }}>לוח ניהול</p>
           </div>
           <button
             className="btn-ghost"
             onClick={() => setAuthed(false)}
-            style={{ fontSize: '0.75rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}
+            style={{ fontSize: '0.75rem', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}
           >
             יציאה
           </button>
@@ -160,15 +179,20 @@ export default function AdminPage() {
         {/* Stats row */}
         <div className="grid gap-3 mb-8 animate-fade-up" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
           {[
-            { key: 'pending', label: 'ממתינים', color: '#f59e0b' },
-            { key: 'approved', label: 'מאושרים', color: '#22c55e' },
-            { key: 'rejected', label: 'נדחו', color: '#ef4444' },
-          ].map(({ key, label, color }) => (
-            <div key={key} className="glass-card" style={{ padding: '1rem', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.75rem', fontFamily: 'var(--font-display)', fontWeight: 400, color, lineHeight: 1 }}>
+            { key: 'pending',  label: 'ממתינים', color: '#92400E', bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.28)', numColor: '#D97706' },
+            { key: 'approved', label: 'מאושרים', color: '#065F46', bg: 'rgba(16,185,129,0.10)', border: 'rgba(16,185,129,0.26)', numColor: '#059669' },
+            { key: 'rejected', label: 'נדחו',    color: '#991B1B', bg: 'rgba(239,68,68,0.09)',  border: 'rgba(239,68,68,0.22)',   numColor: '#DC2626' },
+          ].map(({ key, label, color, bg, border, numColor }) => (
+            <div key={key} style={{
+              padding: '1.125rem', textAlign: 'center',
+              background: bg, border: `1px solid ${border}`,
+              borderRadius: 'var(--radius-lg)',
+              transition: 'var(--transition)',
+            }}>
+              <div style={{ fontSize: '2rem', fontFamily: 'var(--font-display)', fontWeight: 600, color: numColor, lineHeight: 1 }}>
                 {counts[key as keyof typeof counts]}
               </div>
-              <div style={{ fontSize: '0.65rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)', marginTop: '0.375rem' }}>{label}</div>
+              <div style={{ fontSize: '0.65rem', letterSpacing: '0.1em', textTransform: 'uppercase', color, marginTop: '0.375rem', fontWeight: 700 }}>{label}</div>
             </div>
           ))}
         </div>
@@ -183,19 +207,20 @@ export default function AdminPage() {
                 padding: '0.5rem 1.125rem',
                 borderRadius: 999,
                 fontSize: '0.75rem',
-                fontWeight: 500,
-                letterSpacing: '0.08em',
+                fontWeight: 700,
+                letterSpacing: '0.07em',
                 textTransform: 'uppercase',
                 whiteSpace: 'nowrap',
                 cursor: 'pointer',
                 transition: 'var(--transition)',
-                background: filter === f ? 'linear-gradient(135deg, var(--gold-dim), var(--gold-light))' : 'var(--glass)',
-                border: filter === f ? '1px solid var(--gold)' : '1px solid var(--glass-border)',
-                color: filter === f ? '#080808' : 'var(--text-muted)',
+                background: filter === f ? 'linear-gradient(135deg, var(--amber-dark), var(--amber-light))' : '#fff',
+                border: filter === f ? '1.5px solid var(--amber)' : '1.5px solid rgba(28,25,23,0.10)',
+                color: filter === f ? '#fff' : 'var(--text-muted)',
+                boxShadow: filter === f ? 'var(--shadow-amber)' : 'none',
               }}
             >
               {f === 'all' ? 'הכל' : STATUS[f].label}
-              <span style={{ marginRight: 6, opacity: 0.7 }}>({counts[f]})</span>
+              <span style={{ marginRight: 6, opacity: 0.75 }}>({counts[f]})</span>
             </button>
           ))}
         </div>
@@ -203,24 +228,24 @@ export default function AdminPage() {
         {/* Content */}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '4rem 0' }}>
-            <div style={{ width: 28, height: 28, border: '2px solid var(--gold)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto', animation: 'spin-slow 0.8s linear infinite' }} />
+            <div style={{ width: 28, height: 28, border: '2.5px solid var(--amber)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto', animation: 'spin-slow 0.8s linear infinite' }} />
           </div>
         ) : dates.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '4rem 0', color: 'var(--text-dim)' }}>
-            <p className="serif" style={{ fontSize: '1.5rem', fontWeight: 300, marginBottom: '0.5rem' }}>אין תורים</p>
-            <p style={{ fontSize: '0.875rem' }}>לא נמצאו תורים בקטגוריה זו</p>
+            <p className="serif" style={{ fontSize: '1.5rem', fontWeight: 400, marginBottom: '0.5rem', color: 'var(--text)' }}>אין תורים</p>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>לא נמצאו תורים בקטגוריה זו</p>
           </div>
         ) : (
           dates.map((date) => (
             <div key={date} className="mb-8 animate-fade-up">
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
-                  <p className="serif" style={{ fontSize: '1.25rem', fontWeight: 400 }}>{formatDate(date)}</p>
-                  <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', letterSpacing: '0.1em' }}>
+                  <p className="serif" style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text)' }}>{formatDate(date)}</p>
+                  <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', letterSpacing: '0.1em', fontWeight: 600 }}>
                     {grouped[date].length} {grouped[date].length === 1 ? 'תור' : 'תורים'}
                   </p>
                 </div>
-                <div style={{ flex: 1, height: 1, background: 'var(--glass-border)' }} />
+                <div style={{ flex: 1, height: 1, background: 'rgba(28,25,23,0.09)' }} />
               </div>
               <div className="flex flex-col gap-3">
                 {grouped[date].map((a) => <AppCard key={a.id} appt={a} onUpdate={updateStatus} />)}
@@ -243,14 +268,21 @@ function AppCard({ appt: a, onUpdate }: {
   const st = STATUS[a.status];
 
   return (
-    <div className="glass-card" style={{ padding: '1.25rem 1.5rem' }}>
+    <div style={{
+      background: '#fff',
+      border: '1px solid rgba(28,25,23,0.08)',
+      borderRadius: 'var(--radius-lg)',
+      padding: '1.25rem 1.5rem',
+      boxShadow: 'var(--shadow-card)',
+      transition: 'var(--transition)',
+    }}>
       {/* Top row */}
       <div className="flex justify-between items-start mb-3">
         <div>
-          <p style={{ fontSize: '1.1rem', fontFamily: 'var(--font-display)', fontWeight: 400, marginBottom: '0.2rem' }}>{a.name}</p>
+          <p style={{ fontSize: '1.05rem', fontFamily: 'var(--font-display)', fontWeight: 600, marginBottom: '0.2rem', color: 'var(--text)' }}>{a.name}</p>
           <a
             href={`tel:${a.phone}`}
-            style={{ fontSize: '0.8rem', color: 'var(--text-muted)', letterSpacing: '0.03em', display: 'flex', alignItems: 'center', gap: 4 }}
+            style={{ fontSize: '0.8rem', color: 'var(--text-muted)', letterSpacing: '0.03em', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 11.7 19.79 19.79 0 01.01 3.1 2 2 0 012 .92h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
@@ -258,20 +290,20 @@ function AppCard({ appt: a, onUpdate }: {
             {a.phone}
           </a>
         </div>
-        <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-          <p className="serif gold" style={{ fontSize: '1.25rem', fontWeight: 500, lineHeight: 1 }}>{a.time}</p>
+        <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
+          <p className="serif" style={{ fontSize: '1.3rem', fontWeight: 600, lineHeight: 1, color: 'var(--amber)' }}>{a.time}</p>
           <span className={`badge ${st.badge}`}>{st.label}</span>
         </div>
       </div>
 
       {/* Service */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '1rem' }}>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
           <line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/>
           <line x1="8.12" y1="8.12" x2="12" y2="12"/>
         </svg>
-        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{svc}</span>
+        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 500 }}>{svc}</span>
       </div>
 
       {/* Actions */}
@@ -284,10 +316,10 @@ function AppCard({ appt: a, onUpdate }: {
             onClick={() => onUpdate(a.id, 'approved')}
             style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              padding: '0.625rem', borderRadius: 'var(--radius)',
-              background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)',
-              color: '#22c55e', fontSize: '0.8rem', fontWeight: 500,
-              letterSpacing: '0.05em', textDecoration: 'none', cursor: 'pointer',
+              padding: '0.65rem', borderRadius: 'var(--radius)',
+              background: 'rgba(16,185,129,0.10)', border: '1.5px solid rgba(16,185,129,0.28)',
+              color: '#065F46', fontSize: '0.8rem', fontWeight: 700,
+              letterSpacing: '0.04em', textDecoration: 'none', cursor: 'pointer',
               transition: 'var(--transition)',
             }}
           >
@@ -299,9 +331,9 @@ function AppCard({ appt: a, onUpdate }: {
           <button
             onClick={() => onUpdate(a.id, 'rejected')}
             style={{
-              flex: 1, padding: '0.625rem', borderRadius: 'var(--radius)',
-              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-              color: '#ef4444', fontSize: '0.8rem', fontWeight: 500, cursor: 'pointer',
+              flex: 1, padding: '0.65rem', borderRadius: 'var(--radius)',
+              background: 'rgba(239,68,68,0.08)', border: '1.5px solid rgba(239,68,68,0.22)',
+              color: '#991B1B', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer',
               transition: 'var(--transition)',
             }}
           >
@@ -318,9 +350,9 @@ function AppCard({ appt: a, onUpdate }: {
             rel="noopener noreferrer"
             style={{
               flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              padding: '0.625rem', borderRadius: 'var(--radius)',
-              background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.15)',
-              color: '#22c55e', fontSize: '0.8rem', textDecoration: 'none',
+              padding: '0.65rem', borderRadius: 'var(--radius)',
+              background: 'rgba(16,185,129,0.08)', border: '1.5px solid rgba(16,185,129,0.22)',
+              color: '#065F46', fontSize: '0.8rem', textDecoration: 'none', fontWeight: 600,
             }}
           >
             שלח הודעת WhatsApp
@@ -328,9 +360,10 @@ function AppCard({ appt: a, onUpdate }: {
           <button
             onClick={() => onUpdate(a.id, 'rejected')}
             style={{
-              padding: '0.625rem 1rem', borderRadius: 'var(--radius)',
-              background: 'var(--glass)', border: '1px solid var(--glass-border)',
+              padding: '0.65rem 1rem', borderRadius: 'var(--radius)',
+              background: '#fff', border: '1.5px solid rgba(28,25,23,0.10)',
               color: 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer',
+              fontWeight: 600,
             }}
           >
             בטל
@@ -342,10 +375,10 @@ function AppCard({ appt: a, onUpdate }: {
         <button
           onClick={() => onUpdate(a.id, 'pending')}
           style={{
-            width: '100%', padding: '0.625rem', borderRadius: 'var(--radius)',
-            background: 'var(--glass)', border: '1px solid var(--glass-border)',
+            width: '100%', padding: '0.65rem', borderRadius: 'var(--radius)',
+            background: '#fff', border: '1.5px solid rgba(28,25,23,0.10)',
             color: 'var(--text-muted)', fontSize: '0.8rem', cursor: 'pointer',
-            transition: 'var(--transition)',
+            transition: 'var(--transition)', fontWeight: 600,
           }}
         >
           שחזר לממתין

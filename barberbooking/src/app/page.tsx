@@ -12,14 +12,14 @@ const SERVICES_PREVIEW = [
 export default function HomePage() {
   return (
     <div className="page-bg">
-      {/* ── Hero ─────────────────────────────────────── */}
+      {/* ── Hero ─────────────────────────────────────────────── */}
       <section
         className="relative min-h-screen flex flex-col overflow-hidden"
         style={{
           background: `
-            radial-gradient(ellipse 100% 60% at 50% 0%, rgba(201,168,76,0.07) 0%, transparent 60%),
-            radial-gradient(ellipse 60% 80% at 80% 50%, rgba(201,168,76,0.04) 0%, transparent 60%),
-            #080808
+            radial-gradient(ellipse 80% 50% at 40% 10%, rgba(212,144,10,0.11) 0%, transparent 55%),
+            radial-gradient(ellipse 55% 40% at 72% 58%, rgba(15,118,110,0.07) 0%, transparent 50%),
+            linear-gradient(150deg, #0D1B2A 0%, #0F2338 60%, #0A1523 100%)
           `,
         }}
       >
@@ -28,19 +28,19 @@ export default function HomePage() {
           <div style={{
             position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
             width: 1, height: '100%',
-            background: 'linear-gradient(180deg, transparent, rgba(201,168,76,0.08) 30%, rgba(201,168,76,0.08) 70%, transparent)',
+            background: 'linear-gradient(180deg, transparent, rgba(212,144,10,0.09) 30%, rgba(212,144,10,0.09) 70%, transparent)',
           }} />
           <div style={{
             position: 'absolute', top: '20%', left: 0, right: 0, height: 1,
-            background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.06), transparent)',
+            background: 'linear-gradient(90deg, transparent, rgba(212,144,10,0.07), transparent)',
           }} />
           <div style={{
             position: 'absolute', bottom: '20%', left: 0, right: 0, height: 1,
-            background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.06), transparent)',
+            background: 'linear-gradient(90deg, transparent, rgba(212,144,10,0.07), transparent)',
           }} />
           {/* Corner accents */}
-          <div style={{ position: 'absolute', top: 32, right: 32, width: 60, height: 60, borderTop: '1px solid rgba(201,168,76,0.2)', borderRight: 'none', borderBottom: 'none', borderLeft: '1px solid rgba(201,168,76,0.2)' }} />
-          <div style={{ position: 'absolute', bottom: 32, left: 32, width: 60, height: 60, borderBottom: '1px solid rgba(201,168,76,0.2)', borderLeft: 'none', borderTop: 'none', borderRight: '1px solid rgba(201,168,76,0.2)' }} />
+          <div style={{ position: 'absolute', top: 32, right: 32, width: 60, height: 60, borderTop: '1px solid rgba(212,144,10,0.28)', borderRight: 'none', borderBottom: 'none', borderLeft: '1px solid rgba(212,144,10,0.28)' }} />
+          <div style={{ position: 'absolute', bottom: 32, left: 32, width: 60, height: 60, borderBottom: '1px solid rgba(212,144,10,0.28)', borderLeft: 'none', borderTop: 'none', borderRight: '1px solid rgba(212,144,10,0.28)' }} />
         </div>
 
         {/* Nav */}
@@ -48,7 +48,7 @@ export default function HomePage() {
           <div className="flex items-center gap-2">
             <ScissorIcon />
           </div>
-          <span className="serif" style={{ fontSize: '0.75rem', letterSpacing: '0.2em', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+          <span className="serif" style={{ fontSize: '0.75rem', letterSpacing: '0.2em', color: 'rgba(250,248,244,0.52)', textTransform: 'uppercase' }}>
             תל אביב · א׳–ו׳
           </span>
         </nav>
@@ -58,27 +58,27 @@ export default function HomePage() {
 
           {/* Eyebrow */}
           <div className="animate-fade-up flex items-center gap-3 mb-8">
-            <div style={{ width: 40, height: 1, background: 'var(--gold)', opacity: 0.5 }} />
+            <div style={{ width: 40, height: 1, background: 'var(--amber)', opacity: 0.65 }} />
             <span style={{
-              fontSize: '0.7rem', letterSpacing: '0.25em',
-              textTransform: 'uppercase', color: 'var(--gold)', fontWeight: 500,
+              fontSize: '0.7rem', letterSpacing: '0.28em',
+              textTransform: 'uppercase', color: 'var(--amber)', fontWeight: 600,
             }}>
               מספרה יוקרתית בתל אביב
             </span>
-            <div style={{ width: 40, height: 1, background: 'var(--gold)', opacity: 0.5 }} />
+            <div style={{ width: 40, height: 1, background: 'var(--amber)', opacity: 0.65 }} />
           </div>
 
           {/* Main title */}
           <h1 className="display display-xl animate-fade-up delay-100" style={{ maxWidth: 700 }}>
             <span className="gold-gradient">ברבר</span>
             <br />
-            <span style={{ color: 'var(--text)', fontStyle: 'italic', fontWeight: 300 }}>בודפשט</span>
+            <span style={{ color: '#FAF8F4', fontStyle: 'italic', fontWeight: 300 }}>בודפשט</span>
           </h1>
 
           {/* Tagline */}
           <p className="animate-fade-up delay-200" style={{
             fontSize: 'clamp(1rem, 2.5vw, 1.25rem)',
-            color: 'var(--text-muted)',
+            color: 'rgba(250,248,244,0.62)',
             marginTop: '1.5rem',
             maxWidth: 400,
             lineHeight: 1.7,
@@ -99,7 +99,7 @@ export default function HomePage() {
             {[['500+', 'לקוחות מרוצים'], ['5★', 'דירוג ממוצע'], ['8+', 'שנות ניסיון']].map(([num, label]) => (
               <div key={label} className="text-center">
                 <div className="serif gold-gradient" style={{ fontSize: '1.75rem', fontWeight: 500, lineHeight: 1 }}>{num}</div>
-                <div style={{ fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-dim)', marginTop: '0.375rem' }}>{label}</div>
+                <div style={{ fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(250,248,244,0.38)', marginTop: '0.375rem' }}>{label}</div>
               </div>
             ))}
           </div>
@@ -107,19 +107,19 @@ export default function HomePage() {
 
         {/* Bottom scroll cue */}
         <div className="animate-fade-up delay-500 flex justify-center pb-10">
-          <div className="animate-float" style={{ color: 'var(--text-dim)', fontSize: '0.75rem', letterSpacing: '0.15em', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 1, height: 40, background: 'linear-gradient(180deg, transparent, rgba(201,168,76,0.4))' }} />
+          <div className="animate-float" style={{ color: 'rgba(250,248,244,0.38)', fontSize: '0.75rem', letterSpacing: '0.15em', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 1, height: 40, background: 'linear-gradient(180deg, transparent, rgba(212,144,10,0.50))' }} />
             <span style={{ textTransform: 'uppercase' }}>גלול</span>
           </div>
         </div>
       </section>
 
-      {/* ── Services ─────────────────────────────────── */}
+      {/* ── Services ─────────────────────────────────────────── */}
       <section className="px-6 py-24 max-w-4xl mx-auto">
         <div className="text-center mb-16">
-          <p style={{ fontSize: '0.7rem', letterSpacing: '0.25em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '1rem' }}>השירותים שלנו</p>
-          <h2 className="display display-lg">
-            <span style={{ fontStyle: 'italic', fontWeight: 300 }}>האמנות</span>
+          <p style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--amber)', marginBottom: '1rem', fontWeight: 600 }}>השירותים שלנו</p>
+          <h2 className="display display-lg" style={{ color: 'var(--text)' }}>
+            <span style={{ fontStyle: 'italic', fontWeight: 400 }}>האמנות</span>
             {' '}שלנו
           </h2>
         </div>
@@ -129,17 +129,22 @@ export default function HomePage() {
             <div
               key={s.name}
               className={`glass-card p-6 animate-fade-up delay-${(i + 1) * 100}`}
-              style={{ animationFillMode: 'both' }}
+              style={{ animationFillMode: 'both', background: '#fff' }}
             >
-              <div style={{ marginBottom: '0.5rem' }}>
-                <div className="divider" style={{ margin: '0 0 1rem 0' }} />
-              </div>
-              <div className="flex items-start justify-between">
-                <div>
-                  <p style={{ fontSize: '1.1rem', fontFamily: 'var(--font-display)', fontWeight: 400, marginBottom: '0.25rem' }}>{s.name}</p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', letterSpacing: '0.05em' }}>{s.duration}</p>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--amber)', letterSpacing: '0.12em', opacity: 0.75, paddingTop: 4 }}>
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <div style={{ flex: 1 }}>
+                  <div className="divider" style={{ margin: '0 0 0.875rem 0' }} />
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p style={{ fontSize: '1.05rem', fontFamily: 'var(--font-display)', fontWeight: 500, marginBottom: '0.25rem', color: 'var(--text)' }}>{s.name}</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', letterSpacing: '0.05em' }}>{s.duration}</p>
+                    </div>
+                    <span className="serif" style={{ color: 'var(--amber)', fontSize: '1.25rem', fontWeight: 600 }}>{s.price}</span>
+                  </div>
                 </div>
-                <span className="gold serif" style={{ fontSize: '1.25rem', fontWeight: 500 }}>{s.price}</span>
               </div>
             </div>
           ))}
@@ -152,8 +157,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Why us ───────────────────────────────────── */}
-      <section style={{ borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)' }}
+      {/* ── Why us ───────────────────────────────────────────── */}
+      <section style={{ background: 'var(--bg-2)', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)' }}
         className="px-6 py-24">
         <div className="max-w-4xl mx-auto grid gap-12" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
           {[
@@ -162,21 +167,21 @@ export default function HomePage() {
             { icon: '◆', title: 'דיוק', body: 'תספורת מושלמת, כל פעם. ללא פשרות, ללא חצי עבודות' },
           ].map((item) => (
             <div key={item.title} className="text-center">
-              <div className="gold serif" style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>{item.icon}</div>
-              <h3 className="serif" style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{item.title}</h3>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>{item.body}</p>
+              <div style={{ fontSize: '1.5rem', marginBottom: '1rem', color: 'var(--amber)' }}>{item.icon}</div>
+              <h3 className="serif" style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: 'var(--text)', fontWeight: 600 }}>{item.title}</h3>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>{item.body}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── Final CTA ────────────────────────────────── */}
-      <section className="px-6 py-32 text-center">
+      {/* ── Final CTA ────────────────────────────────────────── */}
+      <section className="px-6 py-32 text-center" style={{ background: 'linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%)' }}>
         <div className="max-w-xl mx-auto">
-          <p className="gold serif" style={{ fontSize: '0.8rem', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '1.5rem' }}>
+          <p className="serif" style={{ fontSize: '0.8rem', letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: '1.5rem', color: 'var(--amber)', fontWeight: 500 }}>
             מוכן?
           </p>
-          <h2 className="display display-lg mb-8">
+          <h2 className="display display-lg mb-8" style={{ color: 'var(--text)' }}>
             קבע את התור{' '}
             <span style={{ fontStyle: 'italic', fontWeight: 300 }}>שלך</span>
           </h2>
@@ -189,10 +194,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Footer ───────────────────────────────────── */}
-      <footer style={{ borderTop: '1px solid var(--glass-border)', padding: '2rem 1.5rem', textAlign: 'center' }}>
-        <p className="serif gold-gradient" style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>ברבר בודפשט</p>
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', letterSpacing: '0.1em' }}>תל אביב · א׳–ו׳ 9:00–19:00</p>
+      {/* ── Footer ───────────────────────────────────────────── */}
+      <footer style={{ background: 'var(--surface-dark)', padding: '2.5rem 1.5rem', textAlign: 'center' }}>
+        <p className="serif gold-gradient" style={{ fontSize: '1.35rem', marginBottom: '0.5rem' }}>ברבר בודפשט</p>
+        <p style={{ fontSize: '0.75rem', color: 'rgba(250,248,244,0.38)', letterSpacing: '0.1em' }}>תל אביב · א׳–ו׳ 9:00–19:00</p>
       </footer>
     </div>
   );
@@ -200,7 +205,7 @@ export default function HomePage() {
 
 function ScissorIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
       <line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/>
       <line x1="8.12" y1="8.12" x2="12" y2="12"/>

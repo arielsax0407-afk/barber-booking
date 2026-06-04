@@ -66,21 +66,21 @@ export default function BookPage() {
           {/* Check circle */}
           <div className="mx-auto mb-8 flex items-center justify-center animate-pulse-gold" style={{
             width: 88, height: 88, borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(34,197,94,0.15), transparent)',
-            border: '1px solid rgba(34,197,94,0.3)',
+            background: 'radial-gradient(circle, rgba(16,185,129,0.14), transparent)',
+            border: '1.5px solid rgba(16,185,129,0.32)',
           }}>
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
           </div>
 
-          <p style={{ fontSize: '0.7rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '0.75rem' }}>הצלחה</p>
-          <h2 className="serif" style={{ fontSize: '2.25rem', fontWeight: 300, marginBottom: '0.75rem' }}>התור נקבע!</h2>
+          <p style={{ fontSize: '0.7rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--amber)', marginBottom: '0.75rem', fontWeight: 600 }}>הצלחה</p>
+          <h2 className="serif" style={{ fontSize: '2.25rem', fontWeight: 400, marginBottom: '0.75rem', color: 'var(--text)' }}>התור נקבע!</h2>
           <p style={{ color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '2rem', fontSize: '0.9rem' }}>
             הבקשה שלך התקבלה. הספר יאשר אותה בהקדם וישלח אישור.
           </p>
 
-          <div className="glass-card p-6 text-right mb-6" style={{ gap: '0.75rem', display: 'flex', flexDirection: 'column' }}>
+          <div className="glass-card p-6 text-right mb-6" style={{ gap: '0.75rem', display: 'flex', flexDirection: 'column', background: '#fff' }}>
             {[
               ['שירות', svcObj?.name ?? ''],
               ['תאריך', formatDate(date)],
@@ -89,13 +89,13 @@ export default function BookPage() {
               ['טלפון', phone],
             ].map(([l, v]) => (
               <div key={l} className="flex justify-between items-center" style={{ fontSize: '0.875rem' }}>
-                <span style={{ color: 'var(--text-dim)', fontSize: '0.75rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{l}</span>
-                <span style={{ fontWeight: 500 }}>{v}</span>
+                <span style={{ color: 'var(--text-dim)', fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600 }}>{l}</span>
+                <span style={{ fontWeight: 600, color: 'var(--text)' }}>{v}</span>
               </div>
             ))}
             <div className="divider" style={{ margin: '0.25rem 0' }} />
             <div className="flex justify-between items-center">
-              <span style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)' }}>סטטוס</span>
+              <span style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 600 }}>סטטוס</span>
               <span className="badge badge-pending">ממתין לאישור</span>
             </div>
           </div>
@@ -117,17 +117,17 @@ export default function BookPage() {
           <button
             className="btn-ghost"
             onClick={() => { if (stepIndex === 0) router.push('/'); else setStep(STEPS[stepIndex - 1]); }}
-            style={{ padding: '0.5rem', borderRadius: '50%', width: 40, height: 40 }}
+            style={{ padding: '0.5rem', borderRadius: '50%', width: 40, height: 40, background: 'rgba(28,25,23,0.06)' }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>
           </button>
           <div>
-            <p style={{ fontSize: '0.65rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: '0.125rem' }}>
+            <p style={{ fontSize: '0.65rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--amber)', marginBottom: '0.125rem', fontWeight: 700 }}>
               קביעת תור
             </p>
-            <h1 className="serif" style={{ fontSize: '1.5rem', fontWeight: 400 }}>{STEP_LABELS[step]}</h1>
+            <h1 className="serif" style={{ fontSize: '1.5rem', fontWeight: 500, color: 'var(--text)' }}>{STEP_LABELS[step]}</h1>
           </div>
         </div>
 
@@ -152,7 +152,7 @@ export default function BookPage() {
           {/* Service */}
           {step === 'service' && (
             <div>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
                 בחר את השירות הרצוי
               </p>
               <div className="flex flex-col gap-3">
@@ -161,18 +161,18 @@ export default function BookPage() {
                     key={s.id}
                     onClick={() => setService(s.id)}
                     className={`glass-card ${service === s.id ? 'card-selected' : ''}`}
-                    style={{ padding: '1.25rem 1.5rem', textAlign: 'right', width: '100%', cursor: 'pointer', background: 'none', border: '1px solid var(--glass-border)' }}
+                    style={{ padding: '1.25rem 1.5rem', textAlign: 'right', width: '100%', cursor: 'pointer', background: service === s.id ? undefined : '#fff', border: '1px solid var(--glass-border)' }}
                   >
                     <div className="flex justify-between items-center">
                       <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontSize: '1.1rem', fontFamily: 'var(--font-display)', fontWeight: 400, marginBottom: '0.25rem' }}>{s.name}</p>
+                        <p style={{ fontSize: '1.05rem', fontFamily: 'var(--font-display)', fontWeight: 500, marginBottom: '0.25rem', color: 'var(--text)' }}>{s.name}</p>
                         <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', letterSpacing: '0.05em' }}>{s.duration} דקות</p>
                       </div>
                       <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                        <span className="serif gold" style={{ fontSize: '1.375rem', fontWeight: 500 }}>{s.price}</span>
+                        <span className="serif" style={{ color: 'var(--amber)', fontSize: '1.375rem', fontWeight: 600 }}>{s.price}</span>
                         {service === s.id && (
-                          <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#080808" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                          <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--amber)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                           </div>
                         )}
                       </div>
@@ -189,10 +189,10 @@ export default function BookPage() {
           {/* Date */}
           {step === 'date' && (
             <div>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
                 בחר תאריך לתור
               </p>
-              <div className="glass-card" style={{ padding: '0.5rem' }}>
+              <div className="glass-card" style={{ padding: '0.5rem', background: '#fff' }}>
                 <input
                   type="date"
                   min={getMinDate()}
@@ -203,8 +203,8 @@ export default function BookPage() {
                 />
               </div>
               {date && (
-                <div className="glass-card-gold mt-4" style={{ padding: '1rem 1.5rem', textAlign: 'center' }}>
-                  <p className="serif" style={{ fontSize: '1.1rem', color: 'var(--gold)' }}>{formatDate(date)}</p>
+                <div className="glass-card-amber mt-4" style={{ padding: '1rem 1.5rem', textAlign: 'center' }}>
+                  <p className="serif" style={{ fontSize: '1.1rem', color: 'var(--amber)', fontWeight: 500 }}>{formatDate(date)}</p>
                 </div>
               )}
               <button className="btn-primary mt-8" disabled={!date} onClick={() => { loadSlots(date); setStep('time'); }} style={{ width: '100%' }}>
@@ -216,12 +216,12 @@ export default function BookPage() {
           {/* Time */}
           {step === 'time' && (
             <div>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
                 {formatDate(date)} — בחר שעה פנויה
               </p>
               {loadingSlots ? (
                 <div className="text-center py-16">
-                  <div style={{ width: 32, height: 32, border: '2px solid var(--gold)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto', animation: 'spin-slow 0.8s linear infinite' }} />
+                  <div style={{ width: 32, height: 32, border: '2.5px solid var(--amber)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto', animation: 'spin-slow 0.8s linear infinite' }} />
                   <p style={{ color: 'var(--text-dim)', marginTop: '1rem', fontSize: '0.875rem' }}>טוען שעות פנויות...</p>
                 </div>
               ) : (
@@ -238,18 +238,18 @@ export default function BookPage() {
                           padding: '0.75rem 0.5rem',
                           borderRadius: 'var(--radius)',
                           fontSize: '0.875rem',
-                          fontWeight: selected ? 600 : 400,
+                          fontWeight: selected ? 700 : 500,
                           cursor: taken ? 'not-allowed' : 'pointer',
                           transition: 'var(--transition)',
                           background: selected
-                            ? 'linear-gradient(135deg, var(--gold-dim), var(--gold-light))'
-                            : taken ? 'rgba(255,255,255,0.02)' : 'var(--glass)',
+                            ? 'linear-gradient(135deg, var(--amber-dark), var(--amber-light))'
+                            : taken ? 'rgba(28,25,23,0.03)' : '#fff',
                           border: selected
-                            ? '1px solid var(--gold)'
-                            : taken ? '1px solid rgba(255,255,255,0.04)' : '1px solid var(--glass-border)',
-                          color: selected ? '#080808' : taken ? 'var(--text-dim)' : 'var(--text)',
+                            ? '1.5px solid var(--amber)'
+                            : taken ? '1px solid rgba(28,25,23,0.06)' : '1px solid var(--glass-border)',
+                          color: selected ? '#fff' : taken ? 'var(--text-dim)' : 'var(--text)',
                           textDecoration: taken ? 'line-through' : 'none',
-                          boxShadow: selected ? '0 0 20px rgba(201,168,76,0.3)' : 'none',
+                          boxShadow: selected ? 'var(--shadow-amber)' : taken ? 'none' : 'var(--shadow-card)',
                         }}
                       >
                         {slot}
@@ -267,7 +267,7 @@ export default function BookPage() {
           {/* Details */}
           {step === 'details' && (
             <div>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
                 הזן את פרטיך לאישור התור
               </p>
               <div className="flex flex-col gap-5">
@@ -294,10 +294,10 @@ export default function BookPage() {
           {/* Confirm */}
           {step === 'confirm' && (
             <div>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
                 אמת את פרטי התור לפני הקביעה
               </p>
-              <div className="glass-card p-6 mb-6">
+              <div className="glass-card p-6 mb-6" style={{ background: '#fff' }}>
                 {[
                   ['שירות', SERVICES.find((s) => s.id === service)?.name ?? ''],
                   ['תאריך', formatDate(date)],
@@ -308,20 +308,20 @@ export default function BookPage() {
                   <div key={l}>
                     {i > 0 && <div className="divider" style={{ margin: '0.75rem 0' }} />}
                     <div className="flex justify-between items-center">
-                      <span style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)' }}>{l}</span>
-                      <span style={{ fontWeight: 500, fontSize: '0.9375rem' }}>{v}</span>
+                      <span style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 700 }}>{l}</span>
+                      <span style={{ fontWeight: 600, fontSize: '0.9375rem', color: 'var(--text)' }}>{v}</span>
                     </div>
                   </div>
                 ))}
                 <div className="divider" style={{ margin: '0.75rem 0' }} />
                 <div className="flex justify-between items-center">
-                  <span style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)' }}>מחיר</span>
-                  <span className="serif gold" style={{ fontSize: '1.125rem' }}>{SERVICES.find((s) => s.id === service)?.price}</span>
+                  <span style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 700 }}>מחיר</span>
+                  <span className="serif" style={{ color: 'var(--amber)', fontSize: '1.125rem', fontWeight: 600 }}>{SERVICES.find((s) => s.id === service)?.price}</span>
                 </div>
               </div>
 
               {error && (
-                <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius)', padding: '0.75rem 1rem', marginBottom: '1.25rem', color: '#ef4444', fontSize: '0.875rem', textAlign: 'center' }}>
+                <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 'var(--radius)', padding: '0.75rem 1rem', marginBottom: '1.25rem', color: '#991B1B', fontSize: '0.875rem', textAlign: 'center', fontWeight: 500 }}>
                   {error}
                 </div>
               )}
@@ -329,7 +329,7 @@ export default function BookPage() {
               <button className="btn-primary" onClick={handleSubmit} disabled={submitting} style={{ width: '100%' }}>
                 {submitting ? (
                   <span className="flex items-center justify-center gap-2">
-                    <span style={{ width: 14, height: 14, border: '2px solid #080808', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin-slow 0.7s linear infinite' }} />
+                    <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.6)', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin-slow 0.7s linear infinite' }} />
                     שולח...
                   </span>
                 ) : 'אשר וקבע תור'}
