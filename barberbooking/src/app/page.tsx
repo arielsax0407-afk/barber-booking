@@ -156,7 +156,8 @@ export default function HomePage() {
           <div className="animate-fade-up delay-400 flex items-center gap-8 mt-16">
             {[['500+', 'לקוחות מרוצים'], ['4.9★', 'דירוג גוגל'], ['8+', 'שנות ניסיון']].map(([num, label]) => (
               <div key={label} className="text-center">
-                <div className="serif gold-gradient" style={{ fontSize: '1.75rem', fontWeight: 500, lineHeight: 1 }}>{num}</div>
+                {/* dir=ltr prevents Unicode bidi from reversing "500+" to "+500" */}
+                <div className="serif gold-gradient" dir="ltr" style={{ fontSize: '1.75rem', fontWeight: 500, lineHeight: 1 }}>{num}</div>
                 <div style={{ fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(250,248,244,0.38)', marginTop: '0.375rem' }}>{label}</div>
               </div>
             ))}
@@ -172,7 +173,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Social proof ticker ───────────────────────────── */}
-      <div style={{ background: 'var(--surface-dark)', padding: '0.9rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '2.5rem', flexWrap: 'wrap', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+      <div className="proof-ticker" style={{ background: 'var(--surface-dark)', padding: '0.9rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '2.5rem', flexWrap: 'wrap', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
         {[
           { icon: '🔥', text: 'מעל 47 תורים החודש' },
           { icon: '⭐', text: 'דירוג 4.9 בגוגל' },
@@ -194,20 +195,29 @@ export default function HomePage() {
           </h2>
         </div>
 
-        <div className="grid grid-cols-2 gap-4" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
+        {/* 1-col mobile, 2-col desktop */}
+        <div className="grid gap-4 services-grid">
           {SERVICES_PREVIEW.map((s, i) => (
-            <div key={s.name} className={`glass-card p-6 animate-fade-up delay-${(i + 1) * 100}`} style={{ animationFillMode: 'both', background: '#fff' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--red)', letterSpacing: '0.12em', opacity: 0.7, paddingTop: 4 }}>{String(i + 1).padStart(2, '0')}</span>
+            <div
+              key={s.name}
+              className={`glass-card animate-fade-up delay-${(i + 1) * 100}`}
+              style={{ animationFillMode: 'both', background: '#fff', padding: '1.25rem 1.5rem' }}
+            >
+              {/* Row: name+duration (right) | price+number (left) — RTL flex */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                {/* Right side — name & duration */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="divider" style={{ margin: '0 0 0.875rem 0' }} />
-                  <div className="flex items-start justify-between" style={{ gap: '0.75rem' }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: '1.05rem', fontFamily: 'var(--font-display)', fontWeight: 500, marginBottom: '0.25rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</p>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{s.duration}</p>
-                    </div>
-                    <span className="serif" style={{ color: 'var(--red)', fontSize: '1.25rem', fontWeight: 600, flexShrink: 0 }}>{s.price}</span>
-                  </div>
+                  <p style={{
+                    fontSize: '1.05rem', fontFamily: 'var(--font-display)', fontWeight: 600,
+                    color: 'var(--text)', marginBottom: '0.2rem',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>{s.name}</p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{s.duration}</p>
+                </div>
+                {/* Left side — price + decorative number */}
+                <div style={{ flexShrink: 0, textAlign: 'center', minWidth: 52 }}>
+                  <p className="serif" style={{ fontSize: '1.375rem', fontWeight: 700, color: 'var(--red)', lineHeight: 1 }}>{s.price}</p>
+                  <p style={{ fontSize: '0.5rem', fontWeight: 700, color: 'var(--text-dim)', letterSpacing: '0.15em', marginTop: 3 }}>{String(i + 1).padStart(2, '0')}</p>
                 </div>
               </div>
             </div>
@@ -269,7 +279,7 @@ export default function HomePage() {
             </h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+          <div className="gallery-grid" style={{ display: 'grid', gap: '0.75rem' }}>
             {GALLERY.map((img, i) => (
               <div key={i} style={{ aspectRatio: '1', borderRadius: 'var(--radius)', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}
                 onMouseEnter={e => { const im = e.currentTarget.querySelector('img') as HTMLImageElement; if (im) im.style.transform = 'scale(1.08)'; }}
@@ -401,6 +411,39 @@ export default function HomePage() {
         @keyframes slide-in {
           from { opacity: 0; transform: translateX(20px); }
           to   { opacity: 1; transform: translateX(0); }
+        }
+
+        /* ── Responsive grid classes ─────────────────── */
+        .services-grid { grid-template-columns: repeat(2, 1fr); }
+        .gallery-grid  { grid-template-columns: repeat(3, 1fr); }
+
+        @media (max-width: 640px) {
+          /* 1-column cards on mobile */
+          .services-grid { grid-template-columns: 1fr; }
+          .gallery-grid  { grid-template-columns: repeat(2, 1fr); }
+
+          /* Clipper: smaller, semi-transparent, bottom-anchored */
+          .hero-clipper-wrap {
+            width: 44vw !important;
+            top: auto !important;
+            bottom: 0 !important;
+            align-items: flex-end !important;
+            opacity: 0.45;
+          }
+          .hero-clipper-img { animation: none !important; transform: rotate(-6deg) !important; }
+
+          /* Reduce hero padding */
+          .hero-content-pad { padding-top: 2rem !important; padding-bottom: 2rem !important; }
+
+          /* Ticker: tighter gap */
+          .proof-ticker { gap: 1rem !important; }
+
+          /* Step cards already use auto-fit — fine as is */
+        }
+
+        @media (max-width: 400px) {
+          /* Hide clipper entirely on very small phones */
+          .hero-clipper-wrap { display: none !important; }
         }
       `}</style>
     </div>
