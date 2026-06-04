@@ -10,6 +10,14 @@ const STATUS = {
   rejected: { label: 'נדחה',  badge: 'badge-rejected' },
 } as const;
 
+const PRICE_MAP: Record<string, number> = {
+  haircut: 60, beard: 40, 'haircut-beard': 90, kids: 40, fade: 70,
+};
+
+function getToday() {
+  return new Date().toISOString().split('T')[0];
+}
+
 function formatDate(d: string) {
   const [y, m, day] = d.split('-');
   const months = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
@@ -145,6 +153,11 @@ export default function AdminPage() {
   const counts = { all: appointments.length, pending: 0, approved: 0, rejected: 0 };
   appointments.forEach((a) => { counts[a.status as keyof typeof counts]++; });
 
+  const today = getToday();
+  const todayAppts = appointments.filter(a => a.date === today);
+  const todayRevenue = todayAppts.filter(a => a.status === 'approved').reduce((s, a) => s + (PRICE_MAP[a.service] ?? 0), 0);
+  const todayPending = todayAppts.filter(a => a.status === 'pending').length;
+
   const displayed = filter === 'all' ? appointments : appointments.filter((a) => a.status === filter);
   const grouped = groupByDate(displayed);
   const dates = Object.keys(grouped).sort();
@@ -176,6 +189,40 @@ export default function AdminPage() {
       </header>
 
       <div className="max-w-2xl mx-auto px-4 py-8">
+        {/* Today's revenue card */}
+        {todayAppts.length > 0 && (
+          <div className="animate-fade-in" style={{
+            background: 'linear-gradient(135deg, rgba(212,144,10,0.09), rgba(212,144,10,0.04))',
+            border: '1.5px solid rgba(212,144,10,0.22)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '1.25rem 1.5rem',
+            marginBottom: '1.25rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem',
+          }}>
+            <div>
+              <p style={{ fontSize: '0.65rem', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--amber)', fontWeight: 700, marginBottom: 4 }}>
+                📅 היום
+              </p>
+              <p className="serif" style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>
+                {todayAppts.length} תורים
+              </p>
+              {todayPending > 0 && (
+                <p style={{ fontSize: '0.78rem', color: '#92400E', marginTop: 5, fontWeight: 600 }}>
+                  ⚠️ {todayPending} ממתינים לאישור
+                </p>
+              )}
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <p style={{ fontSize: '0.65rem', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 700, marginBottom: 4 }}>
+                הכנסות מאושרות
+              </p>
+              <p className="serif" style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--amber)', lineHeight: 1 }}>
+                ₪{todayRevenue}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Stats row */}
         <div className="grid gap-3 mb-8 animate-fade-up" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
           {[
@@ -236,22 +283,33 @@ export default function AdminPage() {
             <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>לא נמצאו תורים בקטגוריה זו</p>
           </div>
         ) : (
-          dates.map((date) => (
+          dates.map((date) => {
+            const isToday = date === today;
+            return (
             <div key={date} className="mb-8 animate-fade-up">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem',
+                ...(isToday && { background: 'rgba(212,144,10,0.06)', borderRadius: 12, padding: '0.75rem 1rem', margin: '0 -1rem 0.75rem -1rem' }),
+              }}>
                 <div>
-                  <p className="serif" style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--text)' }}>{formatDate(date)}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    {isToday && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--amber)', display: 'inline-block', boxShadow: '0 0 6px rgba(212,144,10,0.6)', flexShrink: 0 }} />}
+                    <p className="serif" style={{ fontSize: '1.25rem', fontWeight: 700, color: isToday ? 'var(--amber)' : 'var(--text)' }}>
+                      {isToday ? 'היום' : formatDate(date)}
+                    </p>
+                  </div>
                   <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', letterSpacing: '0.1em', fontWeight: 600 }}>
                     {grouped[date].length} {grouped[date].length === 1 ? 'תור' : 'תורים'}
                   </p>
                 </div>
-                <div style={{ flex: 1, height: 1, background: 'rgba(28,25,23,0.09)' }} />
+                <div style={{ flex: 1, height: 1, background: isToday ? 'rgba(212,144,10,0.20)' : 'rgba(28,25,23,0.09)' }} />
               </div>
               <div className="flex flex-col gap-3">
                 {grouped[date].map((a) => <AppCard key={a.id} appt={a} onUpdate={updateStatus} />)}
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
 
