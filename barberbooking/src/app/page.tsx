@@ -28,11 +28,11 @@ const GALLERY = [
 ];
 
 const TESTIMONIALS = [
-  { name: 'דוד כהן', service: 'תספורת + עיצוב זקן', text: 'הכי טוב שהיה לי. הספר ידע בדיוק מה אני רוצה רק ממבט אחד. אני מגיע כל שבוע ולא מוכן לשנות.', stars: 5, initial: 'ד', color: '#0D9488' },
-  { name: 'יוסי לוי', service: 'פייד', text: 'כבר שנה שאני מגיע פעמיים בחודש. הצוות מקצועי, נעים ותמיד בדיוק לשעה. תספורת מושלמת כל פעם.', stars: 5, initial: 'י', color: '#D4900A' },
-  { name: 'אמיר חדד', service: 'עיצוב זקן', text: 'עיצוב הזקן שינה לי את המראה לגמרי. אנשים שואלים מה עשיתי, תמיד עונה: ברבר בודפשט. ממליץ בחום!', stars: 5, initial: 'א', color: '#0F766E' },
-  { name: 'רון ביטון', service: 'תספורת ילדים', text: 'הבן שלי פחד מספרים, כאן הוא מתרגש לבוא. הצוות יודע לעבוד עם ילדים בצורה מדהימה. תודה רבה!', stars: 5, initial: 'ר', color: '#D97706' },
-  { name: 'עמית שלום', service: 'תספורת', text: 'קביעת תור אונליין זה שינוי משחק. 2 דקות ויש לי תור. תמיד יוצא מרוצה ומרגיש כמו מלך. 10/10.', stars: 5, initial: 'ע', color: '#0D9488' },
+  { name: 'דוד כהן', service: 'תספורת + עיצוב זקן', text: 'הכי טוב שהיה לי. הספר ידע בדיוק מה אני רוצה רק ממבט אחד. אני מגיע כל שבוע ולא מוכן לשנות.', stars: 5, initial: 'ד', color: '#1A50A8' },
+  { name: 'יוסי לוי', service: 'פייד', text: 'כבר שנה שאני מגיע פעמיים בחודש. הצוות מקצועי, נעים ותמיד בדיוק לשעה. תספורת מושלמת כל פעם.', stars: 5, initial: 'י', color: '#CC1A1A' },
+  { name: 'אמיר חדד', service: 'עיצוב זקן', text: 'עיצוב הזקן שינה לי את המראה לגמרי. אנשים שואלים מה עשיתי, תמיד עונה: ברבר בודפשט. ממליץ בחום!', stars: 5, initial: 'א', color: '#1A50A8' },
+  { name: 'רון ביטון', service: 'תספורת ילדים', text: 'הבן שלי פחד מספרים, כאן הוא מתרגש לבוא. הצוות יודע לעבוד עם ילדים בצורה מדהימה. תודה רבה!', stars: 5, initial: 'ר', color: '#CC1A1A' },
+  { name: 'עמית שלום', service: 'תספורת', text: 'קביעת תור אונליין זה שינוי משחק. 2 דקות ויש לי תור. תמיד יוצא מרוצה ומרגיש כמו מלך. 10/10.', stars: 5, initial: 'ע', color: '#1A50A8' },
 ];
 
 // ── Page ──────────────────────────────────────────────────
@@ -69,43 +69,72 @@ export default function HomePage() {
       <section
         className="relative min-h-screen flex flex-col overflow-hidden"
         style={{
-          background: `
-            radial-gradient(ellipse 80% 50% at 40% 10%, rgba(212,144,10,0.11) 0%, transparent 55%),
-            radial-gradient(ellipse 55% 40% at 72% 58%, rgba(15,118,110,0.07) 0%, transparent 50%),
-            linear-gradient(150deg, #0D1B2A 0%, #0F2338 60%, #0A1523 100%)
-          `,
+          background: `linear-gradient(150deg, #0A1628 0%, #0F1E38 55%, #0A1220 100%)`,
         }}
       >
-        {/* Floating orbs */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div style={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(212,144,10,0.14), transparent 70%)', top: '12%', right: '8%', animation: 'drift1 22s ease-in-out infinite', filter: 'blur(55px)' }} />
-          <div style={{ position: 'absolute', width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(15,118,110,0.12), transparent 70%)', bottom: '28%', left: '5%', animation: 'drift2 17s ease-in-out infinite', filter: 'blur(45px)' }} />
-          <div style={{ position: 'absolute', width: 170, height: 170, borderRadius: '50%', background: 'radial-gradient(circle, rgba(212,144,10,0.09), transparent 70%)', top: '48%', right: '28%', animation: 'drift1 28s ease-in-out infinite reverse', filter: 'blur(38px)' }} />
+        {/* ① texture.png — barber-stripe pattern overlay */}
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1,
+          backgroundImage: 'url(/images/texture.png)',
+          backgroundSize: '320px 320px',
+          backgroundRepeat: 'repeat',
+          opacity: 0.055,
+          mixBlendMode: 'screen',
+        }} />
+
+        {/* Radial colour glows */}
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1 }}>
+          <div style={{ position: 'absolute', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(204,26,26,0.12), transparent 70%)', top: '5%', right: '10%', filter: 'blur(60px)', animation: 'drift1 22s ease-in-out infinite' }} />
+          <div style={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(26,80,168,0.10), transparent 70%)', bottom: '20%', left: '30%', filter: 'blur(50px)', animation: 'drift2 18s ease-in-out infinite' }} />
         </div>
 
-        {/* Decorative lines */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 1, height: '100%', background: 'linear-gradient(180deg, transparent, rgba(212,144,10,0.09) 30%, rgba(212,144,10,0.09) 70%, transparent)' }} />
-          <div style={{ position: 'absolute', top: '20%', left: 0, right: 0, height: 1, background: 'linear-gradient(90deg, transparent, rgba(212,144,10,0.07), transparent)' }} />
-          <div style={{ position: 'absolute', bottom: '20%', left: 0, right: 0, height: 1, background: 'linear-gradient(90deg, transparent, rgba(212,144,10,0.07), transparent)' }} />
-          <div style={{ position: 'absolute', top: 32, right: 32, width: 60, height: 60, borderTop: '1px solid rgba(212,144,10,0.28)', borderRight: 'none', borderBottom: 'none', borderLeft: '1px solid rgba(212,144,10,0.28)' }} />
-          <div style={{ position: 'absolute', bottom: 32, left: 32, width: 60, height: 60, borderBottom: '1px solid rgba(212,144,10,0.28)', borderLeft: 'none', borderTop: 'none', borderRight: '1px solid rgba(212,144,10,0.28)' }} />
+        {/* ② clipper1.png — floating real trimmer, left side */}
+        <div className="hero-clipper-wrap" style={{
+          position: 'absolute', left: 0, top: 0, bottom: 0,
+          width: 'clamp(160px, 36vw, 400px)',
+          display: 'flex', alignItems: 'center',
+          zIndex: 3, pointerEvents: 'none',
+          paddingLeft: 'clamp(0px, 1vw, 20px)',
+        }}>
+          <img
+            src="/images/clipper1.png"
+            alt=""
+            className="hero-clipper-img"
+            style={{
+              width: '100%',
+              height: 'auto',
+              filter: 'drop-shadow(0 24px 56px rgba(0,0,0,0.65)) drop-shadow(0 0 30px rgba(204,26,26,0.18))',
+            }}
+          />
         </div>
 
-        {/* Nav */}
-        <nav className="relative z-10 flex items-center justify-between px-6 pt-8 pb-4 animate-fade-in max-w-6xl mx-auto w-full">
-          <ScissorIcon />
-          <span className="serif" style={{ fontSize: '0.75rem', letterSpacing: '0.2em', color: 'rgba(250,248,244,0.52)', textTransform: 'uppercase' }}>
+        {/* ③ barber-pole.png — spinning in nav */}
+        <nav className="relative flex items-center justify-between px-6 pt-8 pb-4 animate-fade-in max-w-6xl mx-auto w-full" style={{ zIndex: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+            <img
+              src="/images/barber-pole.png"
+              alt="לוגו ברבר בודפשט"
+              style={{
+                height: 42,
+                filter: 'drop-shadow(0 2px 10px rgba(204,26,26,0.50))',
+                animation: 'barber-pole-spin 10s linear infinite',
+              }}
+            />
+            <span className="serif" style={{ color: '#FAF8F4', fontSize: '1.1rem', fontWeight: 600, letterSpacing: '0.04em' }}>
+              ברבר בודפשט
+            </span>
+          </div>
+          <span className="serif" style={{ fontSize: '0.75rem', letterSpacing: '0.2em', color: 'rgba(250,248,244,0.50)', textTransform: 'uppercase' }}>
             תל אביב · א׳–ו׳
           </span>
         </nav>
 
-        {/* Hero content */}
-        <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-16 text-center">
+        {/* Hero text — centred, above clipper */}
+        <div className="relative flex-1 flex flex-col items-center justify-center px-6 py-16 text-center" style={{ zIndex: 5 }}>
           <div className="animate-fade-up flex items-center gap-3 mb-8">
-            <div style={{ width: 40, height: 1, background: 'var(--amber)', opacity: 0.65 }} />
-            <span style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--amber)', fontWeight: 600 }}>מספרה יוקרתית בתל אביב</span>
-            <div style={{ width: 40, height: 1, background: 'var(--amber)', opacity: 0.65 }} />
+            <div style={{ width: 40, height: 1, background: 'var(--red)', opacity: 0.7 }} />
+            <span style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--red)', fontWeight: 600 }}>מספרה יוקרתית בתל אביב</span>
+            <div style={{ width: 40, height: 1, background: 'var(--red)', opacity: 0.7 }} />
           </div>
 
           <h1 className="display display-xl animate-fade-up delay-100" style={{ maxWidth: 700 }}>
@@ -134,9 +163,9 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="animate-fade-up delay-500 flex justify-center pb-10">
-          <div className="animate-float" style={{ color: 'rgba(250,248,244,0.38)', fontSize: '0.75rem', letterSpacing: '0.15em', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 1, height: 40, background: 'linear-gradient(180deg, transparent, rgba(212,144,10,0.50))' }} />
+        <div className="animate-fade-up delay-500 flex justify-center pb-10" style={{ zIndex: 5, position: 'relative' }}>
+          <div className="animate-float" style={{ color: 'rgba(250,248,244,0.36)', fontSize: '0.75rem', letterSpacing: '0.15em', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 1, height: 40, background: 'linear-gradient(180deg, transparent, rgba(204,26,26,0.55))' }} />
             <span style={{ textTransform: 'uppercase' }}>גלול</span>
           </div>
         </div>
@@ -151,8 +180,7 @@ export default function HomePage() {
           { icon: '💬', text: 'אישור WhatsApp מיידי' },
         ].map(({ icon, text }) => (
           <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'rgba(250,248,244,0.60)', fontSize: '0.78rem', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
-            <span>{icon}</span>
-            <span>{text}</span>
+            <span>{icon}</span><span>{text}</span>
           </div>
         ))}
       </div>
@@ -160,29 +188,25 @@ export default function HomePage() {
       {/* ── Services ─────────────────────────────────────── */}
       <section className="px-6 py-24 max-w-4xl mx-auto">
         <div className="text-center mb-16">
-          <p style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--amber)', marginBottom: '1rem', fontWeight: 600 }}>השירותים שלנו</p>
+          <p style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--red)', marginBottom: '1rem', fontWeight: 600 }}>השירותים שלנו</p>
           <h2 className="display display-lg" style={{ color: 'var(--text)' }}>
-            <span style={{ fontStyle: 'italic', fontWeight: 400 }}>האמנות</span>{' '}שלנו
+            <span style={{ fontStyle: 'italic' }}>האמנות</span>{' '}שלנו
           </h2>
         </div>
 
         <div className="grid grid-cols-2 gap-4" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
           {SERVICES_PREVIEW.map((s, i) => (
-            <div
-              key={s.name}
-              className={`glass-card p-6 animate-fade-up delay-${(i + 1) * 100}`}
-              style={{ animationFillMode: 'both', background: '#fff' }}
-            >
+            <div key={s.name} className={`glass-card p-6 animate-fade-up delay-${(i + 1) * 100}`} style={{ animationFillMode: 'both', background: '#fff' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--amber)', letterSpacing: '0.12em', opacity: 0.75, paddingTop: 4 }}>{String(i + 1).padStart(2, '0')}</span>
-                <div style={{ flex: 1 }}>
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--red)', letterSpacing: '0.12em', opacity: 0.7, paddingTop: 4 }}>{String(i + 1).padStart(2, '0')}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="divider" style={{ margin: '0 0 0.875rem 0' }} />
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p style={{ fontSize: '1.05rem', fontFamily: 'var(--font-display)', fontWeight: 500, marginBottom: '0.25rem', color: 'var(--text)' }}>{s.name}</p>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', letterSpacing: '0.05em' }}>{s.duration}</p>
+                  <div className="flex items-start justify-between" style={{ gap: '0.75rem' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: '1.05rem', fontFamily: 'var(--font-display)', fontWeight: 500, marginBottom: '0.25rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</p>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{s.duration}</p>
                     </div>
-                    <span className="serif" style={{ color: 'var(--amber)', fontSize: '1.25rem', fontWeight: 600 }}>{s.price}</span>
+                    <span className="serif" style={{ color: 'var(--red)', fontSize: '1.25rem', fontWeight: 600, flexShrink: 0 }}>{s.price}</span>
                   </div>
                 </div>
               </div>
@@ -195,11 +219,24 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── How it works ─────────────────────────────────── */}
-      <section style={{ background: 'var(--bg-2)', padding: '5rem 1.5rem', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)' }}>
-        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+      {/* ── How it works — clipper2 in background ────────── */}
+      <section style={{ background: 'var(--bg-2)', padding: '5rem 1.5rem', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)', position: 'relative', overflow: 'hidden' }}>
+        {/* ④ clipper2.png — slowly rotating illustrated trimmer */}
+        <div style={{
+          position: 'absolute', left: '50%', top: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 'clamp(160px, 30%, 280px)',
+          opacity: 0.045,
+          pointerEvents: 'none',
+          animation: 'slow-rotate 24s linear infinite',
+          zIndex: 0,
+        }}>
+          <img src="/images/clipper2.png" alt="" style={{ width: '100%' }} />
+        </div>
+
+        <div style={{ maxWidth: 960, margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-            <p style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--amber)', fontWeight: 600, marginBottom: '0.75rem' }}>פשוט ומהיר</p>
+            <p style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--red)', fontWeight: 600, marginBottom: '0.75rem' }}>פשוט ומהיר</p>
             <h2 className="display display-lg" style={{ color: 'var(--text)' }}>
               איך זה <span style={{ fontStyle: 'italic' }}>עובד?</span>
             </h2>
@@ -208,8 +245,7 @@ export default function HomePage() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
             {STEPS.map((step) => (
               <div key={step.num} style={{ background: '#fff', borderRadius: 'var(--radius-lg)', padding: '2rem 1.75rem', boxShadow: 'var(--shadow-card)', border: '1px solid var(--glass-border)', position: 'relative', textAlign: 'right', overflow: 'hidden' }}>
-                {/* big number bg */}
-                <div style={{ position: 'absolute', top: -8, left: 12, fontSize: '5.5rem', fontFamily: 'var(--font-display)', fontWeight: 700, color: 'rgba(212,144,10,0.08)', lineHeight: 1, userSelect: 'none', pointerEvents: 'none' }}>{step.num}</div>
+                <div style={{ position: 'absolute', top: -8, left: 12, fontSize: '5.5rem', fontFamily: 'var(--font-display)', fontWeight: 700, color: 'rgba(204,26,26,0.07)', lineHeight: 1, userSelect: 'none', pointerEvents: 'none' }}>{step.num}</div>
                 <div style={{ fontSize: '2.25rem', marginBottom: '0.875rem' }}>{step.emoji}</div>
                 <h3 style={{ fontSize: '1.2rem', fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--text)', marginBottom: '0.5rem' }}>{step.title}</h3>
                 <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: 1.65 }}>{step.desc}</p>
@@ -227,7 +263,7 @@ export default function HomePage() {
       <section style={{ padding: '5rem 1.5rem', background: 'var(--bg)' }}>
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <p style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--amber)', fontWeight: 600, marginBottom: '0.75rem' }}>הגלריה שלנו</p>
+            <p style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--red)', fontWeight: 600, marginBottom: '0.75rem' }}>הגלריה שלנו</p>
             <h2 className="display display-lg" style={{ color: 'var(--text)' }}>
               <span style={{ fontStyle: 'italic' }}>העבודות</span> שלנו
             </h2>
@@ -239,13 +275,8 @@ export default function HomePage() {
                 onMouseEnter={e => { const im = e.currentTarget.querySelector('img') as HTMLImageElement; if (im) im.style.transform = 'scale(1.08)'; }}
                 onMouseLeave={e => { const im = e.currentTarget.querySelector('img') as HTMLImageElement; if (im) im.style.transform = 'scale(1)'; }}
               >
-                <img
-                  src={img.url}
-                  alt={img.label}
-                  loading="lazy"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.45s ease', display: 'block' }}
-                />
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '1.5rem 0.75rem 0.75rem', background: 'linear-gradient(transparent, rgba(13,27,41,0.72))', color: 'rgba(250,248,244,0.90)', fontSize: '0.75rem', textAlign: 'center', letterSpacing: '0.08em', fontWeight: 500 }}>
+                <img src={img.url} alt={img.label} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.45s ease', display: 'block' }} />
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '1.5rem 0.75rem 0.75rem', background: 'linear-gradient(transparent, rgba(10,22,40,0.75))', color: 'rgba(250,248,244,0.90)', fontSize: '0.75rem', textAlign: 'center', letterSpacing: '0.08em', fontWeight: 500 }}>
                   {img.label}
                 </div>
               </div>
@@ -258,7 +289,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Testimonials ─────────────────────────────────── */}
+      {/* ── Testimonials — stripes.png flanking both sides ── */}
       <TestimonialsSection />
 
       {/* ── Why us ───────────────────────────────────────── */}
@@ -270,7 +301,7 @@ export default function HomePage() {
             { icon: '◆', title: 'דיוק', body: 'תספורת מושלמת, כל פעם. ללא פשרות, ללא חצי עבודות' },
           ].map((item) => (
             <div key={item.title} className="text-center">
-              <div style={{ fontSize: '1.5rem', marginBottom: '1rem', color: 'var(--amber)' }}>{item.icon}</div>
+              <div style={{ fontSize: '1.5rem', marginBottom: '1rem', color: 'var(--red)' }}>{item.icon}</div>
               <h3 className="serif" style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: 'var(--text)', fontWeight: 600 }}>{item.title}</h3>
               <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>{item.body}</p>
             </div>
@@ -281,7 +312,7 @@ export default function HomePage() {
       {/* ── Final CTA ────────────────────────────────────── */}
       <section className="px-6 py-32 text-center" style={{ background: 'linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%)' }}>
         <div className="max-w-xl mx-auto">
-          <p className="serif" style={{ fontSize: '0.8rem', letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: '1.5rem', color: 'var(--amber)', fontWeight: 500 }}>מוכן?</p>
+          <p className="serif" style={{ fontSize: '0.8rem', letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: '1.5rem', color: 'var(--red)', fontWeight: 500 }}>מוכן?</p>
           <h2 className="display display-lg mb-8" style={{ color: 'var(--text)' }}>
             קבע את התור{' '}<span style={{ fontStyle: 'italic', fontWeight: 300 }}>שלך</span>
           </h2>
@@ -294,29 +325,79 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Footer ───────────────────────────────────────── */}
-      <footer style={{ background: 'var(--surface-dark)', padding: '2.5rem 1.5rem', textAlign: 'center' }}>
-        <p className="serif gold-gradient" style={{ fontSize: '1.35rem', marginBottom: '0.5rem' }}>ברבר בודפשט</p>
+      {/* ── Footer — spinning barber pole ────────────────── */}
+      <footer style={{ background: 'var(--surface-dark)', padding: '3rem 1.5rem', textAlign: 'center' }}>
+        {/* ③ barber-pole.png — spinning brand icon in footer too */}
+        <img
+          src="/images/barber-pole.png"
+          alt=""
+          style={{
+            height: 72,
+            marginBottom: '1rem',
+            animation: 'barber-pole-spin 10s linear infinite',
+            filter: 'drop-shadow(0 4px 20px rgba(204,26,26,0.45))',
+            display: 'block',
+            margin: '0 auto 1rem',
+          }}
+        />
+        <p className="serif gold-gradient" style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>ברבר בודפשט</p>
         <p style={{ fontSize: '0.75rem', color: 'rgba(250,248,244,0.38)', letterSpacing: '0.1em' }}>תל אביב · א׳–ו׳ 9:00–19:00</p>
       </footer>
 
+      {/* ── Keyframes ────────────────────────────────────── */}
       <style>{`
+        /* Barber pole 360 spin */
+        @keyframes barber-pole-spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+
+        /* Clipper entrance slide-in from left */
+        .hero-clipper-wrap {
+          animation: clipper-in 1.2s cubic-bezier(0.34,1.2,0.64,1) 0.4s both;
+        }
+        @keyframes clipper-in {
+          from { opacity: 0; transform: translateX(-60px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Clipper continuous float + slight tilt */
+        .hero-clipper-img {
+          animation: clipper-float 5.5s ease-in-out 1.8s infinite;
+          transform-origin: center bottom;
+        }
+        @keyframes clipper-float {
+          0%,100% { transform: translateY(0) rotate(-6deg); }
+          50%      { transform: translateY(-22px) rotate(-4deg); }
+        }
+
+        /* clipper2 slow background rotation */
+        @keyframes slow-rotate {
+          from { transform: translate(-50%,-50%) rotate(0deg); }
+          to   { transform: translate(-50%,-50%) rotate(360deg); }
+        }
+
+        /* Orb drift */
         @keyframes drift1 {
-          0%, 100% { transform: translate(0, 0); }
-          25%  { transform: translate(18px, -22px); }
-          50%  { transform: translate(-12px, 14px); }
-          75%  { transform: translate(8px, 20px); }
+          0%,100% { transform: translate(0,0); }
+          25%  { transform: translate(18px,-22px); }
+          50%  { transform: translate(-12px,14px); }
+          75%  { transform: translate(8px,20px); }
         }
         @keyframes drift2 {
-          0%, 100% { transform: translate(0, 0); }
-          30%  { transform: translate(-18px, 14px); }
-          60%  { transform: translate(14px, -18px); }
-          80%  { transform: translate(-8px, -6px); }
+          0%,100% { transform: translate(0,0); }
+          30%  { transform: translate(-18px,14px); }
+          60%  { transform: translate(14px,-18px); }
+          80%  { transform: translate(-8px,-6px); }
         }
+
+        /* WhatsApp pulse */
         @keyframes pulse-wa {
-          0%, 100% { box-shadow: 0 4px 20px rgba(37,211,102,0.42); }
+          0%,100% { box-shadow: 0 4px 20px rgba(37,211,102,0.42); }
           50%  { box-shadow: 0 4px 32px rgba(37,211,102,0.68), 0 0 0 10px rgba(37,211,102,0.08); }
         }
+
+        /* Testimonial slide-in */
         @keyframes slide-in {
           from { opacity: 0; transform: translateX(20px); }
           to   { opacity: 1; transform: translateX(0); }
@@ -326,7 +407,7 @@ export default function HomePage() {
   );
 }
 
-// ── Testimonials carousel ─────────────────────────────────
+// ── Testimonials — ⑤ stripes.png on both sides ───────────
 
 function TestimonialsSection() {
   const [active, setActive] = useState(0);
@@ -339,9 +420,17 @@ function TestimonialsSection() {
   const t = TESTIMONIALS[active];
 
   return (
-    <section style={{ background: '#fff', padding: '5rem 1.5rem' }}>
-      <div style={{ maxWidth: 680, margin: '0 auto', textAlign: 'center' }}>
-        <p style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--amber)', fontWeight: 600, marginBottom: '0.75rem' }}>
+    <section style={{ background: '#fff', padding: '5rem 1.5rem', position: 'relative', overflow: 'hidden' }}>
+      {/* ⑤ stripes.png — decorative barber-stripe icons, flanking */}
+      <div style={{ position: 'absolute', right: -50, top: '50%', transform: 'translateY(-50%)', width: 170, opacity: 0.055, pointerEvents: 'none', zIndex: 0, animation: 'stripes-pulse 8s ease-in-out infinite' }}>
+        <img src="/images/stripes.png" alt="" style={{ width: '100%' }} />
+      </div>
+      <div style={{ position: 'absolute', left: -50, top: '50%', transform: 'translateY(-50%) scaleX(-1)', width: 170, opacity: 0.055, pointerEvents: 'none', zIndex: 0, animation: 'stripes-pulse 8s ease-in-out 4s infinite' }}>
+        <img src="/images/stripes.png" alt="" style={{ width: '100%' }} />
+      </div>
+
+      <div style={{ maxWidth: 680, margin: '0 auto', textAlign: 'center', position: 'relative', zIndex: 1 }}>
+        <p style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--red)', fontWeight: 600, marginBottom: '0.75rem' }}>
           לקוחות מדברים
         </p>
         <h2 className="display display-lg" style={{ color: 'var(--text)', marginBottom: '3rem' }}>
@@ -352,19 +441,17 @@ function TestimonialsSection() {
           background: 'var(--bg)',
           borderRadius: 'var(--radius-lg)',
           padding: '2.5rem 2.25rem',
-          boxShadow: '0 4px 40px rgba(28,25,23,0.07)',
+          boxShadow: '0 4px 40px rgba(17,17,17,0.07)',
           border: '1px solid var(--glass-border)',
           position: 'relative',
           animation: 'slide-in 0.35s ease both',
           minHeight: 200,
         }}>
-          {/* Quote mark */}
-          <div style={{ position: 'absolute', top: 16, right: 22, fontSize: '4.5rem', fontFamily: 'Georgia, serif', color: 'rgba(212,144,10,0.13)', lineHeight: 1, userSelect: 'none' }}>"</div>
+          <div style={{ position: 'absolute', top: 16, right: 22, fontSize: '4.5rem', fontFamily: 'Georgia, serif', color: 'rgba(204,26,26,0.12)', lineHeight: 1, userSelect: 'none' }}>"</div>
 
-          {/* Stars */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 3, marginBottom: '1.25rem' }}>
             {[1,2,3,4,5].map(s => (
-              <svg key={s} width="18" height="18" viewBox="0 0 24 24" fill={s <= t.stars ? '#F5BC2F' : '#E8DDD0'}>
+              <svg key={s} width="18" height="18" viewBox="0 0 24 24" fill={s <= t.stars ? '#CC1A1A' : '#DDE5F0'}>
                 <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
               </svg>
             ))}
@@ -377,11 +464,10 @@ function TestimonialsSection() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.875rem' }}>
             <div style={{
               width: 42, height: 42, borderRadius: '50%',
-              background: `linear-gradient(135deg, ${t.color}22, ${t.color}44)`,
+              background: `linear-gradient(135deg, ${t.color}20, ${t.color}44)`,
               border: `2px solid ${t.color}55`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1rem', fontWeight: 700, color: t.color,
-              fontFamily: 'var(--font-display)',
+              fontSize: '1rem', fontWeight: 700, color: t.color, fontFamily: 'var(--font-display)',
             }}>{t.initial}</div>
             <div style={{ textAlign: 'right' }}>
               <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)' }}>{t.name}</p>
@@ -390,52 +476,27 @@ function TestimonialsSection() {
           </div>
         </div>
 
-        {/* Progress dots */}
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 7, marginTop: '1.5rem' }}>
           {TESTIMONIALS.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setActive(i)}
-              style={{
-                width: i === active ? 28 : 8, height: 8, borderRadius: 4,
-                background: i === active ? 'var(--amber)' : 'rgba(28,25,23,0.14)',
-                border: 'none', cursor: 'pointer',
-                transition: 'all 0.32s ease', padding: 0,
-              }}
-            />
+            <button key={i} onClick={() => setActive(i)} style={{ width: i === active ? 28 : 8, height: 8, borderRadius: 4, background: i === active ? 'var(--red)' : 'rgba(17,17,17,0.14)', border: 'none', cursor: 'pointer', transition: 'all 0.32s ease', padding: 0 }} />
           ))}
         </div>
 
-        {/* Nav arrows */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: '1rem' }}>
           {['›', '‹'].map((arrow, ai) => (
-            <button
-              key={ai}
-              onClick={() => setActive(a => ai === 0 ? (a - 1 + TESTIMONIALS.length) % TESTIMONIALS.length : (a + 1) % TESTIMONIALS.length)}
-              style={{
-                width: 36, height: 36, borderRadius: '50%',
-                background: '#fff', border: '1.5px solid rgba(28,25,23,0.10)',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'var(--text)', boxShadow: 'var(--shadow-card)',
-                fontSize: '1.1rem', fontWeight: 600,
-                transition: 'var(--transition)',
-              }}
+            <button key={ai} onClick={() => setActive(a => ai === 0 ? (a - 1 + TESTIMONIALS.length) % TESTIMONIALS.length : (a + 1) % TESTIMONIALS.length)}
+              style={{ width: 36, height: 36, borderRadius: '50%', background: '#fff', border: '1.5px solid rgba(17,17,17,0.10)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text)', boxShadow: 'var(--shadow-card)', fontSize: '1.1rem', fontWeight: 600, transition: 'var(--transition)' }}
             >{arrow}</button>
           ))}
         </div>
+
+        <style>{`
+          @keyframes stripes-pulse {
+            0%,100% { opacity: 0.055; transform: translateY(-50%) scale(1); }
+            50%      { opacity: 0.085; transform: translateY(-50%) scale(1.04); }
+          }
+        `}</style>
       </div>
     </section>
-  );
-}
-
-// ── Icons ─────────────────────────────────────────────────
-
-function ScissorIcon() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/>
-      <line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/>
-      <line x1="8.12" y1="8.12" x2="12" y2="12"/>
-    </svg>
   );
 }
