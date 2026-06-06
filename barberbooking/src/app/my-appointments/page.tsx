@@ -111,20 +111,35 @@ function MyAppointmentsInner() {
   const fetchAppointments = useCallback(async (p: string) => {
     setLoading(true);
     setError('');
-    // normalize: strip dashes and spaces so "050-123" matches "050123"
-    const normalized = p.replace(/[-\s]/g, '');
+    const clean = p.trim();
+
+    // Try exact match first, then stripped dashes
     const { data, error: err } = await supabase
       .from('appointments')
       .select('*')
-      .or(`phone.eq.${p},phone.eq.${normalized}`)
+      .eq('phone', clean)
       .order('date', { ascending: false })
       .order('time', { ascending: false });
-    setLoading(false);
-    if (err) {
-      console.error('[my-appointments] error:', JSON.stringify(err));
-      setError(`שגיאה (${err.code}): ${err.message}`);
-      return;
+
+    // If no results with exact, retry without dashes
+    if (!err && (!data || data.length === 0)) {
+      const stripped = clean.replace(/[-\s]/g, '');
+      if (stripped !== clean) {
+        const { data: data2, error: err2 } = await supabase
+          .from('appointments')
+          .select('*')
+          .eq('phone', stripped)
+          .order('date', { ascending: false })
+          .order('time', { ascending: false });
+        setLoading(false);
+        if (err2) { setError(`שגיאה (${err2.code}): ${err2.message}`); return; }
+        setAppointments((data2 ?? []) as Appointment[]);
+        return;
+      }
     }
+
+    setLoading(false);
+    if (err) { setError(`שגיאה (${err.code}): ${err.message}`); return; }
     setAppointments((data ?? []) as Appointment[]);
   }, []);
 
