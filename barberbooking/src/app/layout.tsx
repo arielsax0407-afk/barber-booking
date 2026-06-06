@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'ברבר בודפשט — מספרה יוקרתית',
+  title: 'ברבר פרמיום — מספרה יוקרתית',
   description: 'חווית טיפוח גברית מהשורה הראשונה. קבע תור עכשיו.',
 };
 

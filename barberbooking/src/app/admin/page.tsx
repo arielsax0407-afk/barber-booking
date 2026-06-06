@@ -53,7 +53,7 @@ const DEFAULT_HOURS: Record<number, DayHours> = {
 };
 
 const WA_TEMPLATES = {
-  approve:   (a: Appointment) => `שלום ${a.name}! 🎉\nהתור שלך אושר:\n✂️ ${svcName(a.service)}\n📅 ${fmtDate(a.date)}\n⏰ ${a.time}\n\nמחכים לך ב-ברבר בודפשט! 💈`,
+  approve:   (a: Appointment) => `שלום ${a.name}! 🎉\nהתור שלך אושר:\n✂️ ${svcName(a.service)}\n📅 ${fmtDate(a.date)}\n⏰ ${a.time}\n\nמחכים לך ב-ברבר פרמיום! 💈`,
   reject:    (a: Appointment) => `שלום ${a.name},\nמצטערים, לא נוכל לקבל אותך בזמן שביקשת.\nאנחנו מזמינים אותך לקבוע תור חדש דרך האתר.\nתודה! 🙏`,
   reschedule:(a: Appointment) => `שלום ${a.name},\nנשמח לשנות את התור שלך.\nאנא היכנס לאתר וקבע תור חדש.\nתודה! 💈`,
 };
@@ -242,7 +242,7 @@ export default function AdminPage() {
               <line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>
             </svg>
           </div>
-          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 600, color: T }}>ברבר בודפשט</p>
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 600, color: T }}>ברבר פרמיום</p>
           <p style={{ fontSize: '0.65rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: G, marginTop: '0.25rem' }}>פאנל ניהול</p>
         </div>
         <div style={{ height: 1, background: `linear-gradient(90deg,transparent,${BDR},transparent)`, marginBottom: '1.5rem' }} />

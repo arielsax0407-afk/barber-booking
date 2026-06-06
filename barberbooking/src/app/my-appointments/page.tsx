@@ -160,7 +160,7 @@ function MyAppointmentsInner() {
             ← חזרה לדף הבית
           </button>
           <p style={{ fontSize: '0.65rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--amber)', fontWeight: 700, marginBottom: '0.5rem' }}>
-            ברבר בודפשט
+            ברבר פרמיום
           </p>
           <h1 className="serif" style={{ fontSize: '2rem', fontWeight: 400, color: 'var(--text)' }}>
             התורים שלי

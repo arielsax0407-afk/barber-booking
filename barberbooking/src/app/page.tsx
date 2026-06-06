@@ -30,7 +30,7 @@ const GALLERY = [
 const TESTIMONIALS = [
   { name: 'דוד כהן', service: 'תספורת + עיצוב זקן', text: 'הכי טוב שהיה לי. הספר ידע בדיוק מה אני רוצה רק ממבט אחד. אני מגיע כל שבוע ולא מוכן לשנות.', stars: 5, initial: 'ד', color: '#1A50A8' },
   { name: 'יוסי לוי', service: 'פייד', text: 'כבר שנה שאני מגיע פעמיים בחודש. הצוות מקצועי, נעים ותמיד בדיוק לשעה. תספורת מושלמת כל פעם.', stars: 5, initial: 'י', color: '#CC1A1A' },
-  { name: 'אמיר חדד', service: 'עיצוב זקן', text: 'עיצוב הזקן שינה לי את המראה לגמרי. אנשים שואלים מה עשיתי, תמיד עונה: ברבר בודפשט. ממליץ בחום!', stars: 5, initial: 'א', color: '#1A50A8' },
+  { name: 'אמיר חדד', service: 'עיצוב זקן', text: 'עיצוב הזקן שינה לי את המראה לגמרי. אנשים שואלים מה עשיתי, תמיד עונה: ברבר פרמיום. ממליץ בחום!', stars: 5, initial: 'א', color: '#1A50A8' },
   { name: 'רון ביטון', service: 'תספורת ילדים', text: 'הבן שלי פחד מספרים, כאן הוא מתרגש לבוא. הצוות יודע לעבוד עם ילדים בצורה מדהימה. תודה רבה!', stars: 5, initial: 'ר', color: '#CC1A1A' },
   { name: 'עמית שלום', service: 'תספורת', text: 'קביעת תור אונליין זה שינוי משחק. 2 דקות ויש לי תור. תמיד יוצא מרוצה ומרגיש כמו מלך. 10/10.', stars: 5, initial: 'ע', color: '#1A50A8' },
 ];
@@ -113,7 +113,7 @@ export default function HomePage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
             <img
               src="/images/barber-pole.png"
-              alt="לוגו ברבר בודפשט"
+              alt="לוגו ברבר פרמיום"
               style={{
                 height: 42,
                 filter: 'drop-shadow(0 2px 10px rgba(204,26,26,0.50))',
@@ -121,7 +121,7 @@ export default function HomePage() {
               }}
             />
             <span className="serif" style={{ color: '#FAF8F4', fontSize: '1.1rem', fontWeight: 600, letterSpacing: '0.04em' }}>
-              ברבר בודפשט
+              ברבר פרמיום
             </span>
           </div>
           <span className="serif" style={{ fontSize: '0.75rem', letterSpacing: '0.2em', color: 'rgba(250,248,244,0.50)', textTransform: 'uppercase' }}>
@@ -353,7 +353,7 @@ export default function HomePage() {
             margin: '0 auto 1rem',
           }}
         />
-        <p className="serif gold-gradient" style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>ברבר בודפשט</p>
+        <p className="serif gold-gradient" style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>ברבר פרמיום</p>
         <p style={{ fontSize: '0.75rem', color: 'rgba(250,248,244,0.38)', letterSpacing: '0.1em' }}>תל אביב · א׳–ו׳ 9:00–19:00</p>
       </footer>
 
