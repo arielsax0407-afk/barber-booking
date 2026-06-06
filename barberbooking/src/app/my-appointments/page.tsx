@@ -146,17 +146,8 @@ function MyAppointmentsInner() {
   useEffect(() => {
     if (!submitted || !phone) return;
     fetchAppointments(phone);
-
-    const safePhone = phone.replace(/[^a-zA-Z0-9]/g, '_');
-    const channel = supabase
-      .channel(`my-appts-${safePhone}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'appointments' }, (payload) => {
-        const updated = payload.new as Appointment;
-        setAppointments(prev => prev.map(a => a.id === updated.id ? updated : a));
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
+    const interval = setInterval(() => fetchAppointments(phone), 30000);
+    return () => clearInterval(interval);
   }, [submitted, phone, fetchAppointments]);
 
   function handleSearch(e: React.FormEvent) {
