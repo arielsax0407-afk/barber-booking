@@ -88,7 +88,7 @@ export default function BookPage() {
           <p style={{ fontSize: '0.7rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--amber)', marginBottom: '0.75rem', fontWeight: 600 }}>הצלחה</p>
           <h2 className="serif" style={{ fontSize: '2.25rem', fontWeight: 400, marginBottom: '0.75rem', color: 'var(--text)' }}>התור נקבע!</h2>
           <p style={{ color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '2rem', fontSize: '0.9rem' }}>
-            הבקשה שלך התקבלה. הספר יאשר אותה בהקדם וישלח אישור.
+            בקשתך התקבלה. פרטי התור המלאים יופיעו לאחר אישור הספר.
           </p>
 
           <div className="glass-card p-6 text-right mb-6" style={{ gap: '0.75rem', display: 'flex', flexDirection: 'column', background: '#fff' }}>
@@ -111,8 +111,8 @@ export default function BookPage() {
             </div>
           </div>
 
-          <button className="btn-primary w-full" onClick={() => router.push(`/queue/${appointmentId}`)} style={{ width: '100%', marginBottom: '0.75rem' }}>
-            צפה במיקום שלי בתור
+          <button className="btn-primary w-full" onClick={() => router.push(`/my-appointments?phone=${encodeURIComponent(phone)}`)} style={{ width: '100%', marginBottom: '0.75rem' }}>
+            התורים שלי
           </button>
           <button className="btn-ghost w-full" onClick={() => router.push('/')} style={{ width: '100%' }}>
             חזרה לדף הבית
