@@ -34,6 +34,7 @@ export default function BookPage() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [appointmentId, setAppointmentId] = useState('');
   const [error, setError] = useState('');
 
   const stepIndex = STEPS.indexOf(step);
@@ -63,7 +64,8 @@ export default function BookPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, phone, service, date, time }),
     });
-    router.push(`/queue/${data.id}`);
+    setAppointmentId(data.id);
+    setDone(true);
   }
 
   /* ── Success screen ──────────────────────────────────── */
@@ -109,7 +111,10 @@ export default function BookPage() {
             </div>
           </div>
 
-          <button className="btn-primary w-full" onClick={() => router.push('/')} style={{ width: '100%' }}>
+          <button className="btn-primary w-full" onClick={() => router.push(`/queue/${appointmentId}`)} style={{ width: '100%', marginBottom: '0.75rem' }}>
+            צפה במיקום שלי בתור
+          </button>
+          <button className="btn-ghost w-full" onClick={() => router.push('/')} style={{ width: '100%' }}>
             חזרה לדף הבית
           </button>
         </div>
