@@ -111,14 +111,20 @@ function MyAppointmentsInner() {
   const fetchAppointments = useCallback(async (p: string) => {
     setLoading(true);
     setError('');
+    // normalize: strip dashes and spaces so "050-123" matches "050123"
+    const normalized = p.replace(/[-\s]/g, '');
     const { data, error: err } = await supabase
       .from('appointments')
       .select('*')
-      .eq('phone', p)
+      .or(`phone.eq.${p},phone.eq.${normalized}`)
       .order('date', { ascending: false })
       .order('time', { ascending: false });
     setLoading(false);
-    if (err) { setError('שגיאה בטעינת התורים'); return; }
+    if (err) {
+      console.error('[my-appointments] error:', JSON.stringify(err));
+      setError(`שגיאה (${err.code}): ${err.message}`);
+      return;
+    }
     setAppointments((data ?? []) as Appointment[]);
   }, []);
 
