@@ -51,10 +51,19 @@ export default function BookPage() {
   async function handleSubmit() {
     setSubmitting(true);
     setError('');
-    const { error: err } = await supabase.from('appointments').insert({ name, phone, service, date, time, status: 'pending' });
+    const { data, error: err } = await supabase
+      .from('appointments')
+      .insert({ name, phone, service, date, time, status: 'pending' })
+      .select('id')
+      .single();
     setSubmitting(false);
-    if (err) { setError('שגיאה בשמירת התור. אנא נסה שוב.'); return; }
-    setDone(true);
+    if (err || !data) { setError('שגיאה בשמירת התור. אנא נסה שוב.'); return; }
+    fetch('/api/notify-admin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone, service, date, time }),
+    });
+    router.push(`/queue/${data.id}`);
   }
 
   /* ── Success screen ──────────────────────────────────── */

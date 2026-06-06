@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 export async function POST(req: NextRequest) {
   const { id, status } = await req.json();
 
-  if (!['approved', 'rejected', 'pending'].includes(status)) {
+  if (!['approved', 'rejected', 'pending', 'in_progress', 'completed', 'cancelled'].includes(status)) {
     return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
   }
 

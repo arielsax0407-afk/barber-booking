@@ -12,6 +12,6 @@ export type Appointment = {
   service: string;
   date: string;
   time: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'in_progress' | 'completed' | 'cancelled';
   created_at: string;
 };

@@ -30,9 +30,12 @@ const PRICE_MAP: Record<string, number> = {
 };
 
 const S_CFG = {
-  pending:  { label: 'ממתין',  color: '#f59e0b', bg: 'rgba(245,158,11,0.14)',  bdr: 'rgba(245,158,11,0.30)' },
-  approved: { label: 'מאושר', color: '#22c55e', bg: 'rgba(34,197,94,0.14)',   bdr: 'rgba(34,197,94,0.30)'  },
-  rejected: { label: 'נדחה',  color: '#ef4444', bg: 'rgba(239,68,68,0.12)',   bdr: 'rgba(239,68,68,0.25)'  },
+  pending:     { label: 'ממתין',   color: '#f59e0b', bg: 'rgba(245,158,11,0.14)',   bdr: 'rgba(245,158,11,0.30)'  },
+  approved:    { label: 'מאושר',   color: '#22c55e', bg: 'rgba(34,197,94,0.14)',    bdr: 'rgba(34,197,94,0.30)'   },
+  rejected:    { label: 'נדחה',    color: '#ef4444', bg: 'rgba(239,68,68,0.12)',    bdr: 'rgba(239,68,68,0.25)'   },
+  in_progress: { label: 'בטיפול', color: '#3b82f6', bg: 'rgba(59,130,246,0.14)',  bdr: 'rgba(59,130,246,0.28)'  },
+  completed:   { label: 'הושלם',  color: '#10b981', bg: 'rgba(16,185,129,0.12)',  bdr: 'rgba(16,185,129,0.25)'  },
+  cancelled:   { label: 'בוטל',   color: '#6b7280', bg: 'rgba(107,114,128,0.10)', bdr: 'rgba(107,114,128,0.22)' },
 } as const;
 
 const DAY_NAMES = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
@@ -121,12 +124,12 @@ function exportCSV(appts: Appointment[]) {
 // ── Types ─────────────────────────────────────────────────────
 
 type Tab = 'dashboard' | 'appointments' | 'calendar' | 'settings';
-type Filter = 'all' | 'pending' | 'approved' | 'rejected';
+type Filter = 'all' | 'pending' | 'approved' | 'in_progress' | 'completed' | 'rejected' | 'cancelled';
 
 interface TabProps {
   appointments: Appointment[];
   blockedSlots: { date: string; time: string }[];
-  updateStatus: (id: string, s: 'approved' | 'rejected' | 'pending') => void;
+  updateStatus: (id: string, s: 'approved' | 'rejected' | 'pending' | 'in_progress' | 'completed' | 'cancelled') => void;
   blockSlot: (date: string, time: string) => void;
   unblockSlot: (date: string, time: string) => void;
   hours: Record<number, DayHours>;
@@ -183,7 +186,7 @@ export default function AdminPage() {
     setLoading(false);
   }
 
-  async function updateStatus(id: string, status: 'approved' | 'rejected' | 'pending') {
+  async function updateStatus(id: string, status: 'approved' | 'rejected' | 'pending' | 'in_progress' | 'completed' | 'cancelled') {
     await fetch('/api/admin/update-status', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, status }),
@@ -589,12 +592,20 @@ function AppointmentsTab({ appointments, updateStatus, returningPhones, today }:
     else setSwipeDrag(0);
   }
 
-  const counts = { all: appointments.length, pending: pending.length, approved: appointments.filter(a => a.status === 'approved').length, rejected: appointments.filter(a => a.status === 'rejected').length };
+  const counts = {
+    all: appointments.length,
+    pending: pending.length,
+    approved: appointments.filter(a => a.status === 'approved').length,
+    in_progress: appointments.filter(a => a.status === 'in_progress').length,
+    completed: appointments.filter(a => a.status === 'completed').length,
+    rejected: appointments.filter(a => a.status === 'rejected').length,
+  };
   const filterTabs: { id: Filter; label: string; color: string }[] = [
-    { id: 'all',      label: `הכל (${counts.all})`,          color: G },
-    { id: 'pending',  label: `ממתינים (${counts.pending})`,   color: '#f59e0b' },
-    { id: 'approved', label: `מאושרים (${counts.approved})`,  color: '#22c55e' },
-    { id: 'rejected', label: `נדחו (${counts.rejected})`,     color: '#ef4444' },
+    { id: 'all',         label: `הכל (${counts.all})`,               color: G },
+    { id: 'pending',     label: `ממתינים (${counts.pending})`,        color: '#f59e0b' },
+    { id: 'approved',    label: `מאושרים (${counts.approved})`,       color: '#22c55e' },
+    { id: 'in_progress', label: `בטיפול (${counts.in_progress})`,     color: '#3b82f6' },
+    { id: 'rejected',    label: `נדחו (${counts.rejected})`,          color: '#ef4444' },
   ];
 
   return (
@@ -878,6 +889,24 @@ function CalendarTab({ appointments, updateStatus }: TabProps) {
                 ✗ דחה
               </button>
             </>}
+            {selectedAppt.status === 'approved' && (
+              <button onClick={() => { updateStatus(selectedAppt.id, 'in_progress'); setSelectedAppt(null); }}
+                style={{ padding: '0.5rem 1.125rem', background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.28)', borderRadius: 8, color: '#3b82f6', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+                ▶ התחל טיפול
+              </button>
+            )}
+            {selectedAppt.status === 'in_progress' && (
+              <button onClick={() => { updateStatus(selectedAppt.id, 'completed'); setSelectedAppt(null); }}
+                style={{ padding: '0.5rem 1.125rem', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.28)', borderRadius: 8, color: '#10b981', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+                ✓ סיים טיפול
+              </button>
+            )}
+            {['approved', 'in_progress'].includes(selectedAppt.status) && (
+              <button onClick={() => { updateStatus(selectedAppt.id, 'cancelled'); setSelectedAppt(null); }}
+                style={{ padding: '0.5rem 0.875rem', background: B4, border: `1px solid ${BDR}`, borderRadius: 8, color: TM, fontSize: '0.78rem', cursor: 'pointer' }}>
+                ✕ בטל
+              </button>
+            )}
             <a href={waLink(selectedAppt, WA_TEMPLATES.reschedule)} target="_blank" rel="noopener noreferrer"
               style={{ padding: '0.5rem 1rem', background: B4, border: `1px solid ${BDR}`, borderRadius: 8, color: TM, fontSize: '0.78rem', textDecoration: 'none' }}>
               📅 שנה תור
@@ -1038,7 +1067,7 @@ function Section({ title, icon, children }: { title: string; icon: string; child
 
 function FullAppCard({ appt: a, selected, onToggle, onUpdate, isReturning }: {
   appt: Appointment; selected: boolean; onToggle: () => void;
-  onUpdate: (id: string, s: 'approved' | 'rejected' | 'pending') => void;
+  onUpdate: (id: string, s: 'approved' | 'rejected' | 'pending' | 'in_progress' | 'completed' | 'cancelled') => void;
   isReturning: boolean;
 }) {
   const cfg = S_CFG[a.status as keyof typeof S_CFG];
@@ -1104,16 +1133,33 @@ function FullAppCard({ appt: a, selected, onToggle, onUpdate, isReturning }: {
           )}
 
           {a.status === 'approved' && (
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button onClick={() => onUpdate(a.id, 'in_progress')}
+                style={{ flex: 1, minWidth: 110, padding: '0.55rem', borderRadius: 8, background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.28)', color: '#3b82f6', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                ▶ התחל טיפול
+              </button>
               <a href={waLink(a, WA_TEMPLATES.approve)} target="_blank" rel="noopener noreferrer"
-                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '0.5rem', borderRadius: 8, background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.18)', color: '#22c55e', fontSize: '0.75rem', textDecoration: 'none' }}>
-                💬 שלח WhatsApp
+                style={{ padding: '0.55rem 0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.18)', color: '#22c55e', fontSize: '0.75rem', textDecoration: 'none' }}>
+                💬
               </a>
-              <button onClick={() => onUpdate(a.id, 'rejected')} style={{ padding: '0.5rem 0.875rem', borderRadius: 8, background: B4, border: `1px solid ${BDR}`, color: TM, fontSize: '0.75rem', cursor: 'pointer' }}>בטל</button>
+              <button onClick={() => onUpdate(a.id, 'cancelled')} style={{ padding: '0.55rem 0.75rem', borderRadius: 8, background: B4, border: `1px solid ${BDR}`, color: TM, fontSize: '0.75rem', cursor: 'pointer' }}>✕</button>
             </div>
           )}
 
-          {a.status === 'rejected' && (
+          {a.status === 'in_progress' && (
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button onClick={() => onUpdate(a.id, 'completed')}
+                style={{ flex: 1, padding: '0.55rem', borderRadius: 8, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.28)', color: '#10b981', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                ✓ סיים
+              </button>
+              <button onClick={() => onUpdate(a.id, 'cancelled')}
+                style={{ padding: '0.55rem 0.875rem', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', color: '#ef4444', fontSize: '0.75rem', cursor: 'pointer' }}>
+                ✕ בטל
+              </button>
+            </div>
+          )}
+
+          {(a.status === 'rejected' || a.status === 'cancelled' || a.status === 'completed') && (
             <button onClick={() => onUpdate(a.id, 'pending')} style={{ padding: '0.5rem 1.25rem', borderRadius: 8, background: B4, border: `1px solid ${BDR}`, color: TM, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
               שחזר לממתין
             </button>
