@@ -151,7 +151,7 @@ export default function HomePage() {
             <Link href="/book" className="btn-primary" style={{ fontSize: '0.8125rem', padding: '1rem 3rem' }}>
               קבע תור עכשיו
             </Link>
-            <Link href="/my-appointments" className="btn-ghost" style={{ fontSize: '0.8125rem', padding: '1rem 2rem' }}>
+            <Link href="/my-appointments" className="btn-outline" style={{ fontSize: '0.8125rem', padding: '1rem 2rem' }}>
               התורים שלי
             </Link>
           </div>
