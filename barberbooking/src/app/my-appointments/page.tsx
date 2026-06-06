@@ -147,8 +147,9 @@ function MyAppointmentsInner() {
     if (!submitted || !phone) return;
     fetchAppointments(phone);
 
+    const safePhone = phone.replace(/[^a-zA-Z0-9]/g, '_');
     const channel = supabase
-      .channel(`my-appts-${phone}`)
+      .channel(`my-appts-${safePhone}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'appointments' }, (payload) => {
         const updated = payload.new as Appointment;
         setAppointments(prev => prev.map(a => a.id === updated.id ? updated : a));
