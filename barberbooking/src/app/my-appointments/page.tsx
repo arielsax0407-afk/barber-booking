@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { SERVICES } from '@/lib/services';
 import type { Appointment } from '@/lib/supabase';
 
@@ -111,36 +110,16 @@ function MyAppointmentsInner() {
   const fetchAppointments = useCallback(async (p: string) => {
     setLoading(true);
     setError('');
-    const clean = p.trim();
-
-    // Try exact match first, then stripped dashes
-    const { data, error: err } = await supabase
-      .from('appointments')
-      .select('*')
-      .eq('phone', clean)
-      .order('date', { ascending: false })
-      .order('time', { ascending: false });
-
-    // If no results with exact, retry without dashes
-    if (!err && (!data || data.length === 0)) {
-      const stripped = clean.replace(/[-\s]/g, '');
-      if (stripped !== clean) {
-        const { data: data2, error: err2 } = await supabase
-          .from('appointments')
-          .select('*')
-          .eq('phone', stripped)
-          .order('date', { ascending: false })
-          .order('time', { ascending: false });
-        setLoading(false);
-        if (err2) { setError(`שגיאה (${err2.code}): ${err2.message}`); return; }
-        setAppointments((data2 ?? []) as Appointment[]);
-        return;
-      }
+    try {
+      const res = await fetch(`/api/my-appointments?phone=${encodeURIComponent(p.trim())}`);
+      const json = await res.json();
+      if (json.error) { setError(`שגיאה: ${json.error}`); return; }
+      setAppointments(json.appointments as Appointment[]);
+    } catch (e) {
+      setError(`שגיאת רשת: ${String(e)}`);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
-    if (err) { setError(`שגיאה (${err.code}): ${err.message}`); return; }
-    setAppointments((data ?? []) as Appointment[]);
   }, []);
 
   useEffect(() => {
