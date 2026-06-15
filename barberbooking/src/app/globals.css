@@ -59,10 +59,53 @@
   --radius:       14px;
   --radius-lg:    22px;
   --transition:   all 0.28s cubic-bezier(0.4,0,0.2,1);
+
+  /* ── Admin panel — dark theme (default) ─────────────────── */
+  --adm-g:    #c9a84c;
+  --adm-gl:   #e8c97a;
+  --adm-gd:   #a07830;
+  --adm-gg:   rgba(201,168,76,0.12);
+  --adm-b0:   #070707;
+  --adm-b1:   #0e0e0e;
+  --adm-b2:   #151515;
+  --adm-b3:   #1d1d1d;
+  --adm-b4:   #272727;
+  --adm-t:    #f5f0e8;
+  --adm-tm:   rgba(245,240,232,0.55);
+  --adm-td:   rgba(245,240,232,0.28);
+  --adm-bdr:  rgba(255,255,255,0.07);
+  --adm-bdrg: rgba(201,168,76,0.20);
+}
+
+/* ── Admin panel — light theme ──────────────────────────────
+   Activated via data-admin-theme="light" on the admin shell,
+   toggled from the sidebar / mobile nav and persisted in
+   localStorage (barber_admin_theme). The login screen has no
+   data-admin-theme attribute, so it always stays dark. */
+[data-admin-theme="light"] {
+  --adm-g:    #a8802c;
+  --adm-gl:   #8a6b1f;
+  --adm-gd:   #6e5519;
+  --adm-gg:   rgba(168,128,40,0.10);
+  --adm-b0:   #f7f4ed;
+  --adm-b1:   #ffffff;
+  --adm-b2:   #ffffff;
+  --adm-b3:   #f1ece1;
+  --adm-b4:   #e8e1d2;
+  --adm-t:    #1c1a16;
+  --adm-tm:   rgba(28,26,22,0.58);
+  --adm-td:   rgba(28,26,22,0.34);
+  --adm-bdr:  rgba(28,26,22,0.10);
+  --adm-bdrg: rgba(168,128,40,0.30);
 }
 
 /* ── Reset & Base ────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* Wrapped in @layer base so Tailwind utility classes (mx-auto, mb-8, px-4, etc.)
+   in the utilities layer can still override these — unlayered rules would
+   otherwise win over @layer utilities regardless of specificity. */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+}
 
 html { scroll-behavior: smooth; }
 

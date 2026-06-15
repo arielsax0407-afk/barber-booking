@@ -144,12 +144,14 @@ function MyAppointmentsInner() {
 
         {/* Header */}
         <div className="animate-fade-in" style={{ marginBottom: '2.5rem' }}>
-          <button onClick={() => router.push('/')} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--text-dim)', fontSize: '0.8rem', marginBottom: '1.5rem',
-            display: 'flex', alignItems: 'center', gap: '0.375rem', padding: 0,
+          <button onClick={() => router.push('/')} className="btn-outline" style={{
+            marginBottom: '1.5rem', fontSize: '0.8125rem', padding: '0.625rem 1.5rem',
+            display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
           }}>
-            ← חזרה לדף הבית
+            חזרה לדף הבית
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
           </button>
           <p style={{ fontSize: '0.65rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--amber)', fontWeight: 700, marginBottom: '0.5rem' }}>
             ברבר פרמיום
@@ -232,6 +234,18 @@ function MyAppointmentsInner() {
                   {past.map(a => <AppointmentCard key={a.id} appt={a} />)}
                 </div>
               </div>
+            )}
+
+            {!loading && (
+              <button onClick={() => router.push('/')} className="btn-outline" style={{
+                width: '100%', marginTop: '2rem', padding: '0.875rem 1.5rem',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+              }}>
+                חזרה לדף הבית
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
             )}
           </div>
         )}

@@ -1,7 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+function stripBOM(s: string | undefined): string {
+  if (!s) return '';
+  return s.charCodeAt(0) === 0xfeff ? s.slice(1) : s;
+}
+
+export function envClean(key: string): string {
+  return stripBOM(process.env[key]);
+}
+
+const supabaseUrl = stripBOM(process.env.NEXT_PUBLIC_SUPABASE_URL);
+const supabaseAnonKey = stripBOM(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 

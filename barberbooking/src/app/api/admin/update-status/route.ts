@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+function stripBOM(s: string | undefined): string {
+  if (!s) return '';
+  return s.charCodeAt(0) === 0xfeff ? s.slice(1) : s;
+}
+
 export async function POST(req: NextRequest) {
   const { id, status } = await req.json();
 
@@ -8,11 +13,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
   }
 
-  // Use service role for admin mutations (bypasses RLS)
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const url = stripBOM(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const key = stripBOM(process.env.SUPABASE_SERVICE_ROLE_KEY) || stripBOM(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
+  const supabaseAdmin = createClient(url, key);
 
   const { error } = await supabaseAdmin
     .from('appointments')

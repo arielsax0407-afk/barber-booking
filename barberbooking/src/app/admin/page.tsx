@@ -4,22 +4,24 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase, Appointment } from '@/lib/supabase';
 import { SERVICES, TIME_SLOTS } from '@/lib/services';
 
-// ── Dark-gold admin palette (independent from public site) ───
+// ── Admin palette — theme-aware via CSS variables ─────────────
+// Defaults (dark) live in :root; [data-admin-theme="light"] overrides
+// them in globals.css, toggled by the theme switch below.
 
-const G   = '#c9a84c';
-const GL  = '#e8c97a';
-const GD  = '#a07830';
-const GG  = 'rgba(201,168,76,0.12)';
-const B0  = '#070707';
-const B1  = '#0e0e0e';
-const B2  = '#151515';
-const B3  = '#1d1d1d';
-const B4  = '#272727';
-const T   = '#f5f0e8';
-const TM  = 'rgba(245,240,232,0.55)';
-const TD  = 'rgba(245,240,232,0.28)';
-const BDR = 'rgba(255,255,255,0.07)';
-const BDRG= 'rgba(201,168,76,0.20)';
+const G   = 'var(--adm-g)';
+const GL  = 'var(--adm-gl)';
+const GD  = 'var(--adm-gd)';
+const GG  = 'var(--adm-gg)';
+const B0  = 'var(--adm-b0)';
+const B1  = 'var(--adm-b1)';
+const B2  = 'var(--adm-b2)';
+const B3  = 'var(--adm-b3)';
+const B4  = 'var(--adm-b4)';
+const T   = 'var(--adm-t)';
+const TM  = 'var(--adm-tm)';
+const TD  = 'var(--adm-td)';
+const BDR = 'var(--adm-bdr)';
+const BDRG= 'var(--adm-bdrg)';
 const R   = 12;
 const RL  = 18;
 
@@ -150,14 +152,23 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [tab, setTab]         = useState<Tab>('dashboard');
   const [hours, setHoursState] = useState<Record<number, DayHours>>(DEFAULT_HOURS);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const prevCountRef = useRef(0);
 
   useEffect(() => {
     try {
       const s = localStorage.getItem('barber_hours');
       if (s) setHoursState(JSON.parse(s));
+      const t = localStorage.getItem('barber_admin_theme');
+      if (t === 'light' || t === 'dark') setTheme(t);
     } catch {}
   }, []);
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    localStorage.setItem('barber_admin_theme', next);
+  }
 
   function setHours(h: Record<number, DayHours>) {
     setHoursState(h);
@@ -270,24 +281,25 @@ export default function AdminPage() {
   const props: TabProps = { appointments, blockedSlots, updateStatus, blockSlot, unblockSlot, hours, setHours, returningPhones, today, loading };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: B0, color: T, direction: 'rtl', fontFamily: 'var(--font-body)' }}>
-      <Sidebar tab={tab} setTab={setTab} onLogout={() => setAuthed(false)} onExport={() => exportCSV(appointments)} pendingCount={appointments.filter(a => a.status === 'pending').length} />
+    <div data-admin-theme={theme} style={{ display: 'flex', minHeight: '100vh', background: B0, color: T, direction: 'rtl', fontFamily: 'var(--font-body)', transition: 'background 0.25s ease, color 0.25s ease' }}>
+      <Sidebar tab={tab} setTab={setTab} onLogout={() => setAuthed(false)} onExport={() => exportCSV(appointments)} pendingCount={appointments.filter(a => a.status === 'pending').length} theme={theme} onToggleTheme={toggleTheme} />
       <main style={{ flex: 1, overflow: 'auto', paddingBottom: '4.5rem' }}>
         {tab === 'dashboard'    && <DashboardTab    {...props} />}
         {tab === 'appointments' && <AppointmentsTab {...props} />}
         {tab === 'calendar'     && <CalendarTab     {...props} />}
         {tab === 'settings'     && <SettingsTab     {...props} />}
       </main>
-      <MobileNav tab={tab} setTab={setTab} pendingCount={appointments.filter(a => a.status === 'pending').length} />
+      <MobileNav tab={tab} setTab={setTab} pendingCount={appointments.filter(a => a.status === 'pending').length} theme={theme} onToggleTheme={toggleTheme} />
     </div>
   );
 }
 
 // ── Sidebar ───────────────────────────────────────────────────
 
-function Sidebar({ tab, setTab, onLogout, onExport, pendingCount }: {
+function Sidebar({ tab, setTab, onLogout, onExport, pendingCount, theme, onToggleTheme }: {
   tab: Tab; setTab: (t: Tab) => void;
   onLogout: () => void; onExport: () => void; pendingCount: number;
+  theme: 'dark' | 'light'; onToggleTheme: () => void;
 }) {
   const items: { id: Tab; icon: string; label: string }[] = [
     { id: 'dashboard',    icon: '▦', label: 'לוח בקרה' },
@@ -325,6 +337,9 @@ function Sidebar({ tab, setTab, onLogout, onExport, pendingCount }: {
       </nav>
       {/* Footer actions */}
       <div style={{ padding: '0 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', borderTop: `1px solid ${BDR}`, paddingTop: '1rem' }}>
+        <button onClick={onToggleTheme} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 1rem', borderRadius: R, border: 'none', cursor: 'pointer', background: 'transparent', color: TM, fontSize: '0.8rem', textAlign: 'right' }}>
+          <span>{theme === 'dark' ? '☀' : '☾'}</span><span>{theme === 'dark' ? 'מצב בהיר' : 'מצב כהה'}</span>
+        </button>
         <button onClick={onExport} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.65rem 1rem', borderRadius: R, border: 'none', cursor: 'pointer', background: 'transparent', color: TM, fontSize: '0.8rem', textAlign: 'right' }}>
           <span>↓</span><span>ייצוא CSV</span>
         </button>
@@ -336,7 +351,7 @@ function Sidebar({ tab, setTab, onLogout, onExport, pendingCount }: {
   );
 }
 
-function MobileNav({ tab, setTab, pendingCount }: { tab: Tab; setTab: (t: Tab) => void; pendingCount: number }) {
+function MobileNav({ tab, setTab, pendingCount, theme, onToggleTheme }: { tab: Tab; setTab: (t: Tab) => void; pendingCount: number; theme: 'dark' | 'light'; onToggleTheme: () => void }) {
   useEffect(() => {
     const style = document.createElement('style');
     style.id = 'admin-responsive';
@@ -373,6 +388,14 @@ function MobileNav({ tab, setTab, pendingCount }: { tab: Tab; setTab: (t: Tab) =
             )}
           </button>
         ))}
+        <button onClick={onToggleTheme} style={{
+          flex: 1, padding: '0.75rem 0.25rem', border: 'none', cursor: 'pointer',
+          background: 'transparent', color: TD,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem',
+        }}>
+          <span style={{ fontSize: '1.1rem' }}>{theme === 'dark' ? '☀' : '☾'}</span>
+          <span style={{ fontSize: '0.55rem', letterSpacing: '0.05em' }}>{theme === 'dark' ? 'בהיר' : 'כהה'}</span>
+        </button>
       </div>
     </nav>
   );

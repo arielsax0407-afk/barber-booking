@@ -22,7 +22,7 @@ const GALLERY = [
   { url: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=480&h=480&fit=crop&q=80', label: 'תספורת קלאסית' },
   { url: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=480&h=480&fit=crop&q=80', label: 'עיצוב זקן' },
   { url: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=480&h=480&fit=crop&q=80', label: 'פייד מקצועי' },
-  { url: 'https://images.unsplash.com/photo-1593702288056-7cc32b615b0e?w=480&h=480&fit=crop&q=80', label: 'חיתוך מדויק' },
+  { url: 'https://images.unsplash.com/photo-1517832606299-7ae9b720a186?w=480&h=480&fit=crop&q=80', label: 'חיתוך מדויק' },
   { url: 'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=480&h=480&fit=crop&q=80', label: 'סטייל מודרני' },
   { url: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?w=480&h=480&fit=crop&q=80', label: 'אווירת המקום' },
 ];
@@ -140,7 +140,7 @@ export default function HomePage() {
           <h1 className="display display-xl animate-fade-up delay-100" style={{ maxWidth: 700 }}>
             <span className="gold-gradient">ברבר</span>
             <br />
-            <span style={{ color: '#FAF8F4', fontStyle: 'italic', fontWeight: 300 }}>בודפשט</span>
+            <span style={{ color: '#FAF8F4', fontStyle: 'italic', fontWeight: 300 }}>פרמיום</span>
           </h1>
 
           <p className="animate-fade-up delay-200" style={{ fontSize: 'clamp(1rem, 2.5vw, 1.25rem)', color: 'rgba(250,248,244,0.62)', marginTop: '1.5rem', maxWidth: 400, lineHeight: 1.7, fontWeight: 300 }}>
