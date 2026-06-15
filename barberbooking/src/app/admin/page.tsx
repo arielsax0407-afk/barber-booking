@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { supabase, Appointment } from '@/lib/supabase';
+import type { Appointment } from '@/lib/supabase';
 import { SERVICES, TIME_SLOTS } from '@/lib/services';
 
 // ── Admin palette — theme-aware via CSS variables ─────────────
@@ -153,7 +153,6 @@ export default function AdminPage() {
   const [tab, setTab]         = useState<Tab>('dashboard');
   const [hours, setHoursState] = useState<Record<number, DayHours>>(DEFAULT_HOURS);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-  const prevCountRef = useRef(0);
 
   useEffect(() => {
     try {
@@ -186,14 +185,12 @@ export default function AdminPage() {
 
   async function loadAll() {
     setLoading(true);
-    const [{ data: appts }, { data: blocked }] = await Promise.all([
-      supabase.from('appointments').select('*').order('date').order('time'),
-      supabase.from('blocked_slots').select('date,time'),
-    ]);
-    const sorted = (appts as Appointment[]) ?? [];
-    setAppointments(sorted);
-    setBlockedSlots(blocked ?? []);
-    prevCountRef.current = sorted.length;
+    const res = await fetch('/api/admin/data');
+    if (res.ok) {
+      const json = await res.json();
+      setAppointments((json.appointments as Appointment[]) ?? []);
+      setBlockedSlots(json.blockedSlots ?? []);
+    }
     setLoading(false);
   }
 
@@ -206,12 +203,18 @@ export default function AdminPage() {
   }
 
   async function blockSlot(date: string, time: string) {
-    await supabase.from('blocked_slots').upsert({ date, time });
+    await fetch('/api/admin/blocked-slots', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slots: [{ date, time }] }),
+    });
     setBlockedSlots(prev => [...prev, { date, time }]);
   }
 
   async function unblockSlot(date: string, time: string) {
-    await supabase.from('blocked_slots').delete().eq('date', date).eq('time', time);
+    await fetch('/api/admin/blocked-slots', {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slots: [{ date, time }] }),
+    });
     setBlockedSlots(prev => prev.filter(s => !(s.date === date && s.time === time)));
   }
 
@@ -220,26 +223,26 @@ export default function AdminPage() {
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
       Notification.requestPermission();
     }
-    const ch = supabase.channel('admin_realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'appointments' }, payload => {
-        if (payload.eventType === 'INSERT') {
-          const nw = payload.new as Appointment;
-          setAppointments(prev => {
-            const next = [...prev, nw].sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-            if (next.length > prevCountRef.current) {
-              playChime();
-              if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-                new Notification('תור חדש! 💈', { body: `${nw.name} · ${fmtDate(nw.date)} ${nw.time}` });
-              }
-            }
-            prevCountRef.current = next.length;
-            return next;
-          });
-        } else {
-          loadAll();
+    const interval = setInterval(async () => {
+      const res = await fetch('/api/admin/data');
+      if (!res.ok) return;
+      const json = await res.json();
+      const fresh = (json.appointments as Appointment[]) ?? [];
+      setAppointments(prev => {
+        const prevIds = new Set(prev.map(a => a.id));
+        const newOnes = fresh.filter(a => !prevIds.has(a.id));
+        if (newOnes.length > 0) {
+          playChime();
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            const nw = newOnes[0];
+            new Notification('תור חדש! 💈', { body: `${nw.name} · ${fmtDate(nw.date)} ${nw.time}` });
+          }
         }
-      }).subscribe();
-    return () => { supabase.removeChannel(ch); };
+        return fresh;
+      });
+      setBlockedSlots(json.blockedSlots ?? []);
+    }, 10000);
+    return () => clearInterval(interval);
   }, [authed]);
 
   /* ── Login screen ─────────────────────────────────────── */

@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { SERVICES, TIME_SLOTS } from '@/lib/services';
 
 type Step = 'service' | 'date' | 'time' | 'details' | 'confirm';
@@ -41,30 +40,29 @@ export default function BookPage() {
 
   async function loadSlots(selectedDate: string) {
     setLoadingSlots(true);
-    const [{ data: appts }, { data: blocked }] = await Promise.all([
-      supabase.from('appointments').select('time').eq('date', selectedDate).neq('status', 'rejected'),
-      supabase.from('blocked_slots').select('time').eq('date', selectedDate),
-    ]);
-    setTakenSlots([...(appts?.map((a) => a.time) ?? []), ...(blocked?.map((b) => b.time) ?? [])]);
+    const res = await fetch(`/api/availability?date=${selectedDate}`);
+    const json = await res.json();
+    setTakenSlots(json.takenSlots ?? []);
     setLoadingSlots(false);
   }
 
   async function handleSubmit() {
     setSubmitting(true);
     setError('');
-    const { data, error: err } = await supabase
-      .from('appointments')
-      .insert({ name, phone, service, date, time, status: 'pending' })
-      .select('id')
-      .single();
+    const res = await fetch('/api/book', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone, service, date, time }),
+    });
+    const json = await res.json();
     setSubmitting(false);
-    if (err || !data) { setError('שגיאה בשמירת התור. אנא נסה שוב.'); return; }
+    if (!res.ok || !json.id) { setError('שגיאה בשמירת התור. אנא נסה שוב.'); return; }
     fetch('/api/notify-admin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, phone, service, date, time }),
     });
-    setAppointmentId(data.id);
+    setAppointmentId(json.id);
     setDone(true);
   }
 

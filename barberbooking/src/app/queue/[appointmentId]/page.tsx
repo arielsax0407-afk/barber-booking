@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 import { SERVICES } from '@/lib/services';
 import type { Appointment } from '@/lib/supabase';
+
+type QueueAppt = { id: string; time: string; service: string; status: Appointment['status'] };
 
 const MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
@@ -37,56 +38,35 @@ export default function QueuePage() {
   const router = useRouter();
 
   const [appt, setAppt] = useState<Appointment | null>(null);
-  const [dayAppts, setDayAppts] = useState<Appointment[]>([]);
+  const [dayAppts, setDayAppts] = useState<QueueAppt[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [flash, setFlash] = useState(false);
+  const prevStatusRef = useRef<string | null>(null);
 
   const loadData = useCallback(async () => {
-    const { data: a, error } = await supabase
-      .from('appointments')
-      .select('*')
-      .eq('id', appointmentId)
-      .single();
+    const res = await fetch(`/api/queue/${appointmentId}`);
+    if (!res.ok) { setNotFound(true); setLoading(false); return; }
 
-    if (error || !a) { setNotFound(true); setLoading(false); return; }
+    const json = await res.json();
+    const a = json.appointment as Appointment;
 
-    const { data: all } = await supabase
-      .from('appointments')
-      .select('*')
-      .eq('date', (a as Appointment).date)
-      .order('time', { ascending: true });
+    if (prevStatusRef.current !== null && prevStatusRef.current !== a.status) {
+      setFlash(true);
+      setTimeout(() => setFlash(false), 1200);
+    }
+    prevStatusRef.current = a.status;
 
-    setAppt(a as Appointment);
-    setDayAppts((all ?? []) as Appointment[]);
+    setAppt(a);
+    setDayAppts((json.queue ?? []) as QueueAppt[]);
     setLoading(false);
   }, [appointmentId]);
 
   useEffect(() => {
     loadData();
-
-    const channel = supabase
-      .channel(`queue-${appointmentId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'appointments' }, (payload) => {
-        const updated = payload.new as Appointment;
-        if (updated.id === appointmentId) {
-          setAppt(updated);
-          setFlash(true);
-          setTimeout(() => setFlash(false), 1200);
-        }
-        setDayAppts(prev => prev.map(a => a.id === updated.id ? updated : a));
-      })
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'appointments' }, (payload) => {
-        const inserted = payload.new as Appointment;
-        setDayAppts(prev => {
-          if (prev.find(a => a.id === inserted.id)) return prev;
-          return [...prev, inserted].sort((a, b) => a.time.localeCompare(b.time));
-        });
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [appointmentId, loadData]);
+    const interval = setInterval(loadData, 8000);
+    return () => clearInterval(interval);
+  }, [loadData]);
 
   // Queue position — only counts non-done appointments
   const activeQueue = dayAppts

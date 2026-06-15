@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { isAdminRequest } from '@/lib/adminAuth';
 
 function stripBOM(s: string | undefined): string {
   if (!s) return '';
@@ -7,6 +8,11 @@ function stripBOM(s: string | undefined): string {
 }
 
 export async function POST(req: NextRequest) {
+  const adminPassword = stripBOM(process.env.ADMIN_PASSWORD).trim();
+  if (!isAdminRequest(req, adminPassword)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { id, status } = await req.json();
 
   if (!['approved', 'rejected', 'pending', 'in_progress', 'completed', 'cancelled'].includes(status)) {
