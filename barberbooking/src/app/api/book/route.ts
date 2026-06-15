@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   const sb = supabaseAdmin();
   const { data, error } = await sb
     .from('appointments')
-    .insert({ name: name.trim(), phone: phone.trim(), service, date, time, status: 'pending' })
+    .insert({ name: name.trim(), phone: phone.trim(), service, date, time, status: 'approved' })
     .select('id')
     .single();
 

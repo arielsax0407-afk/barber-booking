@@ -4,27 +4,27 @@
 /* ── Design Tokens — Red · White · Blue ─────────────────── */
 :root {
   /* ❶ Red — primary brand */
-  --red:          #CC1A1A;
-  --red-dark:     #9E1414;
-  --red-light:    #E53535;
+  --red:          #9C7A2E;
+  --red-dark:     #7A5F23;
+  --red-light:    #E0C275;
 
   /* ❷ Blue — secondary brand */
   --blue:         #1A50A8;
   --blue-dark:    #0F3580;
   --blue-light:   #3370D4;
 
-  /* backward-compat aliases (entire codebase uses --amber / --gold) */
-  --amber:        #CC1A1A;
-  --amber-light:  #E53535;
-  --amber-dark:   #9E1414;
-  --amber-glow:   rgba(204,26,26,0.22);
-  --amber-glass:  rgba(204,26,26,0.09);
+  /* gold accent (matches homepage --gold family) */
+  --amber:        #9C7A2E;
+  --amber-light:  #E0C275;
+  --amber-dark:   #9C7A2E;
+  --amber-glow:   rgba(156,122,46,0.25);
+  --amber-glass:  rgba(156,122,46,0.09);
   --teal:         #1A50A8;
   --teal-light:   #3370D4;
   --teal-glass:   rgba(26,80,168,0.10);
-  --gold:         #CC1A1A;
-  --gold-light:   #E53535;
-  --gold-dim:     #9E1414;
+  --gold:         #9C7A2E;
+  --gold-light:   #E0C275;
+  --gold-dim:     #9C7A2E;
 
   /* Backgrounds — cool white */
   --bg:           #F7F9FC;
@@ -45,13 +45,13 @@
   /* Glass / Cards */
   --glass:        rgba(255,255,255,0.88);
   --glass-border: rgba(17,17,17,0.09);
-  --glass-amber:  rgba(204,26,26,0.08);
-  --glass-gold:   rgba(204,26,26,0.08);
+  --glass-amber:  rgba(156,122,46,0.08);
+  --glass-gold:   rgba(156,122,46,0.08);
 
   /* Shadows */
   --shadow-card:  0 1px 4px rgba(17,17,17,0.06), 0 6px 24px rgba(17,17,17,0.07);
-  --shadow-amber: 0 0 32px rgba(204,26,26,0.32);
-  --shadow-gold:  0 0 32px rgba(204,26,26,0.32);
+  --shadow-amber: 0 0 32px rgba(156,122,46,0.30);
+  --shadow-gold:  0 0 32px rgba(156,122,46,0.30);
 
   --font-display: 'Playfair Display', Georgia, serif;
   --font-body:    'Plus Jakarta Sans', system-ui, sans-serif;
@@ -162,7 +162,7 @@ body {
   transition: var(--transition);
   overflow: hidden;
   text-decoration: none;
-  box-shadow: 0 4px 18px rgba(204,26,26,0.34);
+  box-shadow: 0 4px 18px rgba(156,122,46,0.34);
 }
 .btn-primary::before {
   content: '';
@@ -174,7 +174,7 @@ body {
 }
 .btn-primary:hover::before { transform: translateX(120%); }
 .btn-primary:hover {
-  box-shadow: 0 0 36px rgba(204,26,26,0.55), 0 6px 24px rgba(204,26,26,0.22);
+  box-shadow: 0 0 36px rgba(156,122,46,0.55), 0 6px 24px rgba(156,122,46,0.22);
   transform: translateY(-2px);
 }
 .btn-primary:active { transform: translateY(0); }
@@ -233,21 +233,21 @@ body {
   transition: var(--transition);
 }
 .glass-card:hover {
-  border-color: rgba(204,26,26,0.25);
+  border-color: rgba(156,122,46,0.25);
   box-shadow: 0 2px 8px rgba(17,17,17,0.06), 0 14px 40px rgba(17,17,17,0.09);
 }
 
 .glass-card-gold,
 .glass-card-amber {
   background: var(--glass-amber);
-  border: 1px solid rgba(204,26,26,0.20);
+  border: 1px solid rgba(156,122,46,0.20);
   border-radius: var(--radius-lg);
 }
 
 .card-selected {
-  background: rgba(204,26,26,0.07) !important;
+  background: rgba(156,122,46,0.07) !important;
   border-color: var(--red) !important;
-  box-shadow: inset 0 0 22px rgba(204,26,26,0.04), var(--shadow-amber) !important;
+  box-shadow: inset 0 0 22px rgba(156,122,46,0.04), var(--shadow-amber) !important;
 }
 
 /* ── Inputs ──────────────────────────────────────────────── */
@@ -269,7 +269,7 @@ body {
 .input-field::placeholder { color: var(--text-dim); }
 .input-field:focus {
   border-color: var(--red);
-  box-shadow: 0 0 0 3px rgba(204,26,26,0.12);
+  box-shadow: 0 0 0 3px rgba(156,122,46,0.12);
 }
 
 .input-label {
@@ -285,12 +285,12 @@ body {
 /* ── Divider ─────────────────────────────────────────────── */
 .divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(204,26,26,0.28), transparent);
+  background: linear-gradient(90deg, transparent, rgba(156,122,46,0.28), transparent);
   margin: 1.5rem 0;
 }
 .divider-v {
   width: 1px;
-  background: linear-gradient(180deg, transparent, rgba(204,26,26,0.28), transparent);
+  background: linear-gradient(180deg, transparent, rgba(156,122,46,0.28), transparent);
 }
 
 /* ── Step indicator ──────────────────────────────────────── */
@@ -323,11 +323,11 @@ body {
 .step-node.active {
   background: linear-gradient(135deg, var(--red-dark), var(--red-light));
   color: #fff;
-  box-shadow: 0 0 20px rgba(204,26,26,0.45);
+  box-shadow: 0 0 20px rgba(156,122,46,0.45);
 }
 .step-node.done {
-  background: rgba(204,26,26,0.10);
-  border: 1.5px solid rgba(204,26,26,0.35);
+  background: rgba(156,122,46,0.10);
+  border: 1.5px solid rgba(156,122,46,0.35);
   color: var(--red-dark);
 }
 
@@ -339,7 +339,7 @@ body {
   background: rgba(17,17,17,0.10);
 }
 .step-line.done {
-  background: linear-gradient(90deg, var(--red), rgba(204,26,26,0.25));
+  background: linear-gradient(90deg, var(--red), rgba(156,122,46,0.25));
 }
 
 /* ── Animations ──────────────────────────────────────────── */
@@ -352,8 +352,8 @@ body {
   to   { opacity: 1; }
 }
 @keyframes pulse-red {
-  0%, 100% { box-shadow: 0 0 18px rgba(204,26,26,0.28); }
-  50%       { box-shadow: 0 0 42px rgba(204,26,26,0.58); }
+  0%, 100% { box-shadow: 0 0 18px rgba(156,122,46,0.28); }
+  50%       { box-shadow: 0 0 42px rgba(156,122,46,0.58); }
 }
 @keyframes float {
   0%, 100% { transform: translateY(0); }
@@ -378,7 +378,7 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: var(--red); }
 
 /* ── Selection ───────────────────────────────────────────── */
-::selection { background: rgba(204,26,26,0.16); color: var(--red-dark); }
+::selection { background: rgba(156,122,46,0.16); color: var(--red-dark); }
 
 /* ── Status badges (semantic — unchanged) ────────────────── */
 .badge {

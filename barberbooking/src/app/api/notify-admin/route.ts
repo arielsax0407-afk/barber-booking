@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
           Authorization: `Bearer ${RESEND_API_KEY}`,
         },
         body: JSON.stringify({
-          from: 'noreply@barber-budapest.com',
+          from: 'תורים <onboarding@resend.dev>',
           to: ADMIN_EMAIL,
           subject: `✂️ תור חדש: ${name} — ${svcLabel} ${time}`,
           text: message,

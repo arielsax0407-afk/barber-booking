@@ -35,15 +35,33 @@ export default function BookPage() {
   const [done, setDone] = useState(false);
   const [appointmentId, setAppointmentId] = useState('');
   const [error, setError] = useState('');
+  const [dateError, setDateError] = useState('');
 
   const stepIndex = STEPS.indexOf(step);
 
-  async function loadSlots(selectedDate: string) {
+  function goBack() {
+    if (stepIndex === 0) router.push('/');
+    else setStep(STEPS[stepIndex - 1]);
+  }
+
+  async function loadSlots(selectedDate: string): Promise<string[]> {
     setLoadingSlots(true);
     const res = await fetch(`/api/availability?date=${selectedDate}`);
     const json = await res.json();
-    setTakenSlots(json.takenSlots ?? []);
+    const taken = (json.takenSlots ?? []) as string[];
+    setTakenSlots(taken);
     setLoadingSlots(false);
+    return taken;
+  }
+
+  async function handleDateContinue() {
+    setDateError('');
+    const taken = await loadSlots(date);
+    if (TIME_SLOTS.every((t) => taken.includes(t))) {
+      setDateError('אין תורים פנויים בתאריך זה. נסה תאריך אחר.');
+      return;
+    }
+    setStep('time');
   }
 
   async function handleSubmit() {
@@ -86,7 +104,7 @@ export default function BookPage() {
           <p style={{ fontSize: '0.7rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--amber)', marginBottom: '0.75rem', fontWeight: 600 }}>הצלחה</p>
           <h2 className="serif" style={{ fontSize: '2.25rem', fontWeight: 400, marginBottom: '0.75rem', color: 'var(--text)' }}>התור נקבע!</h2>
           <p style={{ color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '2rem', fontSize: '0.9rem' }}>
-            בקשתך התקבלה. פרטי התור המלאים יופיעו לאחר אישור הספר.
+            התור שלך אושר ונקבע בהצלחה. מחכים לך!
           </p>
 
           <div className="glass-card p-6 text-right mb-6" style={{ gap: '0.75rem', display: 'flex', flexDirection: 'column', background: '#fff' }}>
@@ -105,7 +123,7 @@ export default function BookPage() {
             <div className="divider" style={{ margin: '0.25rem 0' }} />
             <div className="flex justify-between items-center">
               <span style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 600 }}>סטטוס</span>
-              <span className="badge badge-pending">ממתין לאישור</span>
+              <span className="badge badge-approved">מאושר</span>
             </div>
           </div>
 
@@ -192,9 +210,12 @@ export default function BookPage() {
                   </button>
                 ))}
               </div>
-              <button className="btn-primary mt-8" disabled={!service} onClick={() => setStep('date')} style={{ width: '100%' }}>
-                המשך
-              </button>
+              <div className="flex gap-3 mt-8">
+                <button className="btn-ghost" onClick={goBack} style={{ flex: 1 }}>חזור</button>
+                <button className="btn-primary" disabled={!service} onClick={() => setStep('date')} style={{ flex: 2 }}>
+                  המשך
+                </button>
+              </div>
             </div>
           )}
 
@@ -209,7 +230,7 @@ export default function BookPage() {
                   type="date"
                   min={getMinDate()}
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={(e) => { setDate(e.target.value); setDateError(''); }}
                   className="input-field"
                   style={{ textAlign: 'center', fontSize: '1.125rem', background: 'transparent', border: 'none', boxShadow: 'none', padding: '1.25rem' }}
                 />
@@ -219,9 +240,22 @@ export default function BookPage() {
                   <p className="serif" style={{ fontSize: '1.1rem', color: 'var(--amber)', fontWeight: 500 }}>{formatDate(date)}</p>
                 </div>
               )}
-              <button className="btn-primary mt-8" disabled={!date} onClick={() => { loadSlots(date); setStep('time'); }} style={{ width: '100%' }}>
-                המשך
-              </button>
+              {dateError && (
+                <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 'var(--radius)', padding: '0.75rem 1rem', marginTop: '1rem', color: '#991B1B', fontSize: '0.875rem', textAlign: 'center', fontWeight: 500 }}>
+                  {dateError}
+                </div>
+              )}
+              <div className="flex gap-3 mt-8">
+                <button className="btn-ghost" onClick={goBack} style={{ flex: 1 }}>חזור</button>
+                <button className="btn-primary" disabled={!date || loadingSlots} onClick={handleDateContinue} style={{ flex: 2 }}>
+                  {loadingSlots ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.6)', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin-slow 0.7s linear infinite' }} />
+                      בודק זמינות...
+                    </span>
+                  ) : 'המשך'}
+                </button>
+              </div>
             </div>
           )}
 
@@ -270,9 +304,12 @@ export default function BookPage() {
                   })}
                 </div>
               )}
-              <button className="btn-primary mt-8" disabled={!time} onClick={() => setStep('details')} style={{ width: '100%' }}>
-                המשך
-              </button>
+              <div className="flex gap-3 mt-8">
+                <button className="btn-ghost" onClick={goBack} style={{ flex: 1 }}>חזור</button>
+                <button className="btn-primary" disabled={!time} onClick={() => setStep('details')} style={{ flex: 2 }}>
+                  המשך
+                </button>
+              </div>
             </div>
           )}
 
@@ -292,14 +329,17 @@ export default function BookPage() {
                   <input type="tel" className="input-field" placeholder="050-0000000" value={phone} onChange={(e) => setPhone(e.target.value)} />
                 </div>
               </div>
-              <button
-                className="btn-primary mt-8"
-                disabled={!name.trim() || !phone.trim()}
-                onClick={() => setStep('confirm')}
-                style={{ width: '100%' }}
-              >
-                המשך
-              </button>
+              <div className="flex gap-3 mt-8">
+                <button className="btn-ghost" onClick={goBack} style={{ flex: 1 }}>חזור</button>
+                <button
+                  className="btn-primary"
+                  disabled={!name.trim() || !phone.trim()}
+                  onClick={() => setStep('confirm')}
+                  style={{ flex: 2 }}
+                >
+                  המשך
+                </button>
+              </div>
             </div>
           )}
 
@@ -338,16 +378,19 @@ export default function BookPage() {
                 </div>
               )}
 
-              <button className="btn-primary" onClick={handleSubmit} disabled={submitting} style={{ width: '100%' }}>
-                {submitting ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.6)', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin-slow 0.7s linear infinite' }} />
-                    שולח...
-                  </span>
-                ) : 'אשר וקבע תור'}
-              </button>
+              <div className="flex gap-3">
+                <button className="btn-ghost" onClick={goBack} disabled={submitting} style={{ flex: 1 }}>חזור</button>
+                <button className="btn-primary" onClick={handleSubmit} disabled={submitting} style={{ flex: 2 }}>
+                  {submitting ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.6)', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin-slow 0.7s linear infinite' }} />
+                      שולח...
+                    </span>
+                  ) : 'אשר וקבע תור'}
+                </button>
+              </div>
               <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.75rem', marginTop: '1rem', letterSpacing: '0.05em' }}>
-                לאחר הקביעה, הספר יאשר את התור
+                התור יאושר אוטומטית מיד לאחר הקביעה
               </p>
             </div>
           )}

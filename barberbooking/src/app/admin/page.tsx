@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import type { Appointment } from '@/lib/supabase';
 import { SERVICES, TIME_SLOTS } from '@/lib/services';
+import { DEFAULT_WA_TEMPLATES, WA_TEMPLATE_KEYS, WA_TEMPLATE_LABELS, WA_PLACEHOLDER_HELP, WaTemplateKey } from '@/lib/waTemplates';
 
 // ── Admin palette — theme-aware via CSS variables ─────────────
 // Defaults (dark) live in :root; [data-admin-theme="light"] overrides
@@ -54,12 +55,6 @@ const DEFAULT_HOURS: Record<number, DayHours> = {
   6: { open: false, from: '09:00', to: '14:00' },
 };
 
-const WA_TEMPLATES = {
-  approve:   (a: Appointment) => `שלום ${a.name}! 🎉\nהתור שלך אושר:\n✂️ ${svcName(a.service)}\n📅 ${fmtDate(a.date)}\n⏰ ${a.time}\n\nמחכים לך ב-ברבר פרמיום! 💈`,
-  reject:    (a: Appointment) => `שלום ${a.name},\nמצטערים, לא נוכל לקבל אותך בזמן שביקשת.\nאנחנו מזמינים אותך לקבוע תור חדש דרך האתר.\nתודה! 🙏`,
-  reschedule:(a: Appointment) => `שלום ${a.name},\nנשמח לשנות את התור שלך.\nאנא היכנס לאתר וקבע תור חדש.\nתודה! 💈`,
-};
-
 // ── Helpers ───────────────────────────────────────────────────
 
 function svcName(id: string) { return SERVICES.find(s => s.id === id)?.name ?? id; }
@@ -84,27 +79,56 @@ function getWeekDays(ref: string): string[] {
   });
 }
 
-function waLink(a: Appointment, template: (a: Appointment) => string) {
-  const msg = template(a);
+function fillTemplate(template: string, a: Appointment): string {
+  return template
+    .replace(/\{\{name\}\}/g, a.name)
+    .replace(/\{\{service\}\}/g, svcName(a.service))
+    .replace(/\{\{date\}\}/g, fmtDate(a.date))
+    .replace(/\{\{time\}\}/g, a.time)
+    .replace(/\{\{price\}\}/g, String(PRICE_MAP[a.service] ?? 0));
+}
+
+function waLink(a: Appointment, template: string) {
+  const msg = fillTemplate(template, a);
   const phone = a.phone.replace(/\D/g, '');
   const intl = phone.startsWith('0') ? '972' + phone.slice(1) : phone;
   return `https://wa.me/${intl}?text=${encodeURIComponent(msg)}`;
 }
 
-function playChime() {
+function playChime(sharedCtx?: AudioContext | null) {
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    [[880, 0], [1108, 0.18], [880, 0.36]].forEach(([freq, t]) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + t);
-      gain.gain.setValueAtTime(0.22, ctx.currentTime + t);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.35);
-      osc.start(ctx.currentTime + t);
-      osc.stop(ctx.currentTime + t + 0.35);
-    });
+    const ctx = sharedCtx ?? new (window.AudioContext || (window as any).webkitAudioContext)();
+    const ring = () => {
+      [[880, 0], [1108, 0.18], [880, 0.36], [880, 0.9], [1108, 1.08], [1320, 1.26]].forEach(([freq, t]) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + t);
+        gain.gain.setValueAtTime(0.35, ctx.currentTime + t);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.35);
+        osc.start(ctx.currentTime + t);
+        osc.stop(ctx.currentTime + t + 0.35);
+      });
+    };
+    if (ctx.state === 'suspended') ctx.resume().then(ring).catch(() => {});
+    else ring();
+  } catch {}
+  try {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 200]);
+  } catch {}
+}
+
+// Keeps the shared AudioContext from being auto-suspended by the browser
+// when idle, so the chime can still fire later without a fresh tap.
+function startAudioKeepAlive(ctx: AudioContext) {
+  try {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.value = 20;
+    gain.gain.value = 0.00001;
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start();
   } catch {}
 }
 
@@ -126,12 +150,12 @@ function exportCSV(appts: Appointment[]) {
 // ── Types ─────────────────────────────────────────────────────
 
 type Tab = 'dashboard' | 'appointments' | 'calendar' | 'settings';
-type Filter = 'all' | 'pending' | 'approved' | 'in_progress' | 'completed' | 'rejected' | 'cancelled';
+type Filter = 'all' | 'approved' | 'completed' | 'rejected' | 'cancelled';
 
 interface TabProps {
   appointments: Appointment[];
   blockedSlots: { date: string; time: string }[];
-  updateStatus: (id: string, s: 'approved' | 'rejected' | 'pending' | 'in_progress' | 'completed' | 'cancelled') => void;
+  updateStatus: (id: string, s: 'approved' | 'rejected' | 'completed' | 'cancelled') => void;
   blockSlot: (date: string, time: string) => void;
   unblockSlot: (date: string, time: string) => void;
   hours: Record<number, DayHours>;
@@ -139,6 +163,8 @@ interface TabProps {
   returningPhones: Set<string>;
   today: string;
   loading: boolean;
+  templates: Record<WaTemplateKey, string>;
+  updateTemplates: (t: Record<WaTemplateKey, string>) => Promise<void>;
 }
 
 // ── Main ──────────────────────────────────────────────────────
@@ -153,6 +179,43 @@ export default function AdminPage() {
   const [tab, setTab]         = useState<Tab>('dashboard');
   const [hours, setHoursState] = useState<Record<number, DayHours>>(DEFAULT_HOURS);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [templates, setTemplates] = useState<Record<WaTemplateKey, string>>(DEFAULT_WA_TEMPLATES);
+  const [newSinceLogin, setNewSinceLogin] = useState<Appointment[]>([]);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Mobile browsers block audio until a real user gesture happens —
+  // unlock (create + resume) the shared AudioContext on first tap so
+  // the new-booking chime can actually play later from the poll.
+  useEffect(() => {
+    let keptAlive = false;
+    function unlock() {
+      if (!audioCtxRef.current) {
+        try {
+          const AC = window.AudioContext || (window as any).webkitAudioContext;
+          audioCtxRef.current = new AC();
+        } catch { return; }
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+      if (!keptAlive) {
+        keptAlive = true;
+        startAudioKeepAlive(ctx);
+      }
+    }
+    function onVisible() {
+      if (document.visibilityState === 'visible' && audioCtxRef.current?.state === 'suspended') {
+        audioCtxRef.current.resume();
+      }
+    }
+    document.addEventListener('pointerdown', unlock);
+    document.addEventListener('keydown', unlock);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      document.removeEventListener('pointerdown', unlock);
+      document.removeEventListener('keydown', unlock);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -188,13 +251,37 @@ export default function AdminPage() {
     const res = await fetch('/api/admin/data');
     if (res.ok) {
       const json = await res.json();
-      setAppointments((json.appointments as Appointment[]) ?? []);
+      const appts = (json.appointments as Appointment[]) ?? [];
+      setAppointments(appts);
       setBlockedSlots(json.blockedSlots ?? []);
+      setTemplates({ ...DEFAULT_WA_TEMPLATES, ...(json.templates ?? {}) });
+
+      let lastSeen = Date.now();
+      try {
+        const stored = localStorage.getItem('barber_last_seen_ts');
+        if (stored !== null) lastSeen = Number(stored);
+      } catch {}
+      const fresh = appts
+        .filter(a => new Date(a.created_at).getTime() > lastSeen)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      if (fresh.length > 0) {
+        setNewSinceLogin(fresh);
+        playChime(audioCtxRef.current);
+      }
+      try { localStorage.setItem('barber_last_seen_ts', String(Date.now())); } catch {}
     }
     setLoading(false);
   }
 
-  async function updateStatus(id: string, status: 'approved' | 'rejected' | 'pending' | 'in_progress' | 'completed' | 'cancelled') {
+  async function updateTemplates(next: Record<WaTemplateKey, string>) {
+    const res = await fetch('/api/admin/templates', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ templates: next }),
+    });
+    if (res.ok) setTemplates(next);
+  }
+
+  async function updateStatus(id: string, status: 'approved' | 'rejected' | 'completed' | 'cancelled') {
     await fetch('/api/admin/update-status', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, status }),
@@ -232,7 +319,7 @@ export default function AdminPage() {
         const prevIds = new Set(prev.map(a => a.id));
         const newOnes = fresh.filter(a => !prevIds.has(a.id));
         if (newOnes.length > 0) {
-          playChime();
+          playChime(audioCtxRef.current);
           if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
             const nw = newOnes[0];
             new Notification('תור חדש! 💈', { body: `${nw.name} · ${fmtDate(nw.date)} ${nw.time}` });
@@ -281,27 +368,56 @@ export default function AdminPage() {
     return new Set(Object.keys(c).filter(p => c[p] > 1));
   })();
 
-  const props: TabProps = { appointments, blockedSlots, updateStatus, blockSlot, unblockSlot, hours, setHours, returningPhones, today, loading };
+  const props: TabProps = { appointments, blockedSlots, updateStatus, blockSlot, unblockSlot, hours, setHours, returningPhones, today, loading, templates, updateTemplates };
 
   return (
     <div data-admin-theme={theme} style={{ display: 'flex', minHeight: '100vh', background: B0, color: T, direction: 'rtl', fontFamily: 'var(--font-body)', transition: 'background 0.25s ease, color 0.25s ease' }}>
-      <Sidebar tab={tab} setTab={setTab} onLogout={() => setAuthed(false)} onExport={() => exportCSV(appointments)} pendingCount={appointments.filter(a => a.status === 'pending').length} theme={theme} onToggleTheme={toggleTheme} />
+      {newSinceLogin.length > 0 && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+          <div style={{ width: '100%', maxWidth: 380, background: B1, border: `1px solid ${BDR}`, borderRadius: RL, padding: '1.75rem', maxHeight: '80vh', overflow: 'auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
+              <div style={{ width: 54, height: 54, margin: '0 auto 0.75rem', borderRadius: '50%', background: `linear-gradient(135deg,${GD},${GL})`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 24px ${GG}`, fontSize: '1.5rem' }}>
+                🔔
+              </div>
+              <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 600, color: T }}>
+                {newSinceLogin.length} תור{newSinceLogin.length > 1 ? 'ים' : ''} חדש{newSinceLogin.length > 1 ? 'ים' : ''}!
+              </p>
+              <p style={{ fontSize: '0.75rem', color: TM, marginTop: '0.25rem' }}>מאז הביקור האחרון שלך</p>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem' }}>
+              {newSinceLogin.map(a => (
+                <div key={a.id} style={{ background: B0, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.75rem 0.875rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.25rem', gap: '0.5rem' }}>
+                    <span style={{ fontWeight: 700, color: T, fontSize: '0.9rem' }}>{a.name}</span>
+                    <span style={{ color: G, fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>{fmtDate(a.date)} · {a.time}</span>
+                  </div>
+                  <div style={{ color: TM, fontSize: '0.8rem' }}>{svcName(a.service)} · {a.phone}</div>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setNewSinceLogin([])} style={{ width: '100%', padding: '0.875rem', background: `linear-gradient(135deg,${GD},${GL})`, border: 'none', borderRadius: R, color: '#080808', fontSize: '0.875rem', fontWeight: 700, letterSpacing: '0.05em', cursor: 'pointer', boxShadow: `0 4px 16px ${GG}` }}>
+              הבנתי
+            </button>
+          </div>
+        </div>
+      )}
+      <Sidebar tab={tab} setTab={setTab} onLogout={() => setAuthed(false)} onExport={() => exportCSV(appointments)} theme={theme} onToggleTheme={toggleTheme} />
       <main style={{ flex: 1, overflow: 'auto', paddingBottom: '4.5rem' }}>
         {tab === 'dashboard'    && <DashboardTab    {...props} />}
         {tab === 'appointments' && <AppointmentsTab {...props} />}
         {tab === 'calendar'     && <CalendarTab     {...props} />}
         {tab === 'settings'     && <SettingsTab     {...props} />}
       </main>
-      <MobileNav tab={tab} setTab={setTab} pendingCount={appointments.filter(a => a.status === 'pending').length} theme={theme} onToggleTheme={toggleTheme} />
+      <MobileNav tab={tab} setTab={setTab} theme={theme} onToggleTheme={toggleTheme} />
     </div>
   );
 }
 
 // ── Sidebar ───────────────────────────────────────────────────
 
-function Sidebar({ tab, setTab, onLogout, onExport, pendingCount, theme, onToggleTheme }: {
+function Sidebar({ tab, setTab, onLogout, onExport, theme, onToggleTheme }: {
   tab: Tab; setTab: (t: Tab) => void;
-  onLogout: () => void; onExport: () => void; pendingCount: number;
+  onLogout: () => void; onExport: () => void;
   theme: 'dark' | 'light'; onToggleTheme: () => void;
 }) {
   const items: { id: Tab; icon: string; label: string }[] = [
@@ -331,9 +447,6 @@ function Sidebar({ tab, setTab, onLogout, onExport, pendingCount, theme, onToggl
           }}>
             <span style={{ fontSize: '1rem', width: 20, textAlign: 'center' }}>{item.icon}</span>
             <span>{item.label}</span>
-            {item.id === 'appointments' && pendingCount > 0 && (
-              <span style={{ marginRight: 'auto', background: '#f59e0b', color: '#080808', fontSize: '0.6rem', fontWeight: 700, borderRadius: 999, padding: '0.1rem 0.45rem', minWidth: 18, textAlign: 'center' }}>{pendingCount}</span>
-            )}
             {tab === item.id && <div style={{ position: 'absolute', left: 0, top: '20%', bottom: '20%', width: 3, background: G, borderRadius: 2 }} />}
           </button>
         ))}
@@ -354,7 +467,7 @@ function Sidebar({ tab, setTab, onLogout, onExport, pendingCount, theme, onToggl
   );
 }
 
-function MobileNav({ tab, setTab, pendingCount, theme, onToggleTheme }: { tab: Tab; setTab: (t: Tab) => void; pendingCount: number; theme: 'dark' | 'light'; onToggleTheme: () => void }) {
+function MobileNav({ tab, setTab, theme, onToggleTheme }: { tab: Tab; setTab: (t: Tab) => void; theme: 'dark' | 'light'; onToggleTheme: () => void }) {
   useEffect(() => {
     const style = document.createElement('style');
     style.id = 'admin-responsive';
@@ -386,9 +499,6 @@ function MobileNav({ tab, setTab, pendingCount, theme, onToggleTheme }: { tab: T
           }}>
             <span style={{ fontSize: '1.1rem' }}>{item.icon}</span>
             <span style={{ fontSize: '0.55rem', letterSpacing: '0.05em' }}>{item.label}</span>
-            {item.id === 'appointments' && pendingCount > 0 && (
-              <span style={{ position: 'absolute', top: 4, right: 'calc(50% - 20px)', background: '#f59e0b', color: '#080808', fontSize: '0.5rem', fontWeight: 700, borderRadius: 999, padding: '0.1rem 0.35rem' }}>{pendingCount}</span>
-            )}
           </button>
         ))}
         <button onClick={onToggleTheme} style={{
@@ -406,12 +516,12 @@ function MobileNav({ tab, setTab, pendingCount, theme, onToggleTheme }: { tab: T
 
 // ── Dashboard Tab ─────────────────────────────────────────────
 
-function DashboardTab({ appointments, updateStatus, returningPhones, today, loading }: TabProps) {
+function DashboardTab({ appointments, today }: TabProps) {
   const weekDays = getWeekDays(today);
   const weekAppts = appointments.filter(a => weekDays.includes(a.date));
   const monthAppts = appointments.filter(a => a.date.startsWith(today.slice(0, 7)));
   const todayAppts = appointments.filter(a => a.date === today);
-  const pendingToday = todayAppts.filter(a => a.status === 'pending');
+  const todayCompleted = todayAppts.filter(a => a.status === 'completed').length;
   const weekRevenue = weekAppts.filter(a => a.status === 'approved').reduce((s, a) => s + (PRICE_MAP[a.service] ?? 0), 0);
   const weekApproved = weekAppts.filter(a => a.status === 'approved').length;
   const weekRate = weekAppts.length ? Math.round(weekApproved / weekAppts.length * 100) : 0;
@@ -425,16 +535,8 @@ function DashboardTab({ appointments, updateStatus, returningPhones, today, load
   appointments.forEach(a => { const k = a.time.split(':')[0] + ':00'; if (k in hrCount) hrCount[k]++; });
   const maxHr = Math.max(...Object.values(hrCount), 1);
 
-  async function approveAllPendingToday() {
-    await Promise.all(pendingToday.map(a => fetch('/api/admin/update-status', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: a.id, status: 'approved' }),
-    })));
-    pendingToday.forEach(a => updateStatus(a.id, 'approved'));
-  }
-
   const kpi = [
-    { label: 'תורים היום', value: todayAppts.length, sub: `${pendingToday.length} ממתינים`, color: G },
+    { label: 'תורים היום', value: todayAppts.length, sub: `${todayCompleted} הושלמו`, color: G },
     { label: 'הכנסות השבוע', value: `₪${weekRevenue}`, sub: `${weekAppts.length} תורים`, color: GL },
     { label: 'תורים בחודש', value: monthAppts.length, sub: `${monthAppts.filter(a => a.status === 'approved').length} מאושרים`, color: G },
     { label: 'אחוז אישור', value: `${weekRate}%`, sub: 'השבוע', color: weekRate >= 80 ? '#22c55e' : G },
@@ -446,19 +548,6 @@ function DashboardTab({ appointments, updateStatus, returningPhones, today, load
         <p style={{ fontSize: '0.65rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: G, marginBottom: '0.25rem' }}>שלום, ספר ✂️</p>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 500, color: T }}>לוח בקרה</h1>
       </div>
-
-      {/* Approve all banner */}
-      {pendingToday.length > 0 && (
-        <div style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.28)', borderRadius: RL, padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-          <div>
-            <p style={{ fontWeight: 600, color: T, fontSize: '0.9rem' }}>⚡ {pendingToday.length} תורים ממתינים לאישור היום</p>
-            <p style={{ color: TM, fontSize: '0.78rem', marginTop: 2 }}>לחץ לאשר את כולם בבת אחת</p>
-          </div>
-          <button onClick={approveAllPendingToday} style={{ padding: '0.6rem 1.25rem', background: '#f59e0b', border: 'none', borderRadius: R, color: '#080808', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-            אשר הכל
-          </button>
-        </div>
-      )}
 
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
@@ -509,54 +598,19 @@ function DashboardTab({ appointments, updateStatus, returningPhones, today, load
         </div>
       </div>
 
-      {/* Recent pending */}
-      {appointments.filter(a => a.status === 'pending').length > 0 && (
-        <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, padding: '1.5rem' }}>
-          <p style={{ fontSize: '0.7rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: G, marginBottom: '1.25rem' }}>ממתינים לאישור</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {appointments.filter(a => a.status === 'pending').slice(0, 4).map(a => (
-              <div key={a.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.75rem 1rem', background: B3, borderRadius: R, border: `1px solid ${BDR}` }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: '0.875rem', fontWeight: 600, color: T, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</p>
-                  <p style={{ fontSize: '0.72rem', color: TM }}>{fmtDate(a.date)} · {a.time} · {svcName(a.service)}</p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
-                  <a href={waLink(a, WA_TEMPLATES.approve)} target="_blank" rel="noopener noreferrer"
-                    onClick={() => updateStatus(a.id, 'approved')}
-                    style={{ padding: '0.4rem 0.875rem', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.28)', borderRadius: 8, color: '#22c55e', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}>
-                    אשר
-                  </a>
-                  <button onClick={() => updateStatus(a.id, 'rejected')}
-                    style={{ padding: '0.4rem 0.75rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 8, color: '#ef4444', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
-                    דחה
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
 // ── Appointments Tab ──────────────────────────────────────────
 
-function AppointmentsTab({ appointments, updateStatus, returningPhones, today }: TabProps) {
+function AppointmentsTab({ appointments, updateStatus, returningPhones, today, templates }: TabProps) {
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
   const [svcFilter, setSvcFilter] = useState('all');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [viewMode, setViewMode] = useState<'list' | 'swipe'>('list');
-  const [swipeIdx, setSwipeIdx] = useState(0);
-  const [swipeDrag, setSwipeDrag] = useState(0);
-  const [swipeDir, setSwipeDir] = useState<'left' | 'right' | null>(null);
-  const dragStart = useRef(0);
-  const isDragging = useRef(false);
-
-  const pending = appointments.filter(a => a.status === 'pending');
 
   let filtered = appointments;
   if (filter !== 'all') filtered = filtered.filter(a => a.status === filter);
@@ -588,61 +642,23 @@ function AppointmentsTab({ appointments, updateStatus, returningPhones, today }:
     clearSelect();
   }
 
-  // Swipe logic
-  const currentSwipe = pending[swipeIdx];
-
-  function swipeAction(dir: 'right' | 'left') {
-    if (!currentSwipe) return;
-    setSwipeDir(dir);
-    setTimeout(() => {
-      updateStatus(currentSwipe.id, dir === 'right' ? 'approved' : 'rejected');
-      setSwipeDrag(0);
-      setSwipeDir(null);
-      setSwipeIdx(0);
-    }, 300);
-  }
-
-  function handleDragStart(x: number) {
-    isDragging.current = true;
-    dragStart.current = x;
-  }
-  function handleDragMove(x: number) {
-    if (!isDragging.current) return;
-    setSwipeDrag(x - dragStart.current);
-  }
-  function handleDragEnd() {
-    if (!isDragging.current) return;
-    isDragging.current = false;
-    if (swipeDrag > 80) swipeAction('right');
-    else if (swipeDrag < -80) swipeAction('left');
-    else setSwipeDrag(0);
-  }
-
   const counts = {
     all: appointments.length,
-    pending: pending.length,
     approved: appointments.filter(a => a.status === 'approved').length,
-    in_progress: appointments.filter(a => a.status === 'in_progress').length,
     completed: appointments.filter(a => a.status === 'completed').length,
     rejected: appointments.filter(a => a.status === 'rejected').length,
   };
   const filterTabs: { id: Filter; label: string; color: string }[] = [
-    { id: 'all',         label: `הכל (${counts.all})`,               color: G },
-    { id: 'pending',     label: `ממתינים (${counts.pending})`,        color: '#f59e0b' },
-    { id: 'approved',    label: `מאושרים (${counts.approved})`,       color: '#22c55e' },
-    { id: 'in_progress', label: `בטיפול (${counts.in_progress})`,     color: '#3b82f6' },
-    { id: 'rejected',    label: `נדחו (${counts.rejected})`,          color: '#ef4444' },
+    { id: 'all',       label: `הכל (${counts.all})`,       color: G },
+    { id: 'approved',  label: `מאושרים (${counts.approved})`, color: '#22c55e' },
+    { id: 'completed', label: `הושלמו (${counts.completed})`, color: '#10b981' },
+    { id: 'rejected',  label: `נדחו (${counts.rejected})`,    color: '#ef4444' },
   ];
 
   return (
     <div style={{ padding: '2rem 1.5rem', maxWidth: '900px', margin: '0 auto', width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.75rem', gap: '1rem', flexWrap: 'wrap' }}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 500, color: T }}>תורים</h1>
-        {pending.length > 0 && (
-          <button onClick={() => setViewMode(v => v === 'list' ? 'swipe' : 'list')} style={{ padding: '0.5rem 1.25rem', background: viewMode === 'swipe' ? GG : B3, border: `1px solid ${viewMode === 'swipe' ? BDRG : BDR}`, borderRadius: R, color: viewMode === 'swipe' ? GL : TM, fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
-            {viewMode === 'swipe' ? '≡ רשימה' : '⟺ אישור מהיר'}
-          </button>
-        )}
       </div>
 
       {/* Search + filters */}
@@ -699,59 +715,8 @@ function AppointmentsTab({ appointments, updateStatus, returningPhones, today }:
         </div>
       )}
 
-      {/* Swipe view */}
-      {viewMode === 'swipe' && pending.length > 0 && (
-        <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, padding: '2rem', marginBottom: '1.5rem', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.65rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: G, marginBottom: '1rem' }}>
-            אישור מהיר · {swipeIdx + 1} / {pending.length}
-          </p>
-          {currentSwipe ? (
-            <>
-              <div
-                onMouseDown={e => handleDragStart(e.clientX)}
-                onMouseMove={e => handleDragMove(e.clientX)}
-                onMouseUp={handleDragEnd}
-                onMouseLeave={handleDragEnd}
-                onTouchStart={e => handleDragStart(e.touches[0].clientX)}
-                onTouchMove={e => handleDragMove(e.touches[0].clientX)}
-                onTouchEnd={handleDragEnd}
-                style={{
-                  maxWidth: 380, margin: '0 auto 1.5rem',
-                  background: B3, border: `1px solid ${BDR}`, borderRadius: RL, padding: '1.75rem',
-                  cursor: 'grab', userSelect: 'none',
-                  transform: `translateX(${swipeDir === 'right' ? 400 : swipeDir === 'left' ? -400 : swipeDrag}px) rotate(${swipeDrag * 0.04}deg)`,
-                  transition: swipeDir || !isDragging.current ? 'transform 0.3s ease, opacity 0.3s ease' : 'none',
-                  opacity: swipeDir ? 0 : Math.max(0.4, 1 - Math.abs(swipeDrag) / 300),
-                  position: 'relative',
-                }}>
-                {Math.abs(swipeDrag) > 40 && (
-                  <div style={{
-                    position: 'absolute', top: 12, left: swipeDrag > 0 ? 'auto' : 12, right: swipeDrag > 0 ? 12 : 'auto',
-                    background: swipeDrag > 0 ? 'rgba(34,197,94,0.9)' : 'rgba(239,68,68,0.9)',
-                    color: '#fff', fontWeight: 700, fontSize: '0.85rem', padding: '0.3rem 0.875rem', borderRadius: 8,
-                  }}>
-                    {swipeDrag > 0 ? '✓ אשר' : '✗ דחה'}
-                  </div>
-                )}
-                <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', fontWeight: 600, color: T, marginBottom: '0.5rem' }}>{currentSwipe.name}</p>
-                <p style={{ color: TM, fontSize: '0.85rem', marginBottom: '0.25rem' }}>{svcName(currentSwipe.service)} · ₪{PRICE_MAP[currentSwipe.service]}</p>
-                <p style={{ color: G, fontWeight: 600, fontSize: '0.9rem' }}>{fmtDate(currentSwipe.date)} · {currentSwipe.time}</p>
-                <p style={{ color: TD, fontSize: '0.78rem', marginTop: '0.375rem' }}>{currentSwipe.phone}</p>
-              </div>
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                <button onClick={() => swipeAction('left')} style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(239,68,68,0.12)', border: '1.5px solid rgba(239,68,68,0.3)', color: '#ef4444', fontSize: '1.2rem', cursor: 'pointer', fontWeight: 700 }}>✗</button>
-                <button onClick={() => swipeAction('right')} style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(34,197,94,0.12)', border: '1.5px solid rgba(34,197,94,0.3)', color: '#22c55e', fontSize: '1.2rem', cursor: 'pointer', fontWeight: 700 }}>✓</button>
-              </div>
-              <p style={{ color: TD, fontSize: '0.7rem', marginTop: '0.875rem' }}>גרור ימינה לאישור · שמאלה לדחייה</p>
-            </>
-          ) : (
-            <p style={{ color: TM, padding: '2rem' }}>אין תורים ממתינים 🎉</p>
-          )}
-        </div>
-      )}
-
       {/* List view */}
-      {viewMode === 'list' && (dates.length === 0
+      {dates.length === 0
         ? <div style={{ textAlign: 'center', padding: '4rem 0', color: TD }}>
             <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: TM, marginBottom: '0.5rem' }}>אין תורים</p>
             <p style={{ fontSize: '0.875rem' }}>לא נמצאו תורים לפי הסינון שנבחר</p>
@@ -768,19 +733,19 @@ function AppointmentsTab({ appointments, updateStatus, returningPhones, today }:
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
                 {grouped[date].map(a => (
                   <FullAppCard key={a.id} appt={a} selected={selected.has(a.id)} onToggle={() => toggleSelect(a.id)}
-                    onUpdate={updateStatus} isReturning={returningPhones.has(a.phone)} />
+                    onUpdate={updateStatus} isReturning={returningPhones.has(a.phone)} templates={templates} />
                 ))}
               </div>
             </div>
           ))
-      )}
+      }
     </div>
   );
 }
 
 // ── Calendar Tab ──────────────────────────────────────────────
 
-function CalendarTab({ appointments, updateStatus }: TabProps) {
+function CalendarTab({ appointments, updateStatus, templates }: TabProps) {
   const [weekRef, setWeekRef] = useState(getToday());
   const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
   const weekDays = getWeekDays(weekRef);
@@ -826,69 +791,73 @@ function CalendarTab({ appointments, updateStatus }: TabProps) {
 
       {/* Calendar grid */}
       <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, overflow: 'hidden' }}>
-        {/* Day headers */}
-        <div style={{ display: 'grid', gridTemplateColumns: '44px repeat(7, 1fr)', borderBottom: `1px solid ${BDR}` }}>
-          <div />
-          {weekDays.map((day, i) => {
-            const isToday = day === today;
-            const cnt = appointments.filter(a => a.date === day).length;
-            return (
-              <div key={day} style={{ padding: '0.875rem 0.25rem', textAlign: 'center', borderRight: i > 0 ? `1px solid ${BDR}` : 'none', background: isToday ? GG : 'transparent' }}>
-                <p style={{ fontSize: '0.65rem', letterSpacing: '0.1em', color: isToday ? G : TD, textTransform: 'uppercase', marginBottom: '0.2rem' }}>{DAY_NAMES[i]}</p>
-                <p style={{ fontSize: '1rem', fontWeight: 700, color: isToday ? GL : T }}>{parseInt(day.split('-')[2])}</p>
-                {cnt > 0 && <div style={{ width: 6, height: 6, borderRadius: '50%', background: isToday ? G : GD, margin: '0.2rem auto 0' }} />}
-              </div>
-            );
-          })}
-        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <div style={{ minWidth: 620 }}>
+            {/* Day headers */}
+            <div style={{ display: 'grid', gridTemplateColumns: '44px repeat(7, 1fr)', borderBottom: `1px solid ${BDR}` }}>
+              <div />
+              {weekDays.map((day, i) => {
+                const isToday = day === today;
+                const cnt = appointments.filter(a => a.date === day).length;
+                return (
+                  <div key={day} style={{ padding: '0.875rem 0.25rem', textAlign: 'center', borderRight: i > 0 ? `1px solid ${BDR}` : 'none', background: isToday ? GG : 'transparent' }}>
+                    <p style={{ fontSize: '0.65rem', letterSpacing: '0.1em', color: isToday ? G : TD, textTransform: 'uppercase', marginBottom: '0.2rem' }}>{DAY_NAMES[i]}</p>
+                    <p style={{ fontSize: '1rem', fontWeight: 700, color: isToday ? GL : T }}>{parseInt(day.split('-')[2])}</p>
+                    {cnt > 0 && <div style={{ width: 6, height: 6, borderRadius: '50%', background: isToday ? G : GD, margin: '0.2rem auto 0' }} />}
+                  </div>
+                );
+              })}
+            </div>
 
-        {/* Time grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '44px repeat(7, 1fr)', height: 520, overflowY: 'auto' }}>
-          {/* Time axis */}
-          <div style={{ position: 'relative' }}>
-            {HOURS.map((h, i) => (
-              <div key={h} style={{ position: 'absolute', top: `${i / 10 * 100}%`, right: 0, left: 0, display: 'flex', alignItems: 'flex-start', paddingRight: '0.375rem' }}>
-                <span style={{ fontSize: '0.55rem', color: TD }}>{h}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Day columns */}
-          {weekDays.map((day, di) => {
-            const dayAppts = appointments.filter(a => a.date === day);
-            const isToday = day === today;
-            return (
-              <div key={day} style={{ position: 'relative', borderRight: di > 0 ? `1px solid ${BDR}` : 'none', background: isToday ? 'rgba(201,168,76,0.02)' : 'transparent', minHeight: '100%' }}>
-                {/* Hour lines */}
-                {HOURS.map((_, hi) => (
-                  <div key={hi} style={{ position: 'absolute', top: `${hi / 10 * 100}%`, left: 0, right: 0, height: 1, background: BDR }} />
+            {/* Time grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: '44px repeat(7, 1fr)', height: 520, overflowY: 'auto' }}>
+              {/* Time axis */}
+              <div style={{ position: 'relative' }}>
+                {HOURS.map((h, i) => (
+                  <div key={h} style={{ position: 'absolute', top: `${i / 10 * 100}%`, right: 0, left: 0, display: 'flex', alignItems: 'flex-start', paddingRight: '0.375rem' }}>
+                    <span style={{ fontSize: '0.55rem', color: TD }}>{h}</span>
+                  </div>
                 ))}
-                {/* Appointments */}
-                {dayAppts.map(a => {
-                  const cfg = S_CFG[a.status as keyof typeof S_CFG];
-                  return (
-                    <div key={a.id} onClick={() => setSelectedAppt(a === selectedAppt ? null : a)}
-                      style={{
-                        position: 'absolute',
-                        top: `${apptTop(a.time)}%`,
-                        height: `${apptHeight(a.service)}%`,
-                        left: '2px', right: '2px',
-                        background: cfg.bg, border: `1px solid ${cfg.bdr}`,
-                        borderRadius: 5, padding: '0.2rem 0.35rem',
-                        cursor: 'pointer', overflow: 'hidden',
-                        transition: 'transform 0.15s ease',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.transform = 'scaleX(0.96)')}
-                      onMouseLeave={e => (e.currentTarget.style.transform = 'scaleX(1)')}
-                    >
-                      <p style={{ fontSize: '0.55rem', fontWeight: 700, color: cfg.color, lineHeight: 1.2, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{a.time}</p>
-                      <p style={{ fontSize: '0.55rem', color: T, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{a.name}</p>
-                    </div>
-                  );
-                })}
               </div>
-            );
-          })}
+
+              {/* Day columns */}
+              {weekDays.map((day, di) => {
+                const dayAppts = appointments.filter(a => a.date === day);
+                const isToday = day === today;
+                return (
+                  <div key={day} style={{ position: 'relative', borderRight: di > 0 ? `1px solid ${BDR}` : 'none', background: isToday ? 'rgba(201,168,76,0.02)' : 'transparent', minHeight: '100%' }}>
+                    {/* Hour lines */}
+                    {HOURS.map((_, hi) => (
+                      <div key={hi} style={{ position: 'absolute', top: `${hi / 10 * 100}%`, left: 0, right: 0, height: 1, background: BDR }} />
+                    ))}
+                    {/* Appointments */}
+                    {dayAppts.map(a => {
+                      const cfg = S_CFG[a.status as keyof typeof S_CFG];
+                      return (
+                        <div key={a.id} onClick={() => setSelectedAppt(a === selectedAppt ? null : a)}
+                          style={{
+                            position: 'absolute',
+                            top: `${apptTop(a.time)}%`,
+                            height: `${apptHeight(a.service)}%`,
+                            left: '2px', right: '2px',
+                            background: cfg.bg, border: `1px solid ${cfg.bdr}`,
+                            borderRadius: 5, padding: '0.2rem 0.35rem',
+                            cursor: 'pointer', overflow: 'hidden',
+                            transition: 'transform 0.15s ease',
+                          }}
+                          onMouseEnter={e => (e.currentTarget.style.transform = 'scaleX(0.96)')}
+                          onMouseLeave={e => (e.currentTarget.style.transform = 'scaleX(1)')}
+                        >
+                          <p style={{ fontSize: '0.55rem', fontWeight: 700, color: cfg.color, lineHeight: 1.2, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{a.time}</p>
+                          <p style={{ fontSize: '0.55rem', color: T, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{a.name}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -904,36 +873,26 @@ function CalendarTab({ appointments, updateStatus }: TabProps) {
             </span>
           </div>
           <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' }}>
-            {selectedAppt.status === 'pending' && <>
-              <a href={waLink(selectedAppt, WA_TEMPLATES.approve)} target="_blank" rel="noopener noreferrer"
-                onClick={() => { updateStatus(selectedAppt.id, 'approved'); setSelectedAppt(null); }}
-                style={{ padding: '0.5rem 1.125rem', background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, color: '#22c55e', fontSize: '0.8rem', fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}>
-                ✓ אשר
-              </a>
-              <button onClick={() => { updateStatus(selectedAppt.id, 'rejected'); setSelectedAppt(null); }}
-                style={{ padding: '0.5rem 1rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 8, color: '#ef4444', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
-                ✗ דחה
-              </button>
-            </>}
             {selectedAppt.status === 'approved' && (
-              <button onClick={() => { updateStatus(selectedAppt.id, 'in_progress'); setSelectedAppt(null); }}
-                style={{ padding: '0.5rem 1.125rem', background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.28)', borderRadius: 8, color: '#3b82f6', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
-                ▶ התחל טיפול
-              </button>
-            )}
-            {selectedAppt.status === 'in_progress' && (
               <button onClick={() => { updateStatus(selectedAppt.id, 'completed'); setSelectedAppt(null); }}
                 style={{ padding: '0.5rem 1.125rem', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.28)', borderRadius: 8, color: '#10b981', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
                 ✓ סיים טיפול
               </button>
             )}
-            {['approved', 'in_progress'].includes(selectedAppt.status) && (
-              <button onClick={() => { updateStatus(selectedAppt.id, 'cancelled'); setSelectedAppt(null); }}
-                style={{ padding: '0.5rem 0.875rem', background: B4, border: `1px solid ${BDR}`, borderRadius: 8, color: TM, fontSize: '0.78rem', cursor: 'pointer' }}>
-                ✕ בטל
+            {selectedAppt.status === 'approved' && (
+              <a href={waLink(selectedAppt, templates.reschedule)} target="_blank" rel="noopener noreferrer"
+                onClick={() => { updateStatus(selectedAppt.id, 'cancelled'); setSelectedAppt(null); }}
+                style={{ padding: '0.5rem 0.875rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 8, color: '#ef4444', fontSize: '0.78rem', fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}>
+                ✕ בטל + שלח הודעה
+              </a>
+            )}
+            {(selectedAppt.status === 'rejected' || selectedAppt.status === 'cancelled' || selectedAppt.status === 'completed') && (
+              <button onClick={() => { updateStatus(selectedAppt.id, 'approved'); setSelectedAppt(null); }}
+                style={{ padding: '0.5rem 1.125rem', background: B4, border: `1px solid ${BDR}`, borderRadius: 8, color: TM, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+                ↺ שחזר לתור פעיל
               </button>
             )}
-            <a href={waLink(selectedAppt, WA_TEMPLATES.reschedule)} target="_blank" rel="noopener noreferrer"
+            <a href={waLink(selectedAppt, templates.reschedule)} target="_blank" rel="noopener noreferrer"
               style={{ padding: '0.5rem 1rem', background: B4, border: `1px solid ${BDR}`, borderRadius: 8, color: TM, fontSize: '0.78rem', textDecoration: 'none' }}>
               📅 שנה תור
             </a>
@@ -947,10 +906,30 @@ function CalendarTab({ appointments, updateStatus }: TabProps) {
 
 // ── Settings Tab ──────────────────────────────────────────────
 
-function SettingsTab({ appointments, hours, setHours, blockedSlots, blockSlot, unblockSlot }: TabProps) {
+function SettingsTab({ appointments, hours, setHours, blockedSlots, blockSlot, unblockSlot, templates, updateTemplates }: TabProps) {
   const [blockDate, setBlockDate] = useState('');
   const [blockTime, setBlockTime] = useState('');
   const [blockMode, setBlockMode] = useState<'day' | 'slot'>('day');
+  const [editTemplates, setEditTemplates] = useState(templates);
+  const [savingTemplates, setSavingTemplates] = useState(false);
+  const [savedTemplates, setSavedTemplates] = useState(false);
+
+  useEffect(() => { setEditTemplates(templates); }, [templates]);
+
+  const templatesChanged = WA_TEMPLATE_KEYS.some(k => editTemplates[k] !== templates[k]);
+
+  async function handleSaveTemplates() {
+    setSavingTemplates(true);
+    await updateTemplates(editTemplates);
+    setSavingTemplates(false);
+    setSavedTemplates(true);
+    setTimeout(() => setSavedTemplates(false), 1800);
+  }
+
+  const previewAppt: Appointment = {
+    id: '', name: '[שם לקוח]', phone: '', service: 'haircut',
+    date: new Date().toISOString().split('T')[0], time: '10:00', status: 'pending', created_at: '',
+  };
 
   async function handleBlock() {
     if (!blockDate) return;
@@ -1046,22 +1025,36 @@ function SettingsTab({ appointments, hours, setHours, blockedSlots, blockSlot, u
 
       {/* WhatsApp templates */}
       <Section title="תבניות WhatsApp" icon="💬">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-          {[
-            { key: 'approve', label: 'אישור תור' },
-            { key: 'reject', label: 'דחיית תור' },
-            { key: 'reschedule', label: 'שינוי תור' },
-          ].map(({ key, label }) => (
+        <p style={{ fontSize: '0.78rem', color: TM, marginBottom: '1.25rem', lineHeight: 1.6 }}>
+          ניתן לערוך את הודעות הוואטסאפ שנשלחות ללקוחות. השתמש בשדות הבאים — הם יוחלפו אוטומטית: <br />
+          <code style={{ color: GL, direction: 'ltr', display: 'inline-block', marginTop: '0.25rem' }}>{WA_PLACEHOLDER_HELP}</code>
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {WA_TEMPLATE_KEYS.map(key => (
             <div key={key}>
-              <p style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: G, marginBottom: '0.375rem' }}>{label}</p>
-              <div style={{ padding: '0.75rem 1rem', background: B3, border: `1px solid ${BDR}`, borderRadius: R, fontSize: '0.8rem', color: TM, lineHeight: 1.65, whiteSpace: 'pre-wrap', direction: 'rtl' }}>
-                {WA_TEMPLATES[key as keyof typeof WA_TEMPLATES]({
-                  id: '', name: '[שם לקוח]', phone: '', service: 'haircut',
-                  date: new Date().toISOString().split('T')[0], time: '10:00', status: 'pending', created_at: ''
-                })}
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: G, marginBottom: '0.375rem' }}>{WA_TEMPLATE_LABELS[key]}</p>
+              <textarea
+                value={editTemplates[key]}
+                onChange={e => setEditTemplates({ ...editTemplates, [key]: e.target.value })}
+                rows={5}
+                style={{ width: '100%', padding: '0.75rem 1rem', background: B3, border: `1px solid ${BDR}`, borderRadius: R, fontSize: '0.8rem', color: T, lineHeight: 1.65, direction: 'rtl', resize: 'vertical', fontFamily: 'inherit' }}
+              />
+              <div style={{ marginTop: '0.5rem', padding: '0.625rem 0.875rem', background: 'rgba(201,168,76,0.05)', border: `1px solid ${BDR}`, borderRadius: R, fontSize: '0.75rem', color: TD, lineHeight: 1.6, whiteSpace: 'pre-wrap', direction: 'rtl' }}>
+                <span style={{ fontSize: '0.65rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: TD, display: 'block', marginBottom: '0.25rem' }}>תצוגה מקדימה</span>
+                {fillTemplate(editTemplates[key], previewAppt)}
               </div>
             </div>
           ))}
+        </div>
+        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem', flexWrap: 'wrap' }}>
+          <button onClick={handleSaveTemplates} disabled={!templatesChanged || savingTemplates}
+            style={{ padding: '0.6rem 1.5rem', background: `linear-gradient(135deg,${GD},${GL})`, border: 'none', borderRadius: R, color: '#080808', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', opacity: (!templatesChanged || savingTemplates) ? 0.4 : 1 }}>
+            {savingTemplates ? 'שומר…' : savedTemplates ? '✓ נשמר' : 'שמור תבניות'}
+          </button>
+          <button onClick={() => setEditTemplates(DEFAULT_WA_TEMPLATES)}
+            style={{ padding: '0.6rem 1.25rem', background: B4, border: `1px solid ${BDR}`, borderRadius: R, color: TM, fontWeight: 600, fontSize: '0.8rem', cursor: 'pointer' }}>
+            שחזר לברירת מחדל
+          </button>
         </div>
       </Section>
 
@@ -1091,10 +1084,11 @@ function Section({ title, icon, children }: { title: string; icon: string; child
 
 // ── Full App Card ─────────────────────────────────────────────
 
-function FullAppCard({ appt: a, selected, onToggle, onUpdate, isReturning }: {
+function FullAppCard({ appt: a, selected, onToggle, onUpdate, isReturning, templates }: {
   appt: Appointment; selected: boolean; onToggle: () => void;
-  onUpdate: (id: string, s: 'approved' | 'rejected' | 'pending' | 'in_progress' | 'completed' | 'cancelled') => void;
+  onUpdate: (id: string, s: 'approved' | 'rejected' | 'completed' | 'cancelled') => void;
   isReturning: boolean;
+  templates: Record<WaTemplateKey, string>;
 }) {
   const cfg = S_CFG[a.status as keyof typeof S_CFG];
   return (
@@ -1140,54 +1134,27 @@ function FullAppCard({ appt: a, selected, onToggle, onUpdate, isReturning }: {
           </div>
 
           {/* Actions */}
-          {a.status === 'pending' && (
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <a href={waLink(a, WA_TEMPLATES.approve)} target="_blank" rel="noopener noreferrer"
-                onClick={() => onUpdate(a.id, 'approved')}
-                style={{ flex: 1, minWidth: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '0.55rem', borderRadius: 8, background: 'rgba(34,197,94,0.10)', border: '1px solid rgba(34,197,94,0.28)', color: '#22c55e', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', cursor: 'pointer' }}>
-                <span>✓</span> אשר + שלח
-              </a>
-              <button onClick={() => onUpdate(a.id, 'rejected')}
-                style={{ flex: 1, minWidth: 80, padding: '0.55rem', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', color: '#ef4444', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
-                ✗ דחה
-              </button>
-              <a href={waLink(a, WA_TEMPLATES.reschedule)} target="_blank" rel="noopener noreferrer"
-                style={{ padding: '0.55rem 0.875rem', borderRadius: 8, background: B4, border: `1px solid ${BDR}`, color: TM, fontSize: '0.75rem', textDecoration: 'none' }}>
-                📅
-              </a>
-            </div>
-          )}
-
           {a.status === 'approved' && (
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <button onClick={() => onUpdate(a.id, 'in_progress')}
-                style={{ flex: 1, minWidth: 110, padding: '0.55rem', borderRadius: 8, background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.28)', color: '#3b82f6', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
-                ▶ התחל טיפול
+              <button onClick={() => onUpdate(a.id, 'completed')}
+                style={{ flex: 1, minWidth: 100, padding: '0.55rem', borderRadius: 8, background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.28)', color: '#10b981', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                ✓ סיים טיפול
               </button>
-              <a href={waLink(a, WA_TEMPLATES.approve)} target="_blank" rel="noopener noreferrer"
+              <a href={waLink(a, templates.reschedule)} target="_blank" rel="noopener noreferrer"
+                onClick={() => onUpdate(a.id, 'cancelled')}
+                style={{ flex: 1, minWidth: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '0.55rem', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', color: '#ef4444', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none', cursor: 'pointer' }}>
+                <span>✕</span> בטל + שלח הודעה
+              </a>
+              <a href={waLink(a, templates.approve)} target="_blank" rel="noopener noreferrer"
                 style={{ padding: '0.55rem 0.875rem', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.18)', color: '#22c55e', fontSize: '0.75rem', textDecoration: 'none' }}>
                 💬
               </a>
-              <button onClick={() => onUpdate(a.id, 'cancelled')} style={{ padding: '0.55rem 0.75rem', borderRadius: 8, background: B4, border: `1px solid ${BDR}`, color: TM, fontSize: '0.75rem', cursor: 'pointer' }}>✕</button>
-            </div>
-          )}
-
-          {a.status === 'in_progress' && (
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button onClick={() => onUpdate(a.id, 'completed')}
-                style={{ flex: 1, padding: '0.55rem', borderRadius: 8, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.28)', color: '#10b981', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
-                ✓ סיים
-              </button>
-              <button onClick={() => onUpdate(a.id, 'cancelled')}
-                style={{ padding: '0.55rem 0.875rem', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', color: '#ef4444', fontSize: '0.75rem', cursor: 'pointer' }}>
-                ✕ בטל
-              </button>
             </div>
           )}
 
           {(a.status === 'rejected' || a.status === 'cancelled' || a.status === 'completed') && (
-            <button onClick={() => onUpdate(a.id, 'pending')} style={{ padding: '0.5rem 1.25rem', borderRadius: 8, background: B4, border: `1px solid ${BDR}`, color: TM, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
-              שחזר לממתין
+            <button onClick={() => onUpdate(a.id, 'approved')} style={{ padding: '0.5rem 1.25rem', borderRadius: 8, background: B4, border: `1px solid ${BDR}`, color: TM, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+              ↺ שחזר לתור פעיל
             </button>
           )}
         </div>

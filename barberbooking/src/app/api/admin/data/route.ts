@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAdminRequest } from '@/lib/adminAuth';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { DEFAULT_WA_TEMPLATES, WaTemplateKey } from '@/lib/waTemplates';
 
 function stripBOM(s: string | undefined): string {
   if (!s) return '';
@@ -14,10 +15,16 @@ export async function GET(req: NextRequest) {
   }
 
   const sb = supabaseAdmin();
-  const [{ data: appts }, { data: blocked }] = await Promise.all([
+  const [{ data: appts }, { data: blocked }, { data: tmpls }] = await Promise.all([
     sb.from('appointments').select('*').order('date').order('time'),
     sb.from('blocked_slots').select('date,time'),
+    sb.from('wa_templates').select('key,body'),
   ]);
 
-  return NextResponse.json({ appointments: appts ?? [], blockedSlots: blocked ?? [] });
+  const templates = { ...DEFAULT_WA_TEMPLATES };
+  for (const t of tmpls ?? []) {
+    if (t.key in templates) templates[t.key as WaTemplateKey] = t.body;
+  }
+
+  return NextResponse.json({ appointments: appts ?? [], blockedSlots: blocked ?? [], templates });
 }

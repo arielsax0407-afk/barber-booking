@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 
 // ── Static data ───────────────────────────────────────────
@@ -35,11 +35,93 @@ const TESTIMONIALS = [
   { name: 'עמית שלום', service: 'תספורת', text: 'קביעת תור אונליין זה שינוי משחק. 2 דקות ויש לי תור. תמיד יוצא מרוצה ומרגיש כמו מלך. 10/10.', stars: 5, initial: 'ע', color: '#1A50A8' },
 ];
 
+const WHY_US = [
+  { icon: '✦', title: 'מקצועיות', body: 'כל ספר עבר הכשרה מקצועית ומביא איתו שנים של ניסיון' },
+  { icon: '◈', title: 'אווירה', body: 'מרחב מוקפד ואינטימי שיגרום לכם להרגיש מלכים' },
+  { icon: '◆', title: 'דיוק', body: 'תספורת מושלמת, כל פעם. ללא פשרות, ללא חצי עבודות' },
+];
+
+const PROOF = [
+  { icon: '🔥', text: 'מעל 47 תורים החודש' },
+  { icon: '⭐', text: 'דירוג 4.9 בגוגל' },
+  { icon: '✂️', text: 'א׳–ו׳ · 9:00–19:00' },
+  { icon: '💬', text: 'אישור WhatsApp מיידי' },
+];
+
+// ── Scroll-reveal wrapper (visual only) ─────────────────────
+
+function Reveal({ children, className = '', delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          obs.disconnect();
+        }
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -60px 0px' }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className={`bph-reveal${visible ? ' bph-in' : ''} ${className}`} style={{ transitionDelay: `${delay}ms` }}>
+      {children}
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────
 
 export default function HomePage() {
+  const [introPlaying, setIntroPlaying] = useState(true);
+  const [heroReady, setHeroReady] = useState(false);
+  const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
+  useIsoLayoutEffect(() => {
+    let seen = false;
+    try { seen = sessionStorage.getItem('bph_intro_seen') === '1'; } catch {}
+    if (seen) {
+      setIntroPlaying(false);
+      setHeroReady(true);
+      return;
+    }
+    try { sessionStorage.setItem('bph_intro_seen', '1'); } catch {}
+    const t = setTimeout(() => {
+      setIntroPlaying(false);
+      setHeroReady(true);
+    }, 2500);
+    return () => clearTimeout(t);
+  }, []);
+
+  const heroAnim = (n: number, extra = '') => `bph-hero-anim ${heroReady ? `bph-go-${n}` : ''}${extra ? ' ' + extra : ''}`.trim();
+
   return (
-    <div className="page-bg">
+    <div className="bph">
+
+      {/* ── Intro screen ─────────────────────────────────── */}
+      {introPlaying && (
+        <div className="bph-intro2" aria-hidden="true" dir="rtl">
+          <div className="bph-intro2-grain" />
+          <div className="bph-intro2-content">
+            <h1 className="bph-intro2-title serif">
+              {Array.from('ברבר פרמיום').map((ch, i) => (
+                <span key={i} className="bph-intro2-letter" style={{ animationDelay: `${0.5 + i * 0.045}s` }}>
+                  {ch === ' ' ? ' ' : ch}
+                </span>
+              ))}
+            </h1>
+            <div className="bph-intro2-line" />
+            <p className="bph-intro2-tagline">האמנות של להיראות מושלם</p>
+          </div>
+        </div>
+      )}
 
       {/* ── WhatsApp float ───────────────────────────────── */}
       <a
@@ -66,331 +148,609 @@ export default function HomePage() {
       </a>
 
       {/* ── Hero ─────────────────────────────────────────── */}
-      <section
-        className="relative min-h-screen flex flex-col overflow-hidden"
-        style={{
-          background: `linear-gradient(150deg, #0A1628 0%, #0F1E38 55%, #0A1220 100%)`,
-        }}
-      >
-        {/* ① texture.png — barber-stripe pattern overlay */}
+      <section className="bph-hero">
+
+        {/* Cinematic background photo + dark overlay */}
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+          <img
+            src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=1920&h=1280&fit=crop&q=80"
+            alt=""
+            style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'grayscale(0.35) brightness(0.55) contrast(1.1)', animation: 'bph-hero-zoom 12s ease-out forwards', willChange: 'transform' }}
+          />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,9,8,0.30) 0%, rgba(10,9,8,0.62) 50%, rgba(10,9,8,0.97) 100%)' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 28%, rgba(10,9,8,0) 0%, rgba(10,9,8,0.65) 78%)' }} />
+        </div>
+
+        {/* Subtle texture overlay */}
         <div style={{
           position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1,
           backgroundImage: 'url(/images/texture.png)',
           backgroundSize: '320px 320px',
           backgroundRepeat: 'repeat',
-          opacity: 0.055,
-          mixBlendMode: 'screen',
+          opacity: 0.05,
+          mixBlendMode: 'overlay',
         }} />
 
-        {/* Radial colour glows */}
+        {/* Gold glow accents */}
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1 }}>
-          <div style={{ position: 'absolute', width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, rgba(204,26,26,0.12), transparent 70%)', top: '5%', right: '10%', filter: 'blur(60px)', animation: 'drift1 22s ease-in-out infinite' }} />
-          <div style={{ position: 'absolute', width: 300, height: 300, borderRadius: '50%', background: 'radial-gradient(circle, rgba(26,80,168,0.10), transparent 70%)', bottom: '20%', left: '30%', filter: 'blur(50px)', animation: 'drift2 18s ease-in-out infinite' }} />
+          <div style={{ position: 'absolute', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(201,164,73,0.14), transparent 70%)', top: '4%', right: '8%', filter: 'blur(70px)', animation: 'drift1 22s ease-in-out infinite' }} />
+          <div style={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(201,164,73,0.08), transparent 70%)', bottom: '18%', left: '28%', filter: 'blur(60px)', animation: 'drift2 18s ease-in-out infinite' }} />
         </div>
 
-        {/* ② clipper1.png — floating real trimmer, left side */}
-        <div className="hero-clipper-wrap" style={{
-          position: 'absolute', left: 0, top: 0, bottom: 0,
-          width: 'clamp(160px, 36vw, 400px)',
-          display: 'flex', alignItems: 'center',
-          zIndex: 3, pointerEvents: 'none',
-          paddingLeft: 'clamp(0px, 1vw, 20px)',
-        }}>
-          <img
-            src="/images/clipper1.png"
-            alt=""
-            className="hero-clipper-img"
-            style={{
-              width: '100%',
-              height: 'auto',
-              filter: 'drop-shadow(0 24px 56px rgba(0,0,0,0.65)) drop-shadow(0 0 30px rgba(204,26,26,0.18))',
-            }}
-          />
+        {/* Faint decorative clipper accent */}
+        <div className="bph-clipper" aria-hidden="true">
+          <img src="/images/clipper1.png" alt="" />
         </div>
 
-        {/* ③ barber-pole.png — spinning in nav */}
-        <nav className="relative flex items-center justify-between px-6 pt-8 pb-4 animate-fade-in max-w-6xl mx-auto w-full" style={{ zIndex: 10 }}>
+        {/* Nav */}
+        <nav className="bph-nav animate-fade-in">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
             <img
               src="/images/barber-pole.png"
               alt="לוגו ברבר פרמיום"
-              style={{
-                height: 42,
-                filter: 'drop-shadow(0 2px 10px rgba(204,26,26,0.50))',
-                animation: 'barber-pole-spin 10s linear infinite',
-              }}
+              style={{ height: 42, filter: 'drop-shadow(0 2px 10px rgba(201,164,73,0.45))', animation: 'barber-pole-spin 10s linear infinite' }}
             />
-            <span className="serif" style={{ color: '#FAF8F4', fontSize: '1.1rem', fontWeight: 600, letterSpacing: '0.04em' }}>
+            <span className="serif" style={{ color: 'var(--cream)', fontSize: '1.1rem', fontWeight: 600, letterSpacing: '0.04em' }}>
               ברבר פרמיום
             </span>
           </div>
-          <span className="serif" style={{ fontSize: '0.75rem', letterSpacing: '0.2em', color: 'rgba(250,248,244,0.50)', textTransform: 'uppercase' }}>
+          <span className="serif" style={{ fontSize: '0.75rem', letterSpacing: '0.2em', color: 'var(--cream-faint)', textTransform: 'uppercase' }}>
             תל אביב · א׳–ו׳
           </span>
         </nav>
 
-        {/* Hero text — centred, above clipper */}
-        <div className="relative flex-1 flex flex-col items-center justify-center px-6 py-16 text-center" style={{ zIndex: 5 }}>
-          <div className="animate-fade-up flex items-center gap-3 mb-8">
-            <div style={{ width: 40, height: 1, background: 'var(--red)', opacity: 0.7 }} />
-            <span style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--red)', fontWeight: 600 }}>מספרה יוקרתית בתל אביב</span>
-            <div style={{ width: 40, height: 1, background: 'var(--red)', opacity: 0.7 }} />
+        {/* Hero content */}
+        <div className="bph-hero-content">
+          <div className={heroAnim(0, 'flex items-center gap-3 mb-8')}>
+            <div className="bph-eyebrow-line" />
+            <span className="bph-eyebrow-text">מספרה יוקרתית בתל אביב</span>
+            <div className="bph-eyebrow-line" />
           </div>
 
-          <h1 className="display display-xl animate-fade-up delay-100" style={{ maxWidth: 700 }}>
-            <span className="gold-gradient">ברבר</span>
+          <h1 className={`display display-xl ${heroAnim(1)}`} style={{ maxWidth: 760 }}>
+            <span className="bph-gold-text">ברבר</span>
             <br />
-            <span style={{ color: '#FAF8F4', fontStyle: 'italic', fontWeight: 300 }}>פרמיום</span>
+            <span style={{ color: 'var(--cream)', fontStyle: 'italic', fontWeight: 300 }}>פרמיום</span>
           </h1>
 
-          <p className="animate-fade-up delay-200" style={{ fontSize: 'clamp(1rem, 2.5vw, 1.25rem)', color: 'rgba(250,248,244,0.62)', marginTop: '1.5rem', maxWidth: 400, lineHeight: 1.7, fontWeight: 300 }}>
+          <p className={heroAnim(2)} style={{ fontSize: 'clamp(1rem, 2.5vw, 1.25rem)', color: 'var(--cream-dim)', marginTop: '1.5rem', maxWidth: 420, lineHeight: 1.8, fontWeight: 300 }}>
             האמנות של להיראות מושלם.<br />חווית טיפוח שתזכרו.
           </p>
 
-          <div className="animate-fade-up delay-300 flex flex-col sm:flex-row items-center gap-4 mt-12">
-            <Link href="/book" className="btn-primary" style={{ fontSize: '0.8125rem', padding: '1rem 3rem' }}>
+          <div className={heroAnim(3)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', marginTop: '3rem' }}>
+            <Link href="/book" className="bph-btn">
               קבע תור עכשיו
             </Link>
-            <Link href="/my-appointments" className="btn-outline" style={{ fontSize: '0.8125rem', padding: '1rem 2rem' }}>
+            <Link href="/my-appointments" className="bph-link">
               התורים שלי
             </Link>
           </div>
 
-          <div className="animate-fade-up delay-400 flex items-center gap-8 mt-16">
+          {/* Floating glass stats strip */}
+          <div className={`bph-stats ${heroAnim(4)}`}>
             {[['500+', 'לקוחות מרוצים'], ['4.9★', 'דירוג גוגל'], ['8+', 'שנות ניסיון']].map(([num, label]) => (
-              <div key={label} className="text-center">
+              <div key={label} className="bph-stat">
                 {/* dir=ltr prevents Unicode bidi from reversing "500+" to "+500" */}
-                <div className="serif gold-gradient" dir="ltr" style={{ fontSize: '1.75rem', fontWeight: 500, lineHeight: 1 }}>{num}</div>
-                <div style={{ fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(250,248,244,0.38)', marginTop: '0.375rem' }}>{label}</div>
+                <div className="serif bph-gold-text" dir="ltr">{num}</div>
+                <div className="bph-stat-label">{label}</div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="animate-fade-up delay-500 flex justify-center pb-10" style={{ zIndex: 5, position: 'relative' }}>
-          <div className="animate-float" style={{ color: 'rgba(250,248,244,0.36)', fontSize: '0.75rem', letterSpacing: '0.15em', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <div style={{ width: 1, height: 40, background: 'linear-gradient(180deg, transparent, rgba(204,26,26,0.55))' }} />
-            <span style={{ textTransform: 'uppercase' }}>גלול</span>
+        {/* Scroll cue */}
+        <div className={heroAnim(5)} style={{ display: 'flex', justifyContent: 'center', paddingBottom: '2.5rem', position: 'relative', zIndex: 5 }}>
+          <div className="animate-float" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <span style={{ textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.2em', color: 'var(--cream-faint)' }}>גלול</span>
+            <div style={{ width: 1, height: 40, background: 'linear-gradient(180deg, var(--gold), transparent)' }} />
           </div>
         </div>
       </section>
 
       {/* ── Social proof ticker ───────────────────────────── */}
-      <div className="proof-ticker" style={{ background: 'var(--surface-dark)', padding: '0.9rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '2.5rem', flexWrap: 'wrap', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-        {[
-          { icon: '🔥', text: 'מעל 47 תורים החודש' },
-          { icon: '⭐', text: 'דירוג 4.9 בגוגל' },
-          { icon: '✂️', text: 'א׳–ו׳ · 9:00–19:00' },
-          { icon: '💬', text: 'אישור WhatsApp מיידי' },
-        ].map(({ icon, text }) => (
-          <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'rgba(250,248,244,0.60)', fontSize: '0.78rem', letterSpacing: '0.04em', whiteSpace: 'nowrap' }}>
-            <span>{icon}</span><span>{text}</span>
+      <div className="bph-ticker">
+        {PROOF.map(({ icon, text }) => (
+          <div key={text} className="bph-ticker-item">
+            <span className="bph-ticker-icon">{icon}</span><span>{text}</span>
           </div>
         ))}
       </div>
 
       {/* ── Services ─────────────────────────────────────── */}
-      <section style={{ padding: '6rem 1.5rem', maxWidth: '56rem', margin: '0 auto', width: '100%' }}>
-        <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-          <p style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--red)', marginBottom: '1rem', fontWeight: 600 }}>השירותים שלנו</p>
-          <h2 className="display display-lg" style={{ color: 'var(--text)' }}>
-            <span style={{ fontStyle: 'italic' }}>האמנות</span>{' '}שלנו
-          </h2>
-        </div>
-
-        {/* 1-col mobile, 2-col desktop */}
-        <div className="grid gap-4 services-grid">
-          {SERVICES_PREVIEW.map((s, i) => (
-            <div
-              key={s.name}
-              className={`glass-card animate-fade-up delay-${(i + 1) * 100}`}
-              style={{ animationFillMode: 'both', background: '#fff', padding: '1.25rem 1.5rem' }}
-            >
-              {/* Row: name+duration (right) | price+number (left) — RTL flex */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                {/* Right side — name & duration */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{
-                    fontSize: '1.05rem', fontFamily: 'var(--font-display)', fontWeight: 600,
-                    color: 'var(--text)', marginBottom: '0.2rem',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>{s.name}</p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{s.duration}</p>
-                </div>
-                {/* Left side — price + decorative number */}
-                <div style={{ flexShrink: 0, textAlign: 'center', minWidth: 52 }}>
-                  <p className="serif" style={{ fontSize: '1.375rem', fontWeight: 700, color: 'var(--red)', lineHeight: 1 }}>{s.price}</p>
-                  <p style={{ fontSize: '0.5rem', fontWeight: 700, color: 'var(--text-dim)', letterSpacing: '0.15em', marginTop: 3 }}>{String(i + 1).padStart(2, '0')}</p>
-                </div>
-              </div>
+      <section style={{ background: 'var(--g1)' }}>
+        <div className="bph-section">
+          <Reveal>
+            <div className="bph-header">
+              <p className="bph-eyebrow">השירותים שלנו</p>
+              <h2 className="display display-lg" style={{ color: 'var(--cream)' }}>
+                <span className="bph-gold-text" style={{ fontStyle: 'italic' }}>האמנות</span>{' '}שלנו
+              </h2>
             </div>
-          ))}
-        </div>
+          </Reveal>
 
-        <div className="text-center mt-12">
-          <Link href="/book" className="btn-outline">לכל השירותים</Link>
+          <div className="bph-services">
+            {SERVICES_PREVIEW.map((s, i) => (
+              <Reveal key={s.name} delay={i * 70}>
+                <div className="bph-service">
+                  <span className="bph-service-num">{String(i + 1).padStart(2, '0')}</span>
+                  <div className="bph-service-info">
+                    <h3>{s.name}</h3>
+                    <p>{s.duration}</p>
+                  </div>
+                  <div className="bph-service-price serif">{s.price}</div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+
+          <Reveal>
+            <div className="text-center mt-12">
+              <Link href="/book" className="bph-link">לכל השירותים</Link>
+            </div>
+          </Reveal>
         </div>
       </section>
 
-      {/* ── How it works — clipper2 in background ────────── */}
-      <section style={{ background: 'var(--bg-2)', padding: '5rem 1.5rem', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)', position: 'relative', overflow: 'hidden' }}>
-        {/* ④ clipper2.png — slowly rotating illustrated trimmer */}
+      {/* ── How it works ─────────────────────────────────── */}
+      <section style={{ background: 'var(--g0)', position: 'relative', overflow: 'hidden' }}>
+        {/* faint rotating clipper icon */}
         <div style={{
           position: 'absolute', left: '50%', top: '50%',
           transform: 'translate(-50%, -50%)',
           width: 'clamp(160px, 30%, 280px)',
-          opacity: 0.045,
+          opacity: 0.04,
           pointerEvents: 'none',
           animation: 'slow-rotate 24s linear infinite',
           zIndex: 0,
+          filter: 'grayscale(1) brightness(2)',
         }}>
           <img src="/images/clipper2.png" alt="" style={{ width: '100%' }} />
         </div>
 
-        <div style={{ maxWidth: '60rem', margin: '0 auto', width: '100%', position: 'relative', zIndex: 1 }}>
-          <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-            <p style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--red)', fontWeight: 600, marginBottom: '0.75rem' }}>פשוט ומהיר</p>
-            <h2 className="display display-lg" style={{ color: 'var(--text)' }}>
-              איך זה <span style={{ fontStyle: 'italic' }}>עובד?</span>
-            </h2>
-          </div>
+        <div className="bph-section" style={{ position: 'relative', zIndex: 1 }}>
+          <Reveal>
+            <div className="bph-header">
+              <p className="bph-eyebrow">פשוט ומהיר</p>
+              <h2 className="display display-lg" style={{ color: 'var(--cream)' }}>
+                איך זה <span className="bph-gold-text" style={{ fontStyle: 'italic' }}>עובד?</span>
+              </h2>
+            </div>
+          </Reveal>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
-            {STEPS.map((step) => (
-              <div key={step.num} style={{ background: '#fff', borderRadius: 'var(--radius-lg)', padding: '2rem 1.75rem', boxShadow: 'var(--shadow-card)', border: '1px solid var(--glass-border)', position: 'relative', textAlign: 'right', overflow: 'hidden' }}>
-                <div style={{ position: 'absolute', top: -8, left: 12, fontSize: '5.5rem', fontFamily: 'var(--font-display)', fontWeight: 700, color: 'rgba(204,26,26,0.07)', lineHeight: 1, userSelect: 'none', pointerEvents: 'none' }}>{step.num}</div>
-                <div style={{ fontSize: '2.25rem', marginBottom: '0.875rem' }}>{step.emoji}</div>
-                <h3 style={{ fontSize: '1.2rem', fontFamily: 'var(--font-display)', fontWeight: 600, color: 'var(--text)', marginBottom: '0.5rem' }}>{step.title}</h3>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: 1.65 }}>{step.desc}</p>
-              </div>
+          <div className="bph-steps">
+            {STEPS.map((step, i) => (
+              <Reveal key={step.num} delay={i * 100}>
+                <div className="bph-step">
+                  <div className="bph-step-num">{step.num}</div>
+                  <div className="bph-step-icon">{step.emoji}</div>
+                  <h3>{step.title}</h3>
+                  <p>{step.desc}</p>
+                </div>
+              </Reveal>
             ))}
           </div>
 
-          <div style={{ textAlign: 'center', marginTop: '2.5rem' }}>
-            <Link href="/book" className="btn-primary">קבע תור עכשיו</Link>
-          </div>
+          <Reveal>
+            <div className="text-center" style={{ marginTop: 'clamp(2.5rem, 6vw, 4rem)' }}>
+              <Link href="/book" className="bph-btn">קבע תור עכשיו</Link>
+            </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ── Gallery ──────────────────────────────────────── */}
-      <section style={{ padding: '5rem 1.5rem', background: 'var(--bg)' }}>
-        <div style={{ maxWidth: '60rem', margin: '0 auto', width: '100%' }}>
-          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-            <p style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--red)', fontWeight: 600, marginBottom: '0.75rem' }}>הגלריה שלנו</p>
-            <h2 className="display display-lg" style={{ color: 'var(--text)' }}>
-              <span style={{ fontStyle: 'italic' }}>העבודות</span> שלנו
-            </h2>
-          </div>
+      <section style={{ background: 'var(--g1)' }}>
+        <div className="bph-section">
+          <Reveal>
+            <div className="bph-header">
+              <p className="bph-eyebrow">הגלריה שלנו</p>
+              <h2 className="display display-lg" style={{ color: 'var(--cream)' }}>
+                <span className="bph-gold-text" style={{ fontStyle: 'italic' }}>העבודות</span> שלנו
+              </h2>
+            </div>
+          </Reveal>
 
-          <div className="gallery-grid" style={{ display: 'grid', gap: '0.75rem' }}>
+          <div className="bph-gallery">
             {GALLERY.map((img, i) => (
-              <div key={i} style={{ aspectRatio: '1', borderRadius: 'var(--radius)', overflow: 'hidden', position: 'relative', cursor: 'pointer' }}
-                onMouseEnter={e => { const im = e.currentTarget.querySelector('img') as HTMLImageElement; if (im) im.style.transform = 'scale(1.08)'; }}
-                onMouseLeave={e => { const im = e.currentTarget.querySelector('img') as HTMLImageElement; if (im) im.style.transform = 'scale(1)'; }}
-              >
-                <img src={img.url} alt={img.label} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.45s ease', display: 'block' }} />
-                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '1.5rem 0.75rem 0.75rem', background: 'linear-gradient(transparent, rgba(10,22,40,0.75))', color: 'rgba(250,248,244,0.90)', fontSize: '0.75rem', textAlign: 'center', letterSpacing: '0.08em', fontWeight: 500 }}>
-                  {img.label}
-                </div>
+              <div key={i} className="bph-gallery-item">
+                <img src={img.url} alt={img.label} loading="lazy" />
+                <div className="bph-gallery-label">{img.label}</div>
               </div>
             ))}
           </div>
 
-          <div style={{ textAlign: 'center', marginTop: '2.5rem' }}>
-            <Link href="/book" className="btn-outline">קבע תור עכשיו</Link>
+          <Reveal>
+            <div className="text-center mt-12">
+              <Link href="/book" className="bph-link">קבע תור עכשיו</Link>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── Testimonials ─────────────────────────────────── */}
+      <TestimonialsSection />
+
+      {/* ── Why us ───────────────────────────────────────── */}
+      <section style={{ background: 'var(--g1)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)' }}>
+        <div className="bph-section">
+          <div className="bph-whyus">
+            {WHY_US.map((item, i) => (
+              <Reveal key={item.title} delay={i * 100}>
+                <div className="bph-why-item">
+                  <div className="bph-why-icon">{item.icon}</div>
+                  <h3 className="serif">{item.title}</h3>
+                  <p>{item.body}</p>
+                </div>
+              </Reveal>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ── Testimonials — stripes.png flanking both sides ── */}
-      <TestimonialsSection />
-
-      {/* ── Why us ───────────────────────────────────────── */}
-      <section style={{ background: 'var(--bg-2)', borderTop: '1px solid var(--glass-border)', borderBottom: '1px solid var(--glass-border)', padding: '6rem 1.5rem' }}>
-        <div style={{ maxWidth: '56rem', margin: '0 auto', display: 'grid', gap: '3rem', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-          {[
-            { icon: '✦', title: 'מקצועיות', body: 'כל ספר עבר הכשרה מקצועית ומביא איתו שנים של ניסיון' },
-            { icon: '◈', title: 'אווירה', body: 'מרחב מוקפד ואינטימי שיגרום לכם להרגיש מלכים' },
-            { icon: '◆', title: 'דיוק', body: 'תספורת מושלמת, כל פעם. ללא פשרות, ללא חצי עבודות' },
-          ].map((item) => (
-            <div key={item.title} className="text-center">
-              <div style={{ fontSize: '1.5rem', marginBottom: '1rem', color: 'var(--red)' }}>{item.icon}</div>
-              <h3 className="serif" style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: 'var(--text)', fontWeight: 600 }}>{item.title}</h3>
-              <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>{item.body}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* ── Final CTA ────────────────────────────────────── */}
-      <section style={{ padding: '8rem 1.5rem', textAlign: 'center', background: 'linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%)' }}>
-        <div style={{ maxWidth: '36rem', margin: '0 auto' }}>
-          <p className="serif" style={{ fontSize: '0.8rem', letterSpacing: '0.22em', textTransform: 'uppercase', marginBottom: '1.5rem', color: 'var(--red)', fontWeight: 500 }}>מוכן?</p>
-          <h2 className="display display-lg mb-8" style={{ color: 'var(--text)' }}>
-            קבע את התור{' '}<span style={{ fontStyle: 'italic', fontWeight: 300 }}>שלך</span>
+      <section className="bph-final">
+        <div className="bph-final-glow" aria-hidden="true" />
+        <Reveal className="bph-final-inner">
+          <p className="bph-eyebrow">מוכן?</p>
+          <h2 className="display display-lg" style={{ color: 'var(--cream)', marginBottom: '2.5rem' }}>
+            קבע את התור{' '}<span className="bph-gold-text" style={{ fontStyle: 'italic', fontWeight: 300 }}>שלך</span>
           </h2>
-          <Link href="/book" className="btn-primary animate-pulse-gold" style={{ fontSize: '0.875rem', padding: '1.125rem 3.5rem' }}>
+          <Link href="/book" className="bph-btn bph-btn-pulse">
             קביעת תור
           </Link>
-          <p style={{ marginTop: '1.5rem', fontSize: '0.8rem', color: 'var(--text-dim)', letterSpacing: '0.05em' }}>
+          <p style={{ marginTop: '1.5rem', fontSize: '0.8rem', color: 'var(--cream-faint)', letterSpacing: '0.05em' }}>
             ללא כרטיס אשראי · אישור ב-WhatsApp תוך שעה
           </p>
-        </div>
+        </Reveal>
       </section>
 
-      {/* ── Footer — spinning barber pole ────────────────── */}
-      <footer style={{ background: 'var(--surface-dark)', padding: '3rem 1.5rem', textAlign: 'center' }}>
-        {/* ③ barber-pole.png — spinning brand icon in footer too */}
+      {/* ── Footer ───────────────────────────────────────── */}
+      <footer className="bph-footer">
         <img
           src="/images/barber-pole.png"
           alt=""
-          style={{
-            height: 72,
-            marginBottom: '1rem',
-            animation: 'barber-pole-spin 10s linear infinite',
-            filter: 'drop-shadow(0 4px 20px rgba(204,26,26,0.45))',
-            display: 'block',
-            margin: '0 auto 1rem',
-          }}
+          className="bph-footer-pole"
         />
-        <p className="serif gold-gradient" style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>ברבר פרמיום</p>
-        <p style={{ fontSize: '0.75rem', color: 'rgba(250,248,244,0.38)', letterSpacing: '0.1em' }}>תל אביב · א׳–ו׳ 9:00–19:00</p>
+        <p className="serif bph-gold-text" style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>ברבר פרמיום</p>
+        <p style={{ fontSize: '0.75rem', color: 'var(--cream-faint)', letterSpacing: '0.1em' }}>תל אביב · א׳–ו׳ 9:00–19:00</p>
       </footer>
 
-      {/* ── Keyframes ────────────────────────────────────── */}
+      {/* ── Styles ───────────────────────────────────────── */}
       <style>{`
-        /* Barber pole 360 spin */
-        @keyframes barber-pole-spin {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
+        .bph {
+          --g0: #0a0908;
+          --g1: #141210;
+          --g2: #1c1916;
+          --cream: #f3ecdd;
+          --cream-dim: rgba(243,236,221,0.62);
+          --cream-faint: rgba(243,236,221,0.30);
+          --line: rgba(243,236,221,0.10);
+          --gold: #c9a449;
+          --gold-light: #e8d5a3;
+          --gold-dark: #9c7a2e;
+          color: var(--cream);
+          background: var(--g0);
         }
 
-        /* Clipper entrance slide-in from left */
-        .hero-clipper-wrap {
-          animation: clipper-in 1.2s cubic-bezier(0.34,1.2,0.64,1) 0.4s both;
-        }
-        @keyframes clipper-in {
-          from { opacity: 0; transform: translateX(-60px); }
-          to   { opacity: 1; transform: translateX(0); }
+        /* Gold gradient text */
+        .bph-gold-text {
+          background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold-light) 55%, var(--gold) 100%);
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          color: transparent;
         }
 
-        /* Clipper continuous float + slight tilt */
-        .hero-clipper-img {
-          animation: clipper-float 5.5s ease-in-out 1.8s infinite;
+        /* Eyebrow label */
+        .bph-eyebrow {
+          font-size: 0.7rem;
+          letter-spacing: 0.32em;
+          text-transform: uppercase;
+          color: var(--gold);
+          font-weight: 600;
+          margin-bottom: 1rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.75rem;
+        }
+        .bph-eyebrow::before, .bph-eyebrow::after {
+          content: '';
+          width: 28px;
+          height: 1px;
+          background: var(--gold);
+          opacity: 0.5;
+        }
+        .bph-eyebrow-line { width: 40px; height: 1px; background: var(--gold); opacity: 0.6; }
+        .bph-eyebrow-text { font-size: 0.7rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--gold-light); font-weight: 600; }
+
+        /* Buttons / links */
+        .bph-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          padding: 1.05rem 3.25rem;
+          border: 1.5px solid var(--gold);
+          border-radius: 2px;
+          color: var(--gold-light);
+          background: transparent;
+          font-family: var(--font-body);
+          font-size: 0.75rem;
+          font-weight: 600;
+          letter-spacing: 0.28em;
+          text-transform: uppercase;
+          text-decoration: none;
+          transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+        }
+        .bph-btn:hover {
+          background: var(--gold);
+          color: #0a0908;
+          letter-spacing: 0.32em;
+          box-shadow: 0 0 44px rgba(201,164,73,0.35);
+        }
+        .bph-link {
+          color: var(--cream-dim);
+          font-size: 0.75rem;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          text-decoration: none;
+          border-bottom: 1px solid transparent;
+          padding-bottom: 4px;
+          transition: all 0.3s ease;
+        }
+        .bph-link:hover { color: var(--gold-light); border-color: var(--gold); }
+
+        /* Hero */
+        .bph-hero {
+          position: relative;
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        .bph-nav {
+          position: relative;
+          z-index: 10;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          max-width: 72rem;
+          margin: 0 auto;
+          width: 100%;
+          padding: 2rem 1.5rem 1rem;
+        }
+        .bph-hero-content {
+          position: relative;
+          z-index: 5;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          padding: 3rem 1.5rem;
+        }
+        .bph-clipper {
+          position: absolute;
+          left: clamp(-50px, -3vw, -10px);
+          bottom: 0;
+          width: clamp(140px, 22vw, 320px);
+          opacity: 0.14;
+          z-index: 2;
+          pointer-events: none;
+          filter: grayscale(1) brightness(1.9) drop-shadow(0 0 50px rgba(201,164,73,0.25));
+          animation: clipper-float 6.5s ease-in-out infinite;
           transform-origin: center bottom;
         }
-        @keyframes clipper-float {
-          0%,100% { transform: translateY(0) rotate(-6deg); }
-          50%      { transform: translateY(-22px) rotate(-4deg); }
+        .bph-clipper img { width: 100%; display: block; }
+
+        /* Floating glass stats strip */
+        .bph-stats {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: clamp(1.5rem, 6vw, 3.5rem);
+          margin-top: clamp(3rem, 7vw, 4.5rem);
+          padding: 1.5rem clamp(1.75rem, 5vw, 3.5rem);
+          background: rgba(243,236,221,0.04);
+          border: 1px solid var(--line);
+          backdrop-filter: blur(24px) saturate(1.4);
+          -webkit-backdrop-filter: blur(24px) saturate(1.4);
+          border-radius: 3px;
+          box-shadow: 0 24px 70px rgba(0,0,0,0.5);
+        }
+        .bph-stat { text-align: center; position: relative; padding: 0 clamp(0.5rem, 2vw, 1.25rem); }
+        .bph-stat:not(:last-child)::after {
+          content: '';
+          position: absolute;
+          top: 50%;
+          inset-inline-end: calc(-1 * clamp(0.75rem, 3vw, 1.75rem));
+          transform: translateY(-50%);
+          width: 1px;
+          height: 26px;
+          background: var(--line);
+        }
+        .bph-stat > div:first-child { font-size: clamp(1.4rem, 4vw, 1.9rem); font-weight: 600; line-height: 1; }
+        .bph-stat-label { font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--cream-faint); margin-top: 0.4rem; }
+
+        /* Social proof ticker */
+        .bph-ticker {
+          background: var(--g1);
+          border-top: 1px solid var(--line);
+          border-bottom: 1px solid var(--line);
+          padding: 1rem 1.5rem;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 2.5rem;
+          flex-wrap: wrap;
+        }
+        .bph-ticker-item { display: flex; align-items: center; gap: 0.5rem; color: var(--cream-dim); font-size: 0.78rem; letter-spacing: 0.04em; white-space: nowrap; }
+        .bph-ticker-icon { font-size: 0.85rem; }
+
+        /* Generic section layout */
+        .bph-section { max-width: 64rem; margin: 0 auto; width: 100%; padding: clamp(4.5rem, 10vw, 7rem) 1.5rem; }
+        .bph-header { text-align: center; margin-bottom: clamp(3rem, 7vw, 5rem); }
+
+        /* Services — large editorial rows */
+        .bph-services { display: flex; flex-direction: column; }
+        .bph-service {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: clamp(1.25rem, 4vw, 3rem);
+          padding: clamp(1.75rem, 4vw, 2.75rem) clamp(1.25rem, 3vw, 1.75rem);
+          border-bottom: 1px solid var(--line);
+          transition: background 0.4s ease;
+        }
+        .bph-service:first-child { border-top: 1px solid var(--line); }
+        .bph-service::before {
+          content: '';
+          position: absolute;
+          right: 0;
+          top: 50%;
+          width: 3px;
+          height: 0%;
+          background: var(--gold);
+          transform: translateY(-50%);
+          transition: height 0.4s ease;
+        }
+        .bph-service:hover { background: rgba(243,236,221,0.025); }
+        .bph-service:hover::before { height: 64%; }
+        .bph-service-num {
+          font-family: var(--font-display);
+          font-size: clamp(2.25rem, 6vw, 4rem);
+          font-weight: 700;
+          color: transparent;
+          -webkit-text-stroke: 1px rgba(201,164,73,0.35);
+          flex-shrink: 0;
+          line-height: 1;
+          transition: -webkit-text-stroke 0.4s ease;
+        }
+        .bph-service:hover .bph-service-num { -webkit-text-stroke: 1px rgba(201,164,73,0.75); }
+        .bph-service-info { flex: 1; min-width: 0; }
+        .bph-service-info h3 { font-family: var(--font-display); font-size: clamp(1.2rem, 3vw, 1.875rem); color: var(--cream); font-weight: 500; margin-bottom: 0.35rem; }
+        .bph-service-info p { font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--cream-faint); }
+        .bph-service-price {
+          font-size: clamp(1.1rem, 2.5vw, 1.625rem);
+          font-weight: 600;
+          color: rgba(243,236,221,0.32);
+          flex-shrink: 0;
+          transition: all 0.45s cubic-bezier(0.4,0,0.2,1);
+        }
+        .bph-service:hover .bph-service-price { color: var(--gold-light); transform: scale(1.1); text-shadow: 0 0 26px rgba(201,164,73,0.4); }
+
+        /* How it works — editorial numerals */
+        .bph-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: clamp(2.5rem, 6vw, 4.5rem); }
+        .bph-step { text-align: center; }
+        .bph-step-num {
+          font-family: var(--font-display);
+          font-size: clamp(3.25rem, 8vw, 5.5rem);
+          font-weight: 700;
+          color: transparent;
+          -webkit-text-stroke: 1px rgba(201,164,73,0.30);
+          line-height: 1;
+          margin-bottom: 1.25rem;
+        }
+        .bph-step-icon { font-size: 1.4rem; opacity: 0.65; filter: grayscale(0.5); margin-bottom: 1rem; }
+        .bph-step h3 { font-family: var(--font-display); font-size: 1.3rem; color: var(--cream); margin-bottom: 0.6rem; font-weight: 500; }
+        .bph-step p { font-size: 0.875rem; line-height: 1.85; color: var(--cream-dim); }
+
+        /* Gallery — asymmetric collage */
+        .bph-gallery {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          grid-auto-rows: clamp(90px, 11vw, 165px);
+          gap: 1rem;
+          grid-auto-flow: dense;
+        }
+        .bph-gallery-item {
+          position: relative;
+          overflow: hidden;
+          background: var(--g2);
+          border: 1px solid rgba(243,236,221,0.08);
+          padding: 6px;
+          cursor: pointer;
+          transition: transform 0.4s ease, z-index 0.4s ease;
+        }
+        .bph-gallery-item:hover { z-index: 2; transform: scale(1.03) rotate(0deg) !important; }
+        .bph-gallery-item img {
+          width: 100%; height: 100%; object-fit: cover; display: block;
+          filter: grayscale(0.18) contrast(1.05);
+          transition: transform 0.6s ease, filter 0.6s ease;
+        }
+        .bph-gallery-item:hover img { transform: scale(1.07); filter: grayscale(0) contrast(1.1); }
+        .bph-gallery-label {
+          position: absolute; bottom: 0; left: 0; right: 0;
+          padding: 1.5rem 0.75rem 0.6rem;
+          background: linear-gradient(transparent, rgba(10,9,8,0.85));
+          color: var(--cream-dim);
+          font-size: 0.7rem; text-align: center; letter-spacing: 0.1em; font-weight: 500;
+        }
+        .bph-gallery-item:nth-child(1) { grid-column: span 2; grid-row: span 2; }
+        .bph-gallery-item:nth-child(2) { grid-column: span 2; grid-row: span 1; transform: rotate(0.6deg); }
+        .bph-gallery-item:nth-child(3) { grid-column: span 1; grid-row: span 1; transform: rotate(-0.8deg); }
+        .bph-gallery-item:nth-child(4) { grid-column: span 1; grid-row: span 2; }
+        .bph-gallery-item:nth-child(5) { grid-column: span 1; grid-row: span 1; transform: rotate(0.8deg); }
+        .bph-gallery-item:nth-child(6) { grid-column: span 1; grid-row: span 1; transform: rotate(-0.5deg); }
+
+        /* Why us */
+        .bph-whyus { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: clamp(2.5rem, 6vw, 4rem); }
+        .bph-why-item { text-align: center; }
+        .bph-why-icon {
+          width: 52px; height: 52px; margin: 0 auto 1.25rem;
+          border: 1.5px solid rgba(201,164,73,0.35); border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 1.25rem; color: var(--gold-light);
+        }
+        .bph-why-item h3 { font-size: 1.2rem; color: var(--cream); margin-bottom: 0.6rem; font-weight: 600; }
+        .bph-why-item p { font-size: 0.875rem; line-height: 1.8; color: var(--cream-dim); }
+
+        /* Final CTA */
+        .bph-final {
+          position: relative;
+          padding: clamp(6rem, 14vw, 10rem) 1.5rem;
+          background: var(--g0);
+          overflow: hidden;
+          text-align: center;
+        }
+        .bph-final-glow {
+          position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+          width: 640px; height: 640px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(201,164,73,0.10), transparent 70%);
+          filter: blur(50px);
+          pointer-events: none;
+        }
+        .bph-final-inner { position: relative; z-index: 1; max-width: 36rem; margin: 0 auto; }
+        .bph-btn-pulse { animation: bph-pulse-gold 3s ease-in-out infinite; }
+
+        /* Footer */
+        .bph-footer { background: var(--g0); border-top: 1px solid var(--line); padding: 3rem 1.5rem; text-align: center; }
+        .bph-footer-pole {
+          height: 64px; margin: 0 auto 1rem; display: block;
+          animation: barber-pole-spin 10s linear infinite;
+          filter: drop-shadow(0 4px 20px rgba(201,164,73,0.35));
         }
 
-        /* clipper2 slow background rotation */
+        /* Scroll reveal */
+        .bph-reveal {
+          opacity: 0;
+          transform: translateY(36px);
+          transition: opacity 0.9s cubic-bezier(0.16,1,0.3,1), transform 0.9s cubic-bezier(0.16,1,0.3,1);
+        }
+        .bph-reveal.bph-in { opacity: 1; transform: translateY(0); }
+
+        /* ── Keyframes ──────────────────────────────────── */
+        @keyframes barber-pole-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes clipper-float {
+          0%, 100% { transform: translateY(0) rotate(-6deg); }
+          50%       { transform: translateY(-18px) rotate(-4deg); }
+        }
         @keyframes slow-rotate {
           from { transform: translate(-50%,-50%) rotate(0deg); }
           to   { transform: translate(-50%,-50%) rotate(360deg); }
         }
-
-        /* Orb drift */
         @keyframes drift1 {
           0%,100% { transform: translate(0,0); }
           25%  { transform: translate(18px,-22px); }
@@ -403,57 +763,129 @@ export default function HomePage() {
           60%  { transform: translate(14px,-18px); }
           80%  { transform: translate(-8px,-6px); }
         }
-
-        /* WhatsApp pulse */
         @keyframes pulse-wa {
           0%,100% { box-shadow: 0 4px 20px rgba(37,211,102,0.42); }
           50%  { box-shadow: 0 4px 32px rgba(37,211,102,0.68), 0 0 0 10px rgba(37,211,102,0.08); }
         }
-
-        /* Testimonial slide-in */
+        @keyframes bph-pulse-gold {
+          0%,100% { box-shadow: 0 0 0 0 rgba(201,164,73,0.28); }
+          50%       { box-shadow: 0 0 0 14px rgba(201,164,73,0); }
+        }
         @keyframes slide-in {
           from { opacity: 0; transform: translateX(20px); }
           to   { opacity: 1; transform: translateX(0); }
         }
-
-        /* ── Responsive grid classes ─────────────────── */
-        .services-grid { grid-template-columns: repeat(2, 1fr); }
-        .gallery-grid  { grid-template-columns: repeat(3, 1fr); }
-
-        @media (max-width: 640px) {
-          /* 1-column cards on mobile */
-          .services-grid { grid-template-columns: 1fr; }
-          .gallery-grid  { grid-template-columns: repeat(2, 1fr); }
-
-          /* Clipper: smaller, semi-transparent, bottom-anchored */
-          .hero-clipper-wrap {
-            width: 44vw !important;
-            top: auto !important;
-            bottom: 0 !important;
-            align-items: flex-end !important;
-            opacity: 0.45;
-          }
-          .hero-clipper-img { animation: none !important; transform: rotate(-6deg) !important; }
-
-          /* Reduce hero padding */
-          .hero-content-pad { padding-top: 2rem !important; padding-bottom: 2rem !important; }
-
-          /* Ticker: tighter gap */
-          .proof-ticker { gap: 1rem !important; }
-
-          /* Step cards already use auto-fit — fine as is */
+        @keyframes stripes-pulse {
+          0%,100% { opacity: 0.05; transform: translateY(-50%) scale(1); }
+          50%      { opacity: 0.08; transform: translateY(-50%) scale(1.04); }
+        }
+        @keyframes bph-hero-zoom {
+          from { transform: scale(1.12); }
+          to   { transform: scale(1); }
+        }
+        @keyframes bph-intro2-line-in {
+          to { width: min(280px, 60vw); }
+        }
+        @keyframes bph-intro2-letter-in {
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes bph-intro2-spacing {
+          to { letter-spacing: 0.14em; }
+        }
+        @keyframes bph-intro2-tagline-in {
+          to { opacity: 1; }
+        }
+        @keyframes bph-intro2-out {
+          to { opacity: 0; visibility: hidden; }
         }
 
-        @media (max-width: 400px) {
-          /* Hide clipper entirely on very small phones */
-          .hero-clipper-wrap { display: none !important; }
+        /* ── Hero entrance (gated until intro fades out) ──── */
+        .bph-hero-anim { opacity: 0; }
+        .bph-hero-anim.bph-go-0 { animation: fadeUp 0.55s cubic-bezier(0.4,0,0.2,1) 0s   both; }
+        .bph-hero-anim.bph-go-1 { animation: fadeUp 0.55s cubic-bezier(0.4,0,0.2,1) 0.1s both; }
+        .bph-hero-anim.bph-go-2 { animation: fadeUp 0.55s cubic-bezier(0.4,0,0.2,1) 0.2s both; }
+        .bph-hero-anim.bph-go-3 { animation: fadeUp 0.55s cubic-bezier(0.4,0,0.2,1) 0.3s both; }
+        .bph-hero-anim.bph-go-4 { animation: fadeUp 0.55s cubic-bezier(0.4,0,0.2,1) 0.4s both; }
+        .bph-hero-anim.bph-go-5 { animation: fadeUp 0.55s cubic-bezier(0.4,0,0.2,1) 0.5s both; }
+
+        /* ── Intro screen ───────────────────────────────── */
+        .bph-intro2 {
+          position: fixed;
+          inset: 0;
+          z-index: 9999;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #0a0a0a;
+          overflow: hidden;
+          pointer-events: none;
+          animation: bph-intro2-out 0.4s ease 2.1s forwards;
+        }
+        .bph-intro2-grain {
+          position: absolute;
+          inset: -50%;
+          width: 200%;
+          height: 200%;
+          opacity: 0.05;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+          background-size: 160px 160px;
+        }
+        .bph-intro2-content {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+          padding: 0 1.5rem;
+        }
+        .bph-intro2-title {
+          font-size: clamp(1.6rem, 6vw, 2.75rem);
+          font-weight: 600;
+          color: #FAF8F4;
+          letter-spacing: 0.5em;
+          margin: 0;
+          white-space: nowrap;
+          animation: bph-intro2-spacing 0.9s cubic-bezier(0.16,1,0.3,1) 0.5s forwards;
+        }
+        .bph-intro2-letter {
+          display: inline-block;
+          opacity: 0;
+          transform: translateY(12px);
+          animation: bph-intro2-letter-in 0.5s cubic-bezier(0.16,1,0.3,1) forwards;
+        }
+        .bph-intro2-line {
+          width: 0;
+          height: 1px;
+          margin: 1.5rem 0;
+          background: #C9A84C;
+          box-shadow: 0 0 10px rgba(201,168,76,0.55);
+          animation: bph-intro2-line-in 0.6s cubic-bezier(0.45,0,0.2,1) forwards;
+        }
+        .bph-intro2-tagline {
+          margin: 0;
+          font-size: clamp(0.65rem, 2vw, 0.8rem);
+          letter-spacing: 0.24em;
+          text-transform: uppercase;
+          color: rgba(250,248,244,0.5);
+          opacity: 0;
+          animation: bph-intro2-tagline-in 0.4s ease 1.3s forwards;
+        }
+
+        /* ── Responsive ───────────────────────────────────── */
+        @media (max-width: 640px) {
+          .bph-clipper { display: none; }
+          .bph-stats { flex-wrap: wrap; gap: 1.5rem 1rem; }
+          .bph-gallery { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 38vw; }
+          .bph-gallery-item { grid-column: span 1 !important; grid-row: span 1 !important; transform: none !important; }
+          .bph-service { padding-left: 0.5rem; padding-right: 0.5rem; gap: 1rem; }
+          .bph-ticker { gap: 1rem; }
         }
       `}</style>
     </div>
   );
 }
 
-// ── Testimonials — ⑤ stripes.png on both sides ───────────
+// ── Testimonials — single rotating quote on dark glass ───────
 
 function TestimonialsSection() {
   const [active, setActive] = useState(0);
@@ -466,82 +898,86 @@ function TestimonialsSection() {
   const t = TESTIMONIALS[active];
 
   return (
-    <section style={{ background: '#fff', padding: '5rem 1.5rem', position: 'relative', overflow: 'hidden' }}>
-      {/* ⑤ stripes.png — decorative barber-stripe icons, flanking */}
-      <div style={{ position: 'absolute', right: -50, top: '50%', transform: 'translateY(-50%)', width: 170, opacity: 0.055, pointerEvents: 'none', zIndex: 0, animation: 'stripes-pulse 8s ease-in-out infinite' }}>
+    <section style={{ background: 'var(--g0)', position: 'relative', overflow: 'hidden' }}>
+      {/* decorative stripes, flanking */}
+      <div style={{ position: 'absolute', right: -50, top: '50%', transform: 'translateY(-50%)', width: 170, opacity: 0.05, pointerEvents: 'none', zIndex: 0, animation: 'stripes-pulse 8s ease-in-out infinite', filter: 'grayscale(1) brightness(3)' }}>
         <img src="/images/stripes.png" alt="" style={{ width: '100%' }} />
       </div>
-      <div style={{ position: 'absolute', left: -50, top: '50%', transform: 'translateY(-50%) scaleX(-1)', width: 170, opacity: 0.055, pointerEvents: 'none', zIndex: 0, animation: 'stripes-pulse 8s ease-in-out 4s infinite' }}>
+      <div style={{ position: 'absolute', left: -50, top: '50%', transform: 'translateY(-50%) scaleX(-1)', width: 170, opacity: 0.05, pointerEvents: 'none', zIndex: 0, animation: 'stripes-pulse 8s ease-in-out 4s infinite', filter: 'grayscale(1) brightness(3)' }}>
         <img src="/images/stripes.png" alt="" style={{ width: '100%' }} />
       </div>
 
-      <div style={{ maxWidth: 680, margin: '0 auto', textAlign: 'center', position: 'relative', zIndex: 1 }}>
-        <p style={{ fontSize: '0.7rem', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'var(--red)', fontWeight: 600, marginBottom: '0.75rem' }}>
-          לקוחות מדברים
-        </p>
-        <h2 className="display display-lg" style={{ color: 'var(--text)', marginBottom: '3rem' }}>
-          מה <span style={{ fontStyle: 'italic' }}>אומרים</span> עלינו
-        </h2>
+      <div className="bph-section" style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
+        <Reveal>
+          <p className="bph-eyebrow">לקוחות מדברים</p>
+          <h2 className="display display-lg" style={{ color: 'var(--cream)', marginBottom: '3rem' }}>
+            מה <span className="bph-gold-text" style={{ fontStyle: 'italic' }}>אומרים</span> עלינו
+          </h2>
+        </Reveal>
 
         <div key={active} style={{
-          background: 'var(--bg)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '2.5rem 2.25rem',
-          boxShadow: '0 4px 40px rgba(17,17,17,0.07)',
-          border: '1px solid var(--glass-border)',
+          maxWidth: 640,
+          margin: '0 auto',
+          background: 'var(--g1)',
+          border: '1px solid var(--line)',
+          borderRadius: 4,
+          padding: 'clamp(2.5rem, 6vw, 4rem) clamp(1.75rem, 5vw, 3rem)',
           position: 'relative',
           animation: 'slide-in 0.35s ease both',
-          minHeight: 200,
+          minHeight: 220,
         }}>
-          <div style={{ position: 'absolute', top: 16, right: 22, fontSize: '4.5rem', fontFamily: 'Georgia, serif', color: 'rgba(204,26,26,0.12)', lineHeight: 1, userSelect: 'none' }}>"</div>
+          <div style={{ position: 'absolute', top: 12, insetInlineEnd: 24, fontSize: '4.5rem', fontFamily: 'Georgia, serif', color: 'rgba(201,164,73,0.18)', lineHeight: 1, userSelect: 'none' }}>"</div>
 
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 3, marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginBottom: '1.5rem' }}>
             {[1,2,3,4,5].map(s => (
-              <svg key={s} width="18" height="18" viewBox="0 0 24 24" fill={s <= t.stars ? '#CC1A1A' : '#DDE5F0'}>
+              <svg key={s} width="16" height="16" viewBox="0 0 24 24" fill={s <= t.stars ? '#c9a449' : 'rgba(243,236,221,0.15)'}>
                 <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
               </svg>
             ))}
           </div>
 
-          <p style={{ fontSize: '1.05rem', lineHeight: 1.75, color: 'var(--text)', fontStyle: 'italic', marginBottom: '1.75rem', fontFamily: 'var(--font-display)', fontWeight: 400 }}>
+          <p className="display" style={{ fontSize: '1.15rem', lineHeight: 1.85, color: 'var(--cream)', fontStyle: 'italic', fontWeight: 400, marginBottom: '2rem' }}>
             "{t.text}"
           </p>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.875rem' }}>
             <div style={{
-              width: 42, height: 42, borderRadius: '50%',
-              background: `linear-gradient(135deg, ${t.color}20, ${t.color}44)`,
-              border: `2px solid ${t.color}55`,
+              width: 46, height: 46, borderRadius: '50%',
+              background: 'linear-gradient(135deg, rgba(201,164,73,0.14), rgba(201,164,73,0.30))',
+              border: '1.5px solid rgba(201,164,73,0.40)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1rem', fontWeight: 700, color: t.color, fontFamily: 'var(--font-display)',
+              fontSize: '1.05rem', fontWeight: 700, color: 'var(--gold-light)', fontFamily: 'var(--font-display)',
             }}>{t.initial}</div>
             <div style={{ textAlign: 'right' }}>
-              <p style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text)' }}>{t.name}</p>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>{t.service}</p>
+              <p style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--cream)' }}>{t.name}</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--cream-faint)' }}>{t.service}</p>
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 7, marginTop: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 7, marginTop: '1.75rem' }}>
           {TESTIMONIALS.map((_, i) => (
-            <button key={i} onClick={() => setActive(i)} style={{ width: i === active ? 28 : 8, height: 8, borderRadius: 4, background: i === active ? 'var(--red)' : 'rgba(17,17,17,0.14)', border: 'none', cursor: 'pointer', transition: 'all 0.32s ease', padding: 0 }} />
+            <button
+              key={i}
+              onClick={() => setActive(i)}
+              aria-label={`עבור לחוות דעת ${i + 1}`}
+              style={{ width: i === active ? 28 : 8, height: 8, borderRadius: 4, background: i === active ? 'var(--gold)' : 'rgba(243,236,221,0.18)', border: 'none', cursor: 'pointer', transition: 'all 0.32s ease', padding: 0 }}
+            />
           ))}
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: '1rem' }}>
           {['›', '‹'].map((arrow, ai) => (
-            <button key={ai} onClick={() => setActive(a => ai === 0 ? (a - 1 + TESTIMONIALS.length) % TESTIMONIALS.length : (a + 1) % TESTIMONIALS.length)}
-              style={{ width: 36, height: 36, borderRadius: '50%', background: '#fff', border: '1.5px solid rgba(17,17,17,0.10)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text)', boxShadow: 'var(--shadow-card)', fontSize: '1.1rem', fontWeight: 600, transition: 'var(--transition)' }}
+            <button
+              key={ai}
+              onClick={() => setActive(a => ai === 0 ? (a - 1 + TESTIMONIALS.length) % TESTIMONIALS.length : (a + 1) % TESTIMONIALS.length)}
+              aria-label={ai === 0 ? 'הקודם' : 'הבא'}
+              style={{ width: 36, height: 36, borderRadius: '50%', background: 'transparent', border: '1.5px solid rgba(243,236,221,0.16)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--cream-dim)', fontSize: '1.1rem', fontWeight: 600, transition: 'all 0.28s ease' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.color = 'var(--gold-light)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(243,236,221,0.16)'; e.currentTarget.style.color = 'var(--cream-dim)'; }}
             >{arrow}</button>
           ))}
         </div>
-
-        <style>{`
-          @keyframes stripes-pulse {
-            0%,100% { opacity: 0.055; transform: translateY(-50%) scale(1); }
-            50%      { opacity: 0.085; transform: translateY(-50%) scale(1.04); }
-          }
-        `}</style>
       </div>
     </section>
   );

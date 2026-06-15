@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
 
   const sb = supabaseAdmin();
   const [{ data: appts }, { data: blocked }] = await Promise.all([
-    sb.from('appointments').select('time').eq('date', date).neq('status', 'rejected'),
+    sb.from('appointments').select('time').eq('date', date).in('status', ['pending', 'approved', 'in_progress']),
     sb.from('blocked_slots').select('time').eq('date', date),
   ]);
 
