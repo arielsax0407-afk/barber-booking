@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { SERVICES, TIME_SLOTS } from '@/lib/services';
 
@@ -9,6 +9,30 @@ const STEPS: Step[] = ['service', 'date', 'time', 'details', 'confirm'];
 const STEP_LABELS: Record<Step, string> = {
   service: 'שירות', date: 'תאריך', time: 'שעה', details: 'פרטים', confirm: 'אישור',
 };
+
+const LAST_BOOKING_KEY = 'bph_last_booking';
+
+// Typical pattern (mornings + early afternoon are quieter, late afternoon
+// fills up first) — used until enough real bookings exist to measure load.
+const QUIET_FALLBACK = ['09:00', '09:30', '10:00', '13:00', '13:30', '14:00'];
+const BUSY_FALLBACK = ['16:00', '16:30', '17:00', '17:30', '18:00'];
+
+type TimeStats = { counts: Record<string, number>; total: number };
+
+function classifyLoad(stats: TimeStats | null) {
+  if (!stats || stats.total < TIME_SLOTS.length) {
+    return { quiet: new Set(QUIET_FALLBACK), busy: new Set(BUSY_FALLBACK) };
+  }
+  const avg = stats.total / TIME_SLOTS.length;
+  const quiet = new Set<string>();
+  const busy = new Set<string>();
+  for (const slot of TIME_SLOTS) {
+    const c = stats.counts[slot] ?? 0;
+    if (c <= avg * 0.5) quiet.add(slot);
+    else if (c >= avg * 1.5) busy.add(slot);
+  }
+  return { quiet, busy };
+}
 
 function formatDate(d: string) {
   if (!d) return '';
@@ -36,8 +60,30 @@ export default function BookPage() {
   const [appointmentId, setAppointmentId] = useState('');
   const [error, setError] = useState('');
   const [dateError, setDateError] = useState('');
+  const [welcomeBack, setWelcomeBack] = useState<{ name: string; phone: string; service: string } | null>(null);
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [timeStats, setTimeStats] = useState<TimeStats | null>(null);
 
   const stepIndex = STEPS.indexOf(step);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LAST_BOOKING_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw);
+        if (saved?.name && saved?.phone && SERVICES.some((s) => s.id === saved.service)) {
+          setWelcomeBack(saved);
+        }
+      }
+    } catch {}
+
+    fetch('/api/time-stats')
+      .then((res) => res.json())
+      .then((json) => setTimeStats(json))
+      .catch(() => {});
+  }, []);
+
+  const load = classifyLoad(timeStats);
 
   function goBack() {
     if (stepIndex === 0) router.push('/');
@@ -80,6 +126,9 @@ export default function BookPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, phone, service, date, time }),
     });
+    try {
+      localStorage.setItem(LAST_BOOKING_KEY, JSON.stringify({ name, phone, service }));
+    } catch {}
     setAppointmentId(json.id);
     setDone(true);
   }
@@ -182,6 +231,40 @@ export default function BookPage() {
           {/* Service */}
           {step === 'service' && (
             <div>
+              {welcomeBack && showWelcome && (
+                <div className="glass-card-amber animate-fade-up" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)', marginBottom: 2 }}>
+                      ברוך שובך, {welcomeBack.name}! 👋
+                    </p>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      להזמין שוב {SERVICES.find((s) => s.id === welcomeBack.service)?.name}?
+                    </p>
+                  </div>
+                  <div className="flex gap-2" style={{ flexShrink: 0 }}>
+                    <button
+                      className="btn-primary"
+                      style={{ padding: '0.5rem 1rem', fontSize: '0.7rem' }}
+                      onClick={() => {
+                        setService(welcomeBack.service);
+                        setName(welcomeBack.name);
+                        setPhone(welcomeBack.phone);
+                        setStep('date');
+                      }}
+                    >
+                      כן, אותו דבר
+                    </button>
+                    <button
+                      className="btn-ghost"
+                      style={{ padding: '0.5rem 0.75rem', fontSize: '0.7rem' }}
+                      onClick={() => setShowWelcome(false)}
+                      aria-label="סגור"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              )}
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
                 בחר את השירות הרצוי
               </p>
@@ -262,9 +345,21 @@ export default function BookPage() {
           {/* Time */}
           {step === 'time' && (
             <div>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
                 {formatDate(date)} — בחר שעה פנויה
               </p>
+              {!loadingSlots && (
+                <div className="flex items-center gap-4 mb-3" style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>
+                  <span className="flex items-center gap-1">
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10B981', display: 'inline-block' }} />
+                    שעה שקטה
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#D97706', display: 'inline-block' }} />
+                    שעה עמוסה
+                  </span>
+                </div>
+              )}
               {loadingSlots ? (
                 <div className="text-center py-16">
                   <div style={{ width: 32, height: 32, border: '2.5px solid var(--amber)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto', animation: 'spin-slow 0.8s linear infinite' }} />
@@ -281,6 +376,7 @@ export default function BookPage() {
                         disabled={taken}
                         onClick={() => setTime(slot)}
                         style={{
+                          position: 'relative',
                           padding: '0.75rem 0.5rem',
                           borderRadius: 'var(--radius)',
                           fontSize: '0.875rem',
@@ -298,6 +394,12 @@ export default function BookPage() {
                           boxShadow: selected ? 'var(--shadow-amber)' : taken ? 'none' : 'var(--shadow-card)',
                         }}
                       >
+                        {!taken && !selected && load.quiet.has(slot) && (
+                          <span style={{ position: 'absolute', top: 6, insetInlineEnd: 6, width: 7, height: 7, borderRadius: '50%', background: '#10B981' }} />
+                        )}
+                        {!taken && !selected && load.busy.has(slot) && (
+                          <span style={{ position: 'absolute', top: 6, insetInlineEnd: 6, width: 7, height: 7, borderRadius: '50%', background: '#D97706' }} />
+                        )}
                         {slot}
                       </button>
                     );
