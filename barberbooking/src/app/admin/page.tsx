@@ -952,23 +952,29 @@ function SettingsTab({ appointments, hours, setHours, blockedSlots, blockSlot, u
       <Section title="שעות עבודה" icon="⏰">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {Array.from({ length: 7 }, (_, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.875rem 1.125rem', background: B3, borderRadius: R, border: `1px solid ${BDR}` }}>
-              <span style={{ width: 52, fontSize: '0.85rem', color: T, fontWeight: 600 }}>{DAY_FULL[i]}</span>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                <input type="checkbox" checked={hours[i].open}
-                  onChange={e => setHours({ ...hours, [i]: { ...hours[i], open: e.target.checked } })}
-                  style={{ accentColor: G, width: 16, height: 16, cursor: 'pointer' }} />
-                <span style={{ fontSize: '0.75rem', color: hours[i].open ? GL : TD }}>{hours[i].open ? 'פתוח' : 'סגור'}</span>
-              </label>
-              {hours[i].open && <>
-                <input type="time" value={hours[i].from}
-                  onChange={e => setHours({ ...hours, [i]: { ...hours[i], from: e.target.value } })}
-                  style={{ background: B4, border: `1px solid ${BDR}`, borderRadius: 6, padding: '0.35rem 0.625rem', color: T, fontSize: '0.8rem', cursor: 'pointer' }} />
-                <span style={{ color: TD, fontSize: '0.75rem' }}>–</span>
-                <input type="time" value={hours[i].to}
-                  onChange={e => setHours({ ...hours, [i]: { ...hours[i], to: e.target.value } })}
-                  style={{ background: B4, border: `1px solid ${BDR}`, borderRadius: 6, padding: '0.35rem 0.625rem', color: T, fontSize: '0.8rem', cursor: 'pointer' }} />
-              </>}
+            <div key={i} style={{ padding: '0.875rem 1.125rem', background: B3, borderRadius: R, border: `1px solid ${BDR}` }}>
+              {/* Row 1: day name + open/closed toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: hours[i].open ? '0.625rem' : 0 }}>
+                <span style={{ fontSize: '0.85rem', color: T, fontWeight: 600 }}>{DAY_FULL[i]}</span>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                  <span style={{ fontSize: '0.75rem', color: hours[i].open ? GL : TD }}>{hours[i].open ? 'פתוח' : 'סגור'}</span>
+                  <input type="checkbox" checked={hours[i].open}
+                    onChange={e => setHours({ ...hours, [i]: { ...hours[i], open: e.target.checked } })}
+                    style={{ accentColor: G, width: 16, height: 16, cursor: 'pointer' }} />
+                </label>
+              </div>
+              {/* Row 2: time range (only when open) */}
+              {hours[i].open && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input type="time" value={hours[i].from}
+                    onChange={e => setHours({ ...hours, [i]: { ...hours[i], from: e.target.value } })}
+                    style={{ flex: 1, minWidth: 0, background: B4, border: `1px solid ${BDR}`, borderRadius: 6, padding: '0.35rem 0.5rem', color: T, fontSize: '0.8rem', cursor: 'pointer' }} />
+                  <span style={{ color: TD, fontSize: '0.75rem', flexShrink: 0 }}>–</span>
+                  <input type="time" value={hours[i].to}
+                    onChange={e => setHours({ ...hours, [i]: { ...hours[i], to: e.target.value } })}
+                    style={{ flex: 1, minWidth: 0, background: B4, border: `1px solid ${BDR}`, borderRadius: 6, padding: '0.35rem 0.5rem', color: T, fontSize: '0.8rem', cursor: 'pointer' }} />
+                </div>
+              )}
             </div>
           ))}
         </div>
