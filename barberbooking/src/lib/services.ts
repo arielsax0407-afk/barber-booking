@@ -1,9 +1,10 @@
 export const SERVICES = [
-  { id: 'haircut', name: 'תספורת', duration: 30, price: '60₪' },
-  { id: 'beard', name: 'עיצוב זקן', duration: 20, price: '40₪' },
-  { id: 'haircut-beard', name: 'תספורת + זקן', duration: 50, price: '90₪' },
-  { id: 'kids', name: 'תספורת ילדים', duration: 20, price: '40₪' },
-  { id: 'fade', name: 'פייד', duration: 40, price: '70₪' },
+  { id: 'haircut-mens-teen', name: 'תספורת גברים ונוער', duration: 30, price: '50₪' },
+  { id: 'haircut-beard', name: 'תספורת + זקן', duration: 50, price: '55₪' },
+  { id: 'beard-trim', name: 'סידור זקן', duration: 20, price: '30₪' },
+  { id: 'haircut-wax', name: 'תספורת + שעווה (אף ואוזניים)', duration: 40, price: '60₪' },
+  { id: 'haircut-wash-beard', name: 'תספורת + חפיפה + זקן', duration: 60, price: '60₪' },
+  { id: 'organic-straightening', name: 'החלקה אורגנית', duration: 120, price: '700₪' },
 ];
 
 export const TIME_SLOTS = [

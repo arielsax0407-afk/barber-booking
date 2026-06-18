@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const SVC_NAMES: Record<string, string> = {
-  haircut: 'תספורת',
-  beard: 'עיצוב זקן',
+  'haircut-mens-teen': 'תספורת גברים ונוער',
   'haircut-beard': 'תספורת + זקן',
-  kids: 'תספורת ילדים',
-  fade: 'פייד',
+  'beard-trim': 'סידור זקן',
+  'haircut-wax': 'תספורת + שעווה (אף ואוזניים)',
+  'haircut-wash-beard': 'תספורת + חפיפה + זקן',
+  'organic-straightening': 'החלקה אורגנית',
 };
 
 const MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
   const { name, phone, service, date, time } = await req.json();
 
   const svcLabel = SVC_NAMES[service] ?? service;
-  const message = `✂️ תור חדש נקבע!\n\n👤 שם: ${name}\n📞 טלפון: ${phone}\n✂️ שירות: ${svcLabel}\n📅 תאריך: ${formatDate(date)}\n🕐 שעה: ${time}\n\nברבר פרמיום`;
+  const message = `✂️ תור חדש נקבע!\n\n👤 שם: ${name}\n📞 טלפון: ${phone}\n✂️ שירות: ${svcLabel}\n📅 תאריך: ${formatDate(date)}\n🕐 שעה: ${time}\n\nEK Royal Barber`;
 
   // WhatsApp via Twilio
   const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM, ADMIN_WHATSAPP_NUMBER } = process.env;

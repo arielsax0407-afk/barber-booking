@@ -117,7 +117,7 @@ export default function QueuePage() {
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }} className="animate-fade-in">
           <p style={{ fontSize: '0.65rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--amber)', fontWeight: 700, marginBottom: '0.5rem' }}>
-            ברבר פרמיום
+            EK Royal Barber
           </p>
           <h1 className="serif" style={{ fontSize: '2rem', fontWeight: 400, color: 'var(--text)' }}>
             התור שלך

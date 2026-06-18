@@ -13,7 +13,7 @@ export const WA_TEMPLATE_LABELS: Record<WaTemplateKey, string> = {
 };
 
 export const DEFAULT_WA_TEMPLATES: Record<WaTemplateKey, string> = {
-  approve: `שלום {{name}}! 🎉\nהתור שלך אושר:\n✂️ {{service}}\n📅 {{date}}\n⏰ {{time}}\n\nמחכים לך ב-ברבר פרמיום! 💈`,
+  approve: `שלום {{name}}! 🎉\nהתור שלך אושר:\n✂️ {{service}}\n📅 {{date}}\n⏰ {{time}}\n\nמחכים לך ב-EK Royal Barber! 💈`,
   reject: `שלום {{name}},\nמצטערים, לא נוכל לקבל אותך בזמן שביקשת.\nאנחנו מזמינים אותך לקבוע תור חדש דרך האתר.\nתודה! 🙏`,
   reschedule: `שלום {{name}},\nנשמח לשנות את התור שלך.\nאנא היכנס לאתר וקבע תור חדש.\nתודה! 💈`,
 };

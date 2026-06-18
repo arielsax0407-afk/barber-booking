@@ -7,10 +7,12 @@ import { TIME_SLOTS } from '@/lib/services';
 // ── Static data ───────────────────────────────────────────
 
 const SERVICES_PREVIEW = [
-  { name: 'תספורת', price: '60₪', duration: '30 דק׳' },
-  { name: 'עיצוב זקן', price: '40₪', duration: '20 דק׳' },
-  { name: 'תספורת + זקן', price: '90₪', duration: '50 דק׳' },
-  { name: 'פייד', price: '70₪', duration: '40 דק׳' },
+  { name: 'תספורת גברים ונוער', price: '50₪', duration: '30 דק׳' },
+  { name: 'תספורת + זקן', price: '55₪', duration: '50 דק׳' },
+  { name: 'סידור זקן', price: '30₪', duration: '20 דק׳' },
+  { name: 'תספורת + שעווה (אף ואוזניים)', price: '60₪', duration: '40 דק׳' },
+  { name: 'תספורת + חפיפה + זקן', price: '60₪', duration: '60 דק׳' },
+  { name: 'החלקה אורגנית', price: '700₪', duration: '120 דק׳' },
 ];
 
 const STATS = [
@@ -19,9 +21,9 @@ const STATS = [
   { target: 8, decimals: 0, suffix: '+', label: 'שנות ניסיון' },
 ];
 
-// Opening hours: Sunday(0)–Friday(5) 9:00–19:00, closed Saturday(6) — Asia/Jerusalem time
-const OPEN_HOUR = 9;
-const CLOSE_HOUR = 19;
+// Opening hours: Sunday(0)–Friday(5) 8:00–18:00, closed Saturday(6) — Asia/Jerusalem time
+const OPEN_HOUR = 8;
+const CLOSE_HOUR = 18;
 const HEBREW_WEEKDAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
 function getJerusalemParts(date: Date) {
@@ -63,7 +65,7 @@ function computeOpenStatus(now: Date) {
   }
 
   if (!isClosedDay && minutesNow < openMin) {
-    return { open: false, text: 'סגור כרגע', sub: 'נפתח היום ב-09:00' };
+    return { open: false, text: 'סגור כרגע', sub: 'נפתח היום ב-08:00' };
   }
 
   let daysAhead = 0;
@@ -73,7 +75,7 @@ function computeOpenStatus(now: Date) {
     d = (weekday + daysAhead) % 7;
   } while (d === 6);
   const label = daysAhead === 1 ? 'מחר' : `ביום ${HEBREW_WEEKDAYS[d]}`;
-  return { open: false, text: 'סגור כרגע', sub: `נפתח ${label} ב-09:00` };
+  return { open: false, text: 'סגור כרגע', sub: `נפתח ${label} ב-08:00` };
 }
 
 const STEPS = [
@@ -83,18 +85,29 @@ const STEPS = [
 ];
 
 const GALLERY = [
-  { url: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=480&h=480&fit=crop&q=80', label: 'תספורת קלאסית' },
-  { url: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=480&h=480&fit=crop&q=80', label: 'עיצוב זקן' },
-  { url: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=480&h=480&fit=crop&q=80', label: 'פייד מקצועי' },
-  { url: 'https://images.unsplash.com/photo-1517832606299-7ae9b720a186?w=480&h=480&fit=crop&q=80', label: 'חיתוך מדויק' },
-  { url: 'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=480&h=480&fit=crop&q=80', label: 'סטייל מודרני' },
-  { url: 'https://images.unsplash.com/photo-1560869713-7d0a29430803?w=480&h=480&fit=crop&q=80', label: 'אווירת המקום' },
+  { url: '/images/work/work-01.png', label: 'פייד עור · קונטור מדויק' },
+  { url: '/images/work/work-02.png', label: 'אדגר קאט מודרני' },
+  { url: '/images/work/work-03.png', label: 'פייד נמוך · קו עליון חד' },
+  { url: '/images/work/work-04.png', label: 'טאפר טבעי עם טקסטורה' },
+  { url: '/images/work/work-05.png', label: 'עיצוב פסיפס מיוחד' },
+  { url: '/images/work/work-06.png', label: 'פייד קלאסי · גימור חלק' },
+  { url: '/images/work/work-07.png', label: 'פייד לשיער קרלי' },
+];
+
+const PRODUCTS = [
+  { name: "ג'ל לשיער AGIVA", desc: 'לאחיזה חזקה וריח מרענן', img: 'https://images.unsplash.com/photo-1585751119414-ef2636f8aede?w=480&h=480&fit=crop&q=80' },
+  { name: 'וואקס AGIVA Aqua', desc: 'מראה טבעי, צבעים חזקים', img: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=480&h=480&fit=crop&q=80' },
+  { name: 'טוניק לשיער AGIVA', desc: 'מחזק ומעבה את השיער', img: 'https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=480&h=480&fit=crop&q=80' },
+  { name: 'שמן לזקן O&B', desc: 'לעיצוב וטיפוח הזקן', img: 'https://images.unsplash.com/photo-1576426863848-c21f53c60b19?w=480&h=480&fit=crop&q=80' },
+  { name: 'מסיכת פנים AGIVA Gold', desc: 'טיפול פנים שומני', img: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=480&h=480&fit=crop&q=80' },
+  { name: 'מסיכת פנים AGIVA Black', desc: 'הוצאת שחורים', img: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=480&h=480&fit=crop&q=80' },
+  { name: 'בשמי BLANCO', desc: 'לגברים ולנשים, ריחות חדשים', img: 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=480&h=480&fit=crop&q=80' },
 ];
 
 const TESTIMONIALS = [
   { name: 'דוד כהן', service: 'תספורת + עיצוב זקן', text: 'הכי טוב שהיה לי. הספר ידע בדיוק מה אני רוצה רק ממבט אחד. אני מגיע כל שבוע ולא מוכן לשנות.', stars: 5, initial: 'ד', color: '#1A50A8' },
   { name: 'יוסי לוי', service: 'פייד', text: 'כבר שנה שאני מגיע פעמיים בחודש. הצוות מקצועי, נעים ותמיד בדיוק לשעה. תספורת מושלמת כל פעם.', stars: 5, initial: 'י', color: '#CC1A1A' },
-  { name: 'אמיר חדד', service: 'עיצוב זקן', text: 'עיצוב הזקן שינה לי את המראה לגמרי. אנשים שואלים מה עשיתי, תמיד עונה: ברבר פרמיום. ממליץ בחום!', stars: 5, initial: 'א', color: '#1A50A8' },
+  { name: 'אמיר חדד', service: 'עיצוב זקן', text: 'עיצוב הזקן שינה לי את המראה לגמרי. אנשים שואלים מה עשיתי, תמיד עונה: EK Royal Barber. ממליץ בחום!', stars: 5, initial: 'א', color: '#1A50A8' },
   { name: 'רון ביטון', service: 'תספורת ילדים', text: 'הבן שלי פחד מספרים, כאן הוא מתרגש לבוא. הצוות יודע לעבוד עם ילדים בצורה מדהימה. תודה רבה!', stars: 5, initial: 'ר', color: '#CC1A1A' },
   { name: 'עמית שלום', service: 'תספורת', text: 'קביעת תור אונליין זה שינוי משחק. 2 דקות ויש לי תור. תמיד יוצא מרוצה ומרגיש כמו מלך. 10/10.', stars: 5, initial: 'ע', color: '#1A50A8' },
 ];
@@ -108,7 +121,7 @@ const WHY_US = [
 const PROOF = [
   { icon: '🔥', text: 'מעל 47 תורים החודש' },
   { icon: '⭐', text: 'דירוג 4.9 בגוגל' },
-  { icon: '✂️', text: 'א׳–ו׳ · 9:00–19:00' },
+  { icon: '✂️', text: 'א׳–ו׳ · 08:00–18:00' },
   { icon: '💬', text: 'אישור WhatsApp מיידי' },
 ];
 
@@ -322,7 +335,7 @@ export default function HomePage() {
           <div className="bph-intro2-grain" />
           <div className="bph-intro2-content">
             <h1 className="bph-intro2-title serif">
-              {Array.from('ברבר פרמיום').map((ch, i) => (
+              {Array.from('EK Royal Barber').map((ch, i) => (
                 <span key={i} className="bph-intro2-letter" style={{ animationDelay: `${0.5 + i * 0.045}s` }}>
                   {ch === ' ' ? ' ' : ch}
                 </span>
@@ -336,7 +349,7 @@ export default function HomePage() {
 
       {/* ── WhatsApp float ───────────────────────────────── */}
       <a
-        href="https://wa.me/972500000000"
+        href="https://wa.me/972558824429"
         target="_blank"
         rel="noopener noreferrer"
         aria-label="צור קשר בוואטסאפ"
@@ -414,11 +427,11 @@ export default function HomePage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
             <img
               src="/images/barber-pole.png"
-              alt="לוגו ברבר פרמיום"
+              alt="לוגו EK Royal Barber"
               style={{ height: 42, filter: 'drop-shadow(0 2px 10px rgba(201,164,73,0.45))', animation: 'barber-pole-spin 10s linear infinite' }}
             />
             <span className="serif" style={{ color: 'var(--cream)', fontSize: '1.1rem', fontWeight: 600, letterSpacing: '0.04em' }}>
-              ברבר פרמיום
+              EK Royal Barber
             </span>
           </div>
           <OpenStatusBadge />
@@ -428,18 +441,18 @@ export default function HomePage() {
         <div className="bph-hero-content">
           <div className={heroAnim(0, 'flex items-center gap-3 mb-8')}>
             <div className="bph-eyebrow-line" />
-            <span className="bph-eyebrow-text">מספרה יוקרתית בתל אביב</span>
+            <span className="bph-eyebrow-text">מספרה יוקרתית ברחובות</span>
             <div className="bph-eyebrow-line" />
           </div>
 
           <h1 className={`display display-xl ${heroAnim(1)}`} style={{ maxWidth: 760 }}>
-            <span className="bph-gold-text">ברבר</span>
+            <span className="bph-gold-text">EK Royal</span>
             <br />
-            <span style={{ color: 'var(--cream)', fontStyle: 'italic', fontWeight: 300 }}>פרמיום</span>
+            <span style={{ color: 'var(--cream)', fontStyle: 'italic', fontWeight: 300 }}>Barber</span>
           </h1>
 
           <p className={heroAnim(2)} style={{ fontSize: 'clamp(1rem, 2.5vw, 1.25rem)', color: 'var(--cream-dim)', marginTop: '1.5rem', maxWidth: 420, lineHeight: 1.8, fontWeight: 300 }}>
-            האמנות של להיראות מושלם.<br />חווית טיפוח שתזכרו.
+            מספרת פרמיום ברחובות — תספורות, זקן וטיפוח גברי
           </p>
 
           <div className={heroAnim(3)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem', marginTop: '3rem' }}>
@@ -569,7 +582,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Gallery ──────────────────────────────────────── */}
+      {/* ── Gallery — real client work ───────────────────── */}
       <section style={{ background: 'var(--g1)' }}>
         <div className="bph-section">
           <Reveal>
@@ -578,22 +591,26 @@ export default function HomePage() {
               <h2 className="display display-lg" style={{ color: 'var(--cream)' }}>
                 <span className="bph-gold-text" style={{ fontStyle: 'italic' }}>העבודות</span> שלנו
               </h2>
+              <p style={{ color: 'var(--cream-dim)', fontSize: '0.9rem', marginTop: '0.75rem', fontWeight: 300 }}>
+                תספורות אמיתיות, ישר מהכיסא
+              </p>
             </div>
           </Reveal>
 
-          <div className="bph-gallery">
+          <div className="bph-work">
             {GALLERY.map((img, i) => (
               <div
-                key={i}
-                className="bph-gallery-item"
+                key={img.url}
+                className="bph-work-item"
                 onClick={() => setLightboxIndex(i)}
                 role="button"
                 tabIndex={0}
                 aria-label={`הצג ${img.label} בתצוגה מלאה`}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setLightboxIndex(i); }}
               >
+                <span className="bph-work-tag">{String(i + 1).padStart(2, '0')}</span>
                 <img src={img.url} alt={img.label} loading="lazy" />
-                <div className="bph-gallery-label">{img.label}</div>
+                <div className="bph-work-caption">{img.label}</div>
               </div>
             ))}
           </div>
@@ -603,6 +620,50 @@ export default function HomePage() {
               <Link href="/book" className="bph-link">קבע תור עכשיו</Link>
             </div>
           </Reveal>
+        </div>
+      </section>
+
+      {/* ── Products ─────────────────────────────────────── */}
+      <section style={{ background: 'var(--g0)' }}>
+        <div className="bph-section">
+          <Reveal>
+            <div className="bph-header">
+              <p className="bph-eyebrow">החנות שלנו</p>
+              <h2 className="display display-lg" style={{ color: 'var(--cream)' }}>
+                מוצרי <span className="bph-gold-text" style={{ fontStyle: 'italic' }}>פרמיום</span>
+              </h2>
+              <p style={{ color: 'var(--cream-dim)', fontSize: '0.9rem', marginTop: '0.75rem', fontWeight: 300 }}>
+                מוצרי פרמיום לטיפוח — זמינים במספרה
+              </p>
+            </div>
+          </Reveal>
+
+          <div className="bph-products">
+            {PRODUCTS.map((p, i) => (
+              <Reveal key={p.name} delay={i * 60}>
+                <div className="bph-product-card">
+                  <div className="bph-product-img-wrap">
+                    <img src={p.img} alt={p.name} loading="lazy" />
+                  </div>
+                  <div className="bph-product-body">
+                    <h3>{p.name}</h3>
+                    <p>{p.desc}</p>
+                    <a
+                      href="https://wa.me/972558824429"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bph-product-cta"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                      </svg>
+                      לפרטים ורכישה — WhatsApp
+                    </a>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -690,8 +751,19 @@ export default function HomePage() {
           alt=""
           className="bph-footer-pole"
         />
-        <p className="serif bph-gold-text" style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>ברבר פרמיום</p>
-        <p style={{ fontSize: '0.75rem', color: 'var(--cream-faint)', letterSpacing: '0.1em' }}>תל אביב · א׳–ו׳ 9:00–19:00</p>
+        <p className="serif bph-gold-text" style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>EK Royal Barber</p>
+        <p style={{ fontSize: '0.75rem', color: 'var(--cream-faint)', letterSpacing: '0.1em', marginBottom: '1.5rem' }}>רחובות · א׳–ו׳ 08:00–18:00</p>
+        <a
+          href="https://wa.me/972558824429"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="bph-footer-wa"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+          וואטסאפ
+        </a>
       </footer>
 
       {/* ── Gallery lightbox ─────────────────────────────── */}
@@ -706,7 +778,7 @@ export default function HomePage() {
           <figure className="bph-lightbox-figure" onClick={(e) => e.stopPropagation()}>
             <img
               key={lightboxIndex}
-              src={GALLERY[lightboxIndex].url.replace('w=480&h=480', 'w=1280&h=1280')}
+              src={GALLERY[lightboxIndex].url}
               alt={GALLERY[lightboxIndex].label}
               className="bph-lightbox-img"
             />
@@ -1054,43 +1126,98 @@ export default function HomePage() {
         .bph-step h3 { font-family: var(--font-display); font-size: 1.3rem; color: var(--cream); margin-bottom: 0.6rem; font-weight: 500; }
         .bph-step p { font-size: 0.875rem; line-height: 1.85; color: var(--cream-dim); }
 
-        /* Gallery — asymmetric collage */
-        .bph-gallery {
+        /* Work gallery — real client photos, asymmetric collage with numbered tags */
+        .bph-work {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
-          grid-auto-rows: clamp(90px, 11vw, 165px);
+          grid-auto-rows: clamp(100px, 12vw, 180px);
           gap: 1rem;
           grid-auto-flow: dense;
         }
-        .bph-gallery-item {
+        .bph-work-item {
           position: relative;
           overflow: hidden;
           background: var(--g2);
           border: 1px solid rgba(243,236,221,0.08);
-          padding: 6px;
+          border-radius: 3px;
           cursor: pointer;
-          transition: transform 0.4s ease, z-index 0.4s ease;
+          transition: transform 0.4s ease, border-color 0.4s ease, z-index 0.4s ease;
         }
-        .bph-gallery-item:hover { z-index: 2; transform: scale(1.03) rotate(0deg) !important; }
-        .bph-gallery-item img {
+        .bph-work-item:hover { z-index: 2; transform: translateY(-4px); border-color: rgba(201,164,73,0.4); }
+        .bph-work-item img {
           width: 100%; height: 100%; object-fit: cover; display: block;
-          filter: grayscale(0.18) contrast(1.05);
+          filter: grayscale(0.15) contrast(1.08);
           transition: transform 0.6s ease, filter 0.6s ease;
         }
-        .bph-gallery-item:hover img { transform: scale(1.07); filter: grayscale(0) contrast(1.1); }
-        .bph-gallery-label {
+        .bph-work-item:hover img { transform: scale(1.07); filter: grayscale(0) contrast(1.12); }
+        .bph-work-tag {
+          position: absolute; top: 10px; z-index: 2;
+          inset-inline-start: 10px;
+          font-family: var(--font-display); font-size: 0.85rem; font-weight: 700;
+          color: var(--gold-light);
+          background: rgba(10,9,8,0.55);
+          border: 1px solid rgba(201,164,73,0.45);
+          padding: 0.15rem 0.55rem;
+          border-radius: 2px;
+          letter-spacing: 0.05em;
+          backdrop-filter: blur(4px);
+        }
+        .bph-work-caption {
           position: absolute; bottom: 0; left: 0; right: 0;
           padding: 1.5rem 0.75rem 0.6rem;
-          background: linear-gradient(transparent, rgba(10,9,8,0.85));
+          background: linear-gradient(transparent, rgba(10,9,8,0.88));
           color: var(--cream-dim);
-          font-size: 0.7rem; text-align: center; letter-spacing: 0.1em; font-weight: 500;
+          font-size: 0.7rem; text-align: center; letter-spacing: 0.06em; font-weight: 500;
         }
-        .bph-gallery-item:nth-child(1) { grid-column: span 2; grid-row: span 2; }
-        .bph-gallery-item:nth-child(2) { grid-column: span 2; grid-row: span 1; transform: rotate(0.6deg); }
-        .bph-gallery-item:nth-child(3) { grid-column: span 1; grid-row: span 1; transform: rotate(-0.8deg); }
-        .bph-gallery-item:nth-child(4) { grid-column: span 1; grid-row: span 2; }
-        .bph-gallery-item:nth-child(5) { grid-column: span 1; grid-row: span 1; transform: rotate(0.8deg); }
-        .bph-gallery-item:nth-child(6) { grid-column: span 1; grid-row: span 1; transform: rotate(-0.5deg); }
+        .bph-work-item:nth-child(1) { grid-column: span 2; grid-row: span 2; }
+        .bph-work-item:nth-child(2) { grid-column: span 1; grid-row: span 1; }
+        .bph-work-item:nth-child(3) { grid-column: span 1; grid-row: span 2; }
+        .bph-work-item:nth-child(4) { grid-column: span 1; grid-row: span 1; }
+        .bph-work-item:nth-child(5) { grid-column: span 2; grid-row: span 1; }
+        .bph-work-item:nth-child(6) { grid-column: span 1; grid-row: span 1; }
+        .bph-work-item:nth-child(7) { grid-column: span 1; grid-row: span 2; }
+
+        /* Products — dark luxury cards */
+        .bph-products {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+          gap: clamp(1.5rem, 4vw, 2rem);
+        }
+        .bph-product-card {
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          background: var(--g1);
+          border: 1px solid var(--line);
+          border-radius: 4px;
+          overflow: hidden;
+          transition: transform 0.4s ease, border-color 0.4s ease;
+        }
+        .bph-product-card:hover { transform: translateY(-5px); border-color: rgba(201,164,73,0.4); }
+        .bph-product-img-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: hidden; background: var(--g2); }
+        .bph-product-img-wrap img {
+          width: 100%; height: 100%; object-fit: cover; display: block;
+          filter: grayscale(0.1) contrast(1.05);
+          transition: transform 0.6s ease, filter 0.6s ease;
+        }
+        .bph-product-card:hover .bph-product-img-wrap img { transform: scale(1.06); filter: grayscale(0) contrast(1.1); }
+        .bph-product-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; flex: 1; }
+        .bph-product-body h3 { font-family: var(--font-display); font-size: 1.1rem; color: var(--cream); font-weight: 500; line-height: 1.3; }
+        .bph-product-body p { font-size: 0.8rem; color: var(--cream-dim); line-height: 1.6; flex: 1; }
+        .bph-product-cta {
+          display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+          margin-top: 0.25rem;
+          padding: 0.7rem 1rem;
+          border: 1px solid rgba(37,211,102,0.4);
+          border-radius: 2px;
+          background: rgba(37,211,102,0.08);
+          color: #3ddc73;
+          font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+          text-decoration: none;
+          text-align: center;
+          transition: all 0.3s ease;
+        }
+        .bph-product-cta:hover { background: #25D366; color: #0a0908; border-color: #25D366; }
 
         /* Why us */
         .bph-whyus { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: clamp(2.5rem, 6vw, 4rem); }
@@ -1129,6 +1256,18 @@ export default function HomePage() {
           animation: barber-pole-spin 10s linear infinite;
           filter: drop-shadow(0 4px 20px rgba(201,164,73,0.35));
         }
+        .bph-footer-wa {
+          display: inline-flex; align-items: center; gap: 0.5rem;
+          padding: 0.65rem 1.5rem;
+          border: 1px solid rgba(37,211,102,0.4);
+          border-radius: 999px;
+          background: rgba(37,211,102,0.08);
+          color: #3ddc73;
+          font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em;
+          text-decoration: none;
+          transition: all 0.3s ease;
+        }
+        .bph-footer-wa:hover { background: #25D366; color: #0a0908; border-color: #25D366; }
 
         /* Gallery lightbox */
         .bph-lightbox {
@@ -1303,14 +1442,19 @@ export default function HomePage() {
         @media (max-width: 640px) {
           .bph-clipper { display: none; }
           .bph-stats { flex-wrap: wrap; gap: 1.5rem 1rem; }
-          .bph-gallery { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 38vw; }
-          .bph-gallery-item { grid-column: span 1 !important; grid-row: span 1 !important; transform: none !important; }
+          .bph-work { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 38vw; }
+          .bph-work-item { grid-column: span 1 !important; grid-row: span 1 !important; }
+          .bph-products { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+          .bph-product-body { padding: 1.1rem; }
           .bph-service { padding-left: 0.5rem; padding-right: 0.5rem; gap: 1rem; }
           .bph-ticker { gap: 1rem; }
           .bph-open-badge { font-size: 0.62rem; }
           .bph-open-sub { display: none; }
           .bph-next-slot { padding: 0.6rem 1rem; }
           .bph-lightbox-nav { width: 38px; height: 38px; font-size: 1.1rem; margin: 0 0.4rem; }
+        }
+        @media (max-width: 420px) {
+          .bph-products { grid-template-columns: 1fr; }
         }
       `}</style>
     </div>
