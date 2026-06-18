@@ -4,6 +4,17 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'ברבר פרמיום — מספרה יוקרתית',
   description: 'חווית טיפוח גברית מהשורה הראשונה. קבע תור עכשיו.',
+  openGraph: {
+    title: 'ברבר פרמיום — מספרה יוקרתית',
+    description: 'חווית טיפוח גברית מהשורה הראשונה. קבע תור עכשיו.',
+    locale: 'he_IL',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'ברבר פרמיום — מספרה יוקרתית',
+    description: 'חווית טיפוח גברית מהשורה הראשונה. קבע תור עכשיו.',
+  },
 };
 
 export const viewport: Viewport = {

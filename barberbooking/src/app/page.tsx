@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
+import { TIME_SLOTS } from '@/lib/services';
 
 // ── Static data ───────────────────────────────────────────
 
@@ -11,6 +12,69 @@ const SERVICES_PREVIEW = [
   { name: 'תספורת + זקן', price: '90₪', duration: '50 דק׳' },
   { name: 'פייד', price: '70₪', duration: '40 דק׳' },
 ];
+
+const STATS = [
+  { target: 500, decimals: 0, suffix: '+', label: 'לקוחות מרוצים' },
+  { target: 4.9, decimals: 1, suffix: '★', label: 'דירוג גוגל' },
+  { target: 8, decimals: 0, suffix: '+', label: 'שנות ניסיון' },
+];
+
+// Opening hours: Sunday(0)–Friday(5) 9:00–19:00, closed Saturday(6) — Asia/Jerusalem time
+const OPEN_HOUR = 9;
+const CLOSE_HOUR = 19;
+const HEBREW_WEEKDAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+
+function getJerusalemParts(date: Date) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Jerusalem',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(date);
+  const map: Record<string, string> = {};
+  for (const p of parts) map[p.type] = p.value;
+  const weekdayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return {
+    weekday: weekdayMap[map.weekday] ?? date.getDay(),
+    hour: parseInt(map.hour, 10) % 24,
+    minute: parseInt(map.minute, 10),
+  };
+}
+
+function getJerusalemDateStr(date: Date, offsetDays = 0) {
+  const shifted = new Date(date.getTime() + offsetDays * 86400000);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }).format(shifted);
+}
+
+function computeOpenStatus(now: Date) {
+  const { weekday, hour, minute } = getJerusalemParts(now);
+  const minutesNow = hour * 60 + minute;
+  const openMin = OPEN_HOUR * 60;
+  const closeMin = CLOSE_HOUR * 60;
+  const isClosedDay = weekday === 6;
+
+  if (!isClosedDay && minutesNow >= openMin && minutesNow < closeMin) {
+    const left = closeMin - minutesNow;
+    const h = Math.floor(left / 60);
+    const m = left % 60;
+    const sub = h > 0 ? `סוגר בעוד ${h} ש׳${m ? ` ${m} ד׳` : ''}` : `סוגר בעוד ${m} דק׳`;
+    return { open: true, text: 'פתוח עכשיו', sub };
+  }
+
+  if (!isClosedDay && minutesNow < openMin) {
+    return { open: false, text: 'סגור כרגע', sub: 'נפתח היום ב-09:00' };
+  }
+
+  let daysAhead = 0;
+  let d = weekday;
+  do {
+    daysAhead++;
+    d = (weekday + daysAhead) % 7;
+  } while (d === 6);
+  const label = daysAhead === 1 ? 'מחר' : `ביום ${HEBREW_WEEKDAYS[d]}`;
+  return { open: false, text: 'סגור כרגע', sub: `נפתח ${label} ב-09:00` };
+}
 
 const STEPS = [
   { num: '01', emoji: '✂️', title: 'בחר שירות', desc: 'בחר את השירות המתאים לך — תספורת, עיצוב זקן, פייד ועוד' },
@@ -77,12 +141,127 @@ function Reveal({ children, className = '', delay = 0 }: { children: ReactNode; 
   );
 }
 
+// ── Live open/closed badge (real-time calculation) ──────────
+
+function OpenStatusBadge() {
+  const [status, setStatus] = useState<{ open: boolean; text: string; sub: string } | null>(null);
+
+  useEffect(() => {
+    const tick = () => setStatus(computeOpenStatus(new Date()));
+    tick();
+    const id = setInterval(tick, 60000);
+    return () => clearInterval(id);
+  }, []);
+
+  if (!status) return null;
+
+  return (
+    <div className={`bph-open-badge ${status.open ? 'is-open' : 'is-closed'}`}>
+      <span className="bph-open-dot" />
+      <span>{status.text}</span>
+      <span className="bph-open-sub">· {status.sub}</span>
+    </div>
+  );
+}
+
+// ── Next available slot (live calculation against real bookings) ──
+
+function NextSlotWidget() {
+  const [state, setState] = useState<{ label: string; sub: string } | 'loading' | 'hidden'>('loading');
+
+  useEffect(() => {
+    let cancelled = false;
+    const toMin = (t: string) => {
+      const [h, m] = t.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    async function run() {
+      try {
+        const now = new Date();
+        const { hour, minute } = getJerusalemParts(now);
+        const nowMinutes = hour * 60 + minute;
+        const todayStr = getJerusalemDateStr(now, 0);
+
+        const res = await fetch(`/api/availability?date=${todayStr}`);
+        const { takenSlots }: { takenSlots: string[] } = await res.json();
+        const taken = new Set(takenSlots ?? []);
+        const todayFree = TIME_SLOTS.find((t) => toMin(t) > nowMinutes + 10 && !taken.has(t));
+
+        if (todayFree) {
+          if (!cancelled) setState({ label: `היום בשעה ${todayFree}`, sub: 'התור הפנוי הקרוב ביותר' });
+          return;
+        }
+
+        const tomorrowParts = getJerusalemParts(new Date(now.getTime() + 86400000));
+        const offsetDays = tomorrowParts.weekday === 6 ? 2 : 1; // skip Saturday (closed)
+        const dateStr = getJerusalemDateStr(now, offsetDays);
+
+        const res2 = await fetch(`/api/availability?date=${dateStr}`);
+        const { takenSlots: taken2 }: { takenSlots: string[] } = await res2.json();
+        const takenSet2 = new Set(taken2 ?? []);
+        const nextFree = TIME_SLOTS.find((t) => !takenSet2.has(t));
+
+        if (nextFree && !cancelled) {
+          const label = offsetDays === 1 ? 'מחר' : 'ביום ראשון';
+          setState({ label: `${label} בשעה ${nextFree}`, sub: 'התור הפנוי הקרוב ביותר' });
+        } else if (!cancelled) {
+          setState('hidden');
+        }
+      } catch {
+        if (!cancelled) setState('hidden');
+      }
+    }
+
+    run();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (state === 'loading' || state === 'hidden') return null;
+
+  return (
+    <Link href="/book" className="bph-next-slot">
+      <span className="bph-next-slot-dot" />
+      <span className="bph-next-slot-text">
+        <strong>{state.label}</strong>
+        <small>{state.sub}</small>
+      </span>
+      <span className="bph-next-slot-arrow">←</span>
+    </Link>
+  );
+}
+
+// ── Count-up number (triggered once `start` flips true) ─────
+
+function CountUp({ target, decimals = 0, suffix = '', duration = 1400, start }: { target: number; decimals?: number; suffix?: string; duration?: number; start: boolean }) {
+  const [val, setVal] = useState(0);
+
+  useEffect(() => {
+    if (!start) return;
+    let raf = 0;
+    const t0 = performance.now();
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / duration);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setVal(target * eased);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [start, target, duration]);
+
+  return <>{val.toFixed(decimals)}{suffix}</>;
+}
+
 // ── Page ──────────────────────────────────────────────────
 
 export default function HomePage() {
   const [introPlaying, setIntroPlaying] = useState(true);
   const [heroReady, setHeroReady] = useState(false);
   const [floatVisible, setFloatVisible] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [spotlightHint, setSpotlightHint] = useState(true);
+  const heroRef = useRef<HTMLDivElement>(null);
   const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
   useEffect(() => {
@@ -90,6 +269,31 @@ export default function HomePage() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setLightboxIndex(null);
+      if (e.key === 'ArrowLeft') setLightboxIndex((i) => (i === null ? i : (i + 1) % GALLERY.length));
+      if (e.key === 'ArrowRight') setLightboxIndex((i) => (i === null ? i : (i - 1 + GALLERY.length) % GALLERY.length));
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [lightboxIndex]);
+
+  function handleHeroMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    const el = heroRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    el.style.setProperty('--mx', `${e.clientX - rect.left}px`);
+    el.style.setProperty('--my', `${e.clientY - rect.top}px`);
+    if (spotlightHint) setSpotlightHint(false);
+  }
 
   useIsoLayoutEffect(() => {
     let seen = false;
@@ -155,7 +359,10 @@ export default function HomePage() {
       </a>
 
       {/* ── Hero ─────────────────────────────────────────── */}
-      <section className="bph-hero">
+      <section className="bph-hero" ref={heroRef} onMouseMove={handleHeroMouseMove}>
+
+        {/* Cursor-reactive gold glow (desktop only) */}
+        <div className="bph-cursor-glow" aria-hidden="true" />
 
         {/* Cinematic background photo + dark overlay */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
@@ -166,6 +373,19 @@ export default function HomePage() {
           />
           <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,9,8,0.30) 0%, rgba(10,9,8,0.62) 50%, rgba(10,9,8,0.97) 100%)' }} />
           <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 28%, rgba(10,9,8,0) 0%, rgba(10,9,8,0.65) 78%)' }} />
+
+          {/* "Million-dollar" feature — cursor spotlight reveals the true, full-colour photo beneath the moody grade */}
+          <img
+            src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=1920&h=1280&fit=crop&q=80"
+            alt=""
+            aria-hidden="true"
+            className="bph-spotlight-img"
+          />
+        </div>
+
+        <div className="bph-spotlight-ring" aria-hidden="true" />
+        <div className={`bph-spotlight-hint ${spotlightHint ? '' : 'is-hidden'}`} aria-hidden="true">
+          <span>✦</span> זוז עם העכבר לחשיפת המראה האמיתי
         </div>
 
         {/* Subtle texture overlay */}
@@ -201,9 +421,7 @@ export default function HomePage() {
               ברבר פרמיום
             </span>
           </div>
-          <span className="serif" style={{ fontSize: '0.75rem', letterSpacing: '0.2em', color: 'var(--cream-faint)', textTransform: 'uppercase' }}>
-            תל אביב · א׳–ו׳
-          </span>
+          <OpenStatusBadge />
         </nav>
 
         {/* Hero content */}
@@ -233,13 +451,19 @@ export default function HomePage() {
             </Link>
           </div>
 
+          <div className={heroAnim(4)} style={{ marginTop: '1.75rem' }}>
+            <NextSlotWidget />
+          </div>
+
           {/* Floating glass stats strip */}
           <div className={`bph-stats ${heroAnim(4)}`}>
-            {[['500+', 'לקוחות מרוצים'], ['4.9★', 'דירוג גוגל'], ['8+', 'שנות ניסיון']].map(([num, label]) => (
-              <div key={label} className="bph-stat">
+            {STATS.map((s) => (
+              <div key={s.label} className="bph-stat">
                 {/* dir=ltr prevents Unicode bidi from reversing "500+" to "+500" */}
-                <div className="serif bph-gold-text" dir="ltr">{num}</div>
-                <div className="bph-stat-label">{label}</div>
+                <div className="serif bph-gold-text" dir="ltr">
+                  <CountUp target={s.target} decimals={s.decimals} suffix={s.suffix} start={heroReady} />
+                </div>
+                <div className="bph-stat-label">{s.label}</div>
               </div>
             ))}
           </div>
@@ -359,7 +583,15 @@ export default function HomePage() {
 
           <div className="bph-gallery">
             {GALLERY.map((img, i) => (
-              <div key={i} className="bph-gallery-item">
+              <div
+                key={i}
+                className="bph-gallery-item"
+                onClick={() => setLightboxIndex(i)}
+                role="button"
+                tabIndex={0}
+                aria-label={`הצג ${img.label} בתצוגה מלאה`}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setLightboxIndex(i); }}
+              >
                 <img src={img.url} alt={img.label} loading="lazy" />
                 <div className="bph-gallery-label">{img.label}</div>
               </div>
@@ -462,6 +694,32 @@ export default function HomePage() {
         <p style={{ fontSize: '0.75rem', color: 'var(--cream-faint)', letterSpacing: '0.1em' }}>תל אביב · א׳–ו׳ 9:00–19:00</p>
       </footer>
 
+      {/* ── Gallery lightbox ─────────────────────────────── */}
+      {lightboxIndex !== null && (
+        <div className="bph-lightbox" role="dialog" aria-modal="true" onClick={() => setLightboxIndex(null)}>
+          <button className="bph-lightbox-close" onClick={() => setLightboxIndex(null)} aria-label="סגור">✕</button>
+          <button
+            className="bph-lightbox-nav bph-lightbox-prev"
+            onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i! - 1 + GALLERY.length) % GALLERY.length); }}
+            aria-label="התמונה הקודמת"
+          >›</button>
+          <figure className="bph-lightbox-figure" onClick={(e) => e.stopPropagation()}>
+            <img
+              key={lightboxIndex}
+              src={GALLERY[lightboxIndex].url.replace('w=480&h=480', 'w=1280&h=1280')}
+              alt={GALLERY[lightboxIndex].label}
+              className="bph-lightbox-img"
+            />
+            <figcaption className="bph-lightbox-caption">{GALLERY[lightboxIndex].label}</figcaption>
+          </figure>
+          <button
+            className="bph-lightbox-nav bph-lightbox-next"
+            onClick={(e) => { e.stopPropagation(); setLightboxIndex((i) => (i! + 1) % GALLERY.length); }}
+            aria-label="התמונה הבאה"
+          >‹</button>
+        </div>
+      )}
+
       {/* ── Styles ───────────────────────────────────────── */}
       <style>{`
         .bph {
@@ -477,6 +735,15 @@ export default function HomePage() {
           --gold-dark: #9c7a2e;
           color: var(--cream);
           background: var(--g0);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .bph *, .bph *::before, .bph *::after {
+            animation-duration: 0.001ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.001ms !important;
+            scroll-behavior: auto !important;
+          }
         }
 
         /* Gold gradient text */
@@ -591,6 +858,89 @@ export default function HomePage() {
           transform-origin: center bottom;
         }
         .bph-clipper img { width: 100%; display: block; }
+
+        /* Cursor-reactive gold glow (desktop only) */
+        .bph-cursor-glow {
+          position: absolute; inset: 0; z-index: 1; pointer-events: none;
+          background: radial-gradient(circle 320px at var(--mx, 50%) var(--my, 50%), rgba(201,164,73,0.12), transparent 70%);
+        }
+        @media (hover: none), (pointer: coarse) { .bph-cursor-glow { display: none; } }
+
+        /* "Million-dollar" feature — cursor spotlight reveal */
+        .bph-spotlight-img {
+          position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+          filter: brightness(0.95) contrast(1.12) saturate(1.35);
+          clip-path: circle(0px at var(--mx, 50%) var(--my, 50%));
+          transition: clip-path 0.15s ease-out;
+          will-change: clip-path;
+        }
+        .bph-hero:hover .bph-spotlight-img { clip-path: circle(150px at var(--mx, 50%) var(--my, 50%)); }
+        .bph-spotlight-ring {
+          position: absolute; z-index: 2; pointer-events: none;
+          width: 300px; height: 300px; border-radius: 50%;
+          left: var(--mx, 50%); top: var(--my, 50%);
+          transform: translate(-50%, -50%);
+          border: 1px solid rgba(201,164,73,0.55);
+          box-shadow: 0 0 0 1px rgba(243,236,221,0.08) inset, 0 0 40px rgba(201,164,73,0.25);
+          opacity: 0;
+          transition: opacity 0.25s ease, left 0.15s ease-out, top 0.15s ease-out;
+        }
+        .bph-hero:hover .bph-spotlight-ring { opacity: 1; }
+        @media (hover: none), (pointer: coarse) {
+          .bph-spotlight-img, .bph-spotlight-ring { display: none; }
+        }
+        .bph-spotlight-hint {
+          position: absolute; z-index: 4; bottom: clamp(1.25rem, 4vw, 2rem); left: 50%;
+          transform: translateX(-50%);
+          display: flex; align-items: center; gap: 0.5rem;
+          font-size: 0.7rem; letter-spacing: 0.1em; color: var(--cream-faint);
+          background: rgba(10,9,8,0.45);
+          border: 1px solid var(--line);
+          padding: 0.5rem 1rem;
+          border-radius: 999px;
+          backdrop-filter: blur(8px);
+          opacity: 1;
+          transition: opacity 0.5s ease;
+          pointer-events: none;
+        }
+        .bph-spotlight-hint span { color: var(--gold-light); }
+        .bph-spotlight-hint.is-hidden { opacity: 0; }
+        @media (hover: none), (pointer: coarse) { .bph-spotlight-hint { display: none; } }
+
+        /* Live open/closed badge */
+        .bph-open-badge {
+          display: flex; align-items: center; gap: 0.5rem;
+          font-size: 0.7rem; letter-spacing: 0.08em; color: var(--cream-dim);
+          white-space: nowrap;
+        }
+        .bph-open-dot {
+          width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+          background: #5fd17a; box-shadow: 0 0 8px rgba(95,209,122,0.7);
+          animation: pulse-wa 2.4s ease-in-out infinite;
+        }
+        .bph-open-badge.is-closed .bph-open-dot { background: #d15f5f; box-shadow: 0 0 8px rgba(209,95,95,0.6); animation: none; }
+        .bph-open-sub { color: var(--cream-faint); }
+
+        /* Next available slot — live booking widget */
+        .bph-next-slot {
+          display: inline-flex; align-items: center; gap: 0.875rem;
+          padding: 0.75rem 1.25rem;
+          background: rgba(243,236,221,0.05);
+          border: 1px solid rgba(201,164,73,0.30);
+          border-radius: 999px;
+          text-decoration: none;
+          transition: all 0.3s ease;
+        }
+        .bph-next-slot:hover { background: rgba(201,164,73,0.10); border-color: var(--gold); transform: translateY(-1px); }
+        .bph-next-slot-dot {
+          width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+          background: var(--gold); box-shadow: 0 0 10px rgba(201,164,73,0.7);
+          animation: pulse-wa 2.4s ease-in-out infinite;
+        }
+        .bph-next-slot-text { display: flex; flex-direction: column; align-items: flex-start; text-align: right; line-height: 1.35; }
+        .bph-next-slot-text strong { font-size: 0.85rem; color: var(--cream); font-weight: 600; }
+        .bph-next-slot-text small { font-size: 0.65rem; color: var(--cream-faint); letter-spacing: 0.04em; }
+        .bph-next-slot-arrow { color: var(--gold-light); font-size: 1rem; }
 
         /* Floating glass stats strip */
         .bph-stats {
@@ -780,6 +1130,37 @@ export default function HomePage() {
           filter: drop-shadow(0 4px 20px rgba(201,164,73,0.35));
         }
 
+        /* Gallery lightbox */
+        .bph-lightbox {
+          position: fixed; inset: 0; z-index: 10000;
+          background: rgba(8,7,6,0.94);
+          backdrop-filter: blur(6px);
+          display: flex; align-items: center; justify-content: center;
+          padding: clamp(1.5rem, 6vw, 3rem);
+          animation: fadeIn 0.25s ease both;
+        }
+        .bph-lightbox-figure { max-width: min(90vw, 880px); display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+        .bph-lightbox-img { max-width: 100%; max-height: 78vh; object-fit: contain; border-radius: 4px; box-shadow: 0 24px 80px rgba(0,0,0,0.6); animation: fadeIn 0.3s ease both; }
+        .bph-lightbox-caption { font-size: 0.85rem; letter-spacing: 0.06em; color: var(--cream-dim); }
+        .bph-lightbox-close {
+          position: absolute; top: clamp(1rem, 4vw, 2rem); inset-inline-end: clamp(1rem, 4vw, 2rem);
+          width: 42px; height: 42px; border-radius: 50%;
+          background: rgba(243,236,221,0.06); border: 1px solid var(--line);
+          color: var(--cream-dim); font-size: 1rem; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          transition: all 0.25s ease;
+        }
+        .bph-lightbox-close:hover { color: var(--gold-light); border-color: var(--gold); background: rgba(201,164,73,0.1); }
+        .bph-lightbox-nav {
+          width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+          background: rgba(243,236,221,0.05); border: 1.5px solid rgba(243,236,221,0.16);
+          color: var(--cream-dim); font-size: 1.3rem; font-weight: 600; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          margin: 0 clamp(0.5rem, 2vw, 1.5rem);
+          transition: all 0.25s ease;
+        }
+        .bph-lightbox-nav:hover { border-color: var(--gold); color: var(--gold-light); background: rgba(201,164,73,0.1); }
+
         /* Scroll reveal */
         .bph-reveal {
           opacity: 0;
@@ -926,6 +1307,10 @@ export default function HomePage() {
           .bph-gallery-item { grid-column: span 1 !important; grid-row: span 1 !important; transform: none !important; }
           .bph-service { padding-left: 0.5rem; padding-right: 0.5rem; gap: 1rem; }
           .bph-ticker { gap: 1rem; }
+          .bph-open-badge { font-size: 0.62rem; }
+          .bph-open-sub { display: none; }
+          .bph-next-slot { padding: 0.6rem 1rem; }
+          .bph-lightbox-nav { width: 38px; height: 38px; font-size: 1.1rem; margin: 0 0.4rem; }
         }
       `}</style>
     </div>
