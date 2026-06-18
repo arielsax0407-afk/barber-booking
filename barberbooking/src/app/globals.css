@@ -1,40 +1,40 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
-/* ── Design Tokens — Red · White · Blue ─────────────────── */
+/* ── Design Tokens — Electric Purple ─────────────────────── */
 :root {
-  /* ❶ Red — primary brand */
-  --red:          #9C7A2E;
-  --red-dark:     #7A5F23;
-  --red-light:    #E0C275;
+  /* ❶ Purple — primary brand */
+  --red:          #9D4EDD;
+  --red-dark:     #6A0DAD;
+  --red-light:    #C77DFF;
 
-  /* ❷ Blue — secondary brand */
-  --blue:         #1A50A8;
-  --blue-dark:    #0F3580;
-  --blue-light:   #3370D4;
+  /* ❷ Violet — secondary brand */
+  --blue:         #5A189A;
+  --blue-dark:    #3C096C;
+  --blue-light:   #9D4EDD;
 
-  /* gold accent (matches homepage --gold family) */
-  --amber:        #9C7A2E;
-  --amber-light:  #E0C275;
-  --amber-dark:   #9C7A2E;
-  --amber-glow:   rgba(156,122,46,0.25);
-  --amber-glass:  rgba(156,122,46,0.09);
-  --teal:         #1A50A8;
-  --teal-light:   #3370D4;
-  --teal-glass:   rgba(26,80,168,0.10);
-  --gold:         #9C7A2E;
-  --gold-light:   #E0C275;
-  --gold-dim:     #9C7A2E;
+  /* purple accent (matches homepage --gold family) */
+  --amber:        #9D4EDD;
+  --amber-light:  #C77DFF;
+  --amber-dark:   #6A0DAD;
+  --amber-glow:   rgba(157,78,221,0.28);
+  --amber-glass:  rgba(157,78,221,0.09);
+  --teal:         #5A189A;
+  --teal-light:   #9D4EDD;
+  --teal-glass:   rgba(90,24,154,0.10);
+  --gold:         #9D4EDD;
+  --gold-light:   #C77DFF;
+  --gold-dim:     #6A0DAD;
 
-  /* Backgrounds — cool white */
-  --bg:           #F7F9FC;
-  --bg-2:         #EEF2F8;
+  /* Backgrounds — cool lavender-white */
+  --bg:           #FAF8FE;
+  --bg-2:         #F3EEFB;
   --bg-3:         #FFFFFF;
-  --bg-4:         #DDE5F0;
+  --bg-4:         #E6D9F7;
 
-  /* Dark surface — hero / footer (navy blue) */
-  --surface-dark:        #0A1628;
-  --surface-dark-2:      #0F1E38;
+  /* Dark surface — hero / footer (deep purple-black) */
+  --surface-dark:        #120821;
+  --surface-dark-2:      #1C0E33;
   --surface-dark-border: rgba(255,255,255,0.07);
 
   /* Text (on light bg) */
@@ -45,13 +45,13 @@
   /* Glass / Cards */
   --glass:        rgba(255,255,255,0.88);
   --glass-border: rgba(17,17,17,0.09);
-  --glass-amber:  rgba(156,122,46,0.08);
-  --glass-gold:   rgba(156,122,46,0.08);
+  --glass-amber:  rgba(157,78,221,0.08);
+  --glass-gold:   rgba(157,78,221,0.08);
 
   /* Shadows */
   --shadow-card:  0 1px 4px rgba(17,17,17,0.06), 0 6px 24px rgba(17,17,17,0.07);
-  --shadow-amber: 0 0 32px rgba(156,122,46,0.30);
-  --shadow-gold:  0 0 32px rgba(156,122,46,0.30);
+  --shadow-amber: 0 0 32px rgba(157,78,221,0.30);
+  --shadow-gold:  0 0 32px rgba(157,78,221,0.30);
 
   --font-display: 'Playfair Display', Georgia, serif;
   --font-body:    'Plus Jakarta Sans', system-ui, sans-serif;
@@ -60,43 +60,43 @@
   --radius-lg:    22px;
   --transition:   all 0.28s cubic-bezier(0.4,0,0.2,1);
 
-  /* ── Admin panel — dark theme (default) ─────────────────── */
-  --adm-g:    #c9a84c;
-  --adm-gl:   #e8c97a;
-  --adm-gd:   #a07830;
-  --adm-gg:   rgba(201,168,76,0.12);
-  --adm-b0:   #070707;
-  --adm-b1:   #0e0e0e;
-  --adm-b2:   #151515;
-  --adm-b3:   #1d1d1d;
-  --adm-b4:   #272727;
-  --adm-t:    #f5f0e8;
-  --adm-tm:   rgba(245,240,232,0.55);
-  --adm-td:   rgba(245,240,232,0.28);
-  --adm-bdr:  rgba(255,255,255,0.07);
-  --adm-bdrg: rgba(201,168,76,0.20);
+  /* ── Admin panel — night mode (default) ──────────────────── */
+  --adm-g:    #B266FF;
+  --adm-gl:   #D9A8FF;
+  --adm-gd:   #8B2FE0;
+  --adm-gg:   rgba(178,102,255,0.14);
+  --adm-b0:   #0A0612;
+  --adm-b1:   #120B1F;
+  --adm-b2:   #190F2B;
+  --adm-b3:   #221536;
+  --adm-b4:   #2E1D47;
+  --adm-t:    #F3EEFC;
+  --adm-tm:   rgba(243,238,252,0.58);
+  --adm-td:   rgba(243,238,252,0.30);
+  --adm-bdr:  rgba(255,255,255,0.08);
+  --adm-bdrg: rgba(178,102,255,0.24);
 }
 
-/* ── Admin panel — light theme ──────────────────────────────
+/* ── Admin panel — day mode ──────────────────────────────────
    Activated via data-admin-theme="light" on the admin shell,
    toggled from the sidebar / mobile nav and persisted in
    localStorage (barber_admin_theme). The login screen has no
-   data-admin-theme attribute, so it always stays dark. */
+   data-admin-theme attribute, so it always stays in night mode. */
 [data-admin-theme="light"] {
-  --adm-g:    #a8802c;
-  --adm-gl:   #8a6b1f;
-  --adm-gd:   #6e5519;
-  --adm-gg:   rgba(168,128,40,0.10);
-  --adm-b0:   #f7f4ed;
-  --adm-b1:   #ffffff;
-  --adm-b2:   #ffffff;
-  --adm-b3:   #f1ece1;
-  --adm-b4:   #e8e1d2;
-  --adm-t:    #1c1a16;
-  --adm-tm:   rgba(28,26,22,0.58);
-  --adm-td:   rgba(28,26,22,0.34);
-  --adm-bdr:  rgba(28,26,22,0.10);
-  --adm-bdrg: rgba(168,128,40,0.30);
+  --adm-g:    #8B2FE0;
+  --adm-gl:   #6B21A8;
+  --adm-gd:   #5B1A8F;
+  --adm-gg:   rgba(139,47,224,0.08);
+  --adm-b0:   #FAF8FD;
+  --adm-b1:   #FFFFFF;
+  --adm-b2:   #FFFFFF;
+  --adm-b3:   #F1EBFA;
+  --adm-b4:   #E6D9F7;
+  --adm-t:    #1A1325;
+  --adm-tm:   rgba(26,19,37,0.58);
+  --adm-td:   rgba(26,19,37,0.34);
+  --adm-bdr:  rgba(40,20,60,0.10);
+  --adm-bdrg: rgba(139,47,224,0.28);
 }
 
 /* ── Reset & Base ────────────────────────────────────────── */
@@ -162,7 +162,7 @@ body {
   transition: var(--transition);
   overflow: hidden;
   text-decoration: none;
-  box-shadow: 0 4px 18px rgba(156,122,46,0.34);
+  box-shadow: 0 4px 18px rgba(157,78,221,0.34);
 }
 .btn-primary::before {
   content: '';
@@ -174,7 +174,7 @@ body {
 }
 .btn-primary:hover::before { transform: translateX(120%); }
 .btn-primary:hover {
-  box-shadow: 0 0 36px rgba(156,122,46,0.55), 0 6px 24px rgba(156,122,46,0.22);
+  box-shadow: 0 0 36px rgba(157,78,221,0.55), 0 6px 24px rgba(157,78,221,0.22);
   transform: translateY(-2px);
 }
 .btn-primary:active { transform: translateY(0); }
@@ -233,21 +233,21 @@ body {
   transition: var(--transition);
 }
 .glass-card:hover {
-  border-color: rgba(156,122,46,0.25);
+  border-color: rgba(157,78,221,0.25);
   box-shadow: 0 2px 8px rgba(17,17,17,0.06), 0 14px 40px rgba(17,17,17,0.09);
 }
 
 .glass-card-gold,
 .glass-card-amber {
   background: var(--glass-amber);
-  border: 1px solid rgba(156,122,46,0.20);
+  border: 1px solid rgba(157,78,221,0.20);
   border-radius: var(--radius-lg);
 }
 
 .card-selected {
-  background: rgba(156,122,46,0.07) !important;
+  background: rgba(157,78,221,0.07) !important;
   border-color: var(--red) !important;
-  box-shadow: inset 0 0 22px rgba(156,122,46,0.04), var(--shadow-amber) !important;
+  box-shadow: inset 0 0 22px rgba(157,78,221,0.04), var(--shadow-amber) !important;
 }
 
 /* ── Inputs ──────────────────────────────────────────────── */
@@ -269,7 +269,7 @@ body {
 .input-field::placeholder { color: var(--text-dim); }
 .input-field:focus {
   border-color: var(--red);
-  box-shadow: 0 0 0 3px rgba(156,122,46,0.12);
+  box-shadow: 0 0 0 3px rgba(157,78,221,0.12);
 }
 
 .input-label {
@@ -285,12 +285,12 @@ body {
 /* ── Divider ─────────────────────────────────────────────── */
 .divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(156,122,46,0.28), transparent);
+  background: linear-gradient(90deg, transparent, rgba(157,78,221,0.28), transparent);
   margin: 1.5rem 0;
 }
 .divider-v {
   width: 1px;
-  background: linear-gradient(180deg, transparent, rgba(156,122,46,0.28), transparent);
+  background: linear-gradient(180deg, transparent, rgba(157,78,221,0.28), transparent);
 }
 
 /* ── Step indicator ──────────────────────────────────────── */
@@ -323,11 +323,11 @@ body {
 .step-node.active {
   background: linear-gradient(135deg, var(--red-dark), var(--red-light));
   color: #fff;
-  box-shadow: 0 0 20px rgba(156,122,46,0.45);
+  box-shadow: 0 0 20px rgba(157,78,221,0.45);
 }
 .step-node.done {
-  background: rgba(156,122,46,0.10);
-  border: 1.5px solid rgba(156,122,46,0.35);
+  background: rgba(157,78,221,0.10);
+  border: 1.5px solid rgba(157,78,221,0.35);
   color: var(--red-dark);
 }
 
@@ -339,7 +339,7 @@ body {
   background: rgba(17,17,17,0.10);
 }
 .step-line.done {
-  background: linear-gradient(90deg, var(--red), rgba(156,122,46,0.25));
+  background: linear-gradient(90deg, var(--red), rgba(157,78,221,0.25));
 }
 
 /* ── Animations ──────────────────────────────────────────── */
@@ -352,8 +352,8 @@ body {
   to   { opacity: 1; }
 }
 @keyframes pulse-red {
-  0%, 100% { box-shadow: 0 0 18px rgba(156,122,46,0.28); }
-  50%       { box-shadow: 0 0 42px rgba(156,122,46,0.58); }
+  0%, 100% { box-shadow: 0 0 18px rgba(157,78,221,0.28); }
+  50%       { box-shadow: 0 0 42px rgba(157,78,221,0.58); }
 }
 @keyframes float {
   0%, 100% { transform: translateY(0); }
@@ -378,7 +378,7 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: var(--red); }
 
 /* ── Selection ───────────────────────────────────────────── */
-::selection { background: rgba(156,122,46,0.16); color: var(--red-dark); }
+::selection { background: rgba(157,78,221,0.16); color: var(--red-dark); }
 
 /* ── Status badges (semantic — unchanged) ────────────────── */
 .badge {

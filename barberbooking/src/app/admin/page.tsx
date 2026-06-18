@@ -440,7 +440,7 @@ function Sidebar({ tab, setTab, onLogout, onExport, theme, onToggleTheme }: {
           <button key={item.id} onClick={() => setTab(item.id)} style={{
             width: '100%', display: 'flex', alignItems: 'center', gap: '0.75rem',
             padding: '0.75rem 1rem', borderRadius: R, border: 'none', cursor: 'pointer',
-            background: tab === item.id ? `rgba(201,168,76,0.12)` : 'transparent',
+            background: tab === item.id ? `rgba(178,102,255,0.12)` : 'transparent',
             color: tab === item.id ? GL : TM,
             fontSize: '0.875rem', fontWeight: tab === item.id ? 600 : 400,
             transition: 'all 0.2s', textAlign: 'right', position: 'relative',
@@ -590,7 +590,7 @@ function DashboardTab({ appointments, today }: TabProps) {
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.3rem', height: 80 }}>
             {Object.entries(hrCount).map(([hr, cnt]) => (
               <div key={hr} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
-                <div style={{ width: '100%', background: cnt > 0 ? `rgba(201,168,76,${0.2 + (cnt / maxHr) * 0.75})` : B4, borderRadius: '2px 2px 0 0', height: `${Math.max(4, (cnt / maxHr) * 72)}px`, transition: 'height 0.8s ease' }} />
+                <div style={{ width: '100%', background: cnt > 0 ? `rgba(178,102,255,${0.2 + (cnt / maxHr) * 0.75})` : B4, borderRadius: '2px 2px 0 0', height: `${Math.max(4, (cnt / maxHr) * 72)}px`, transition: 'height 0.8s ease' }} />
                 <span style={{ fontSize: '0.45rem', color: TD, whiteSpace: 'nowrap' }}>{hr.replace(':00', '')}</span>
               </div>
             ))}
@@ -693,7 +693,7 @@ function AppointmentsTab({ appointments, updateStatus, returningPhones, today, t
         {filterTabs.map(f => (
           <button key={f.id} onClick={() => setFilter(f.id)} style={{
             padding: '0.45rem 1rem', borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600,
-            background: filter === f.id ? `rgba(201,168,76,0.15)` : B3,
+            background: filter === f.id ? `rgba(178,102,255,0.15)` : B3,
             color: filter === f.id ? GL : TM,
             outline: filter === f.id ? `1px solid ${BDRG}` : `1px solid ${BDR}`,
           }}>{f.label}</button>
@@ -825,7 +825,7 @@ function CalendarTab({ appointments, updateStatus, templates }: TabProps) {
                 const dayAppts = appointments.filter(a => a.date === day);
                 const isToday = day === today;
                 return (
-                  <div key={day} style={{ position: 'relative', borderRight: di > 0 ? `1px solid ${BDR}` : 'none', background: isToday ? 'rgba(201,168,76,0.02)' : 'transparent', minHeight: '100%' }}>
+                  <div key={day} style={{ position: 'relative', borderRight: di > 0 ? `1px solid ${BDR}` : 'none', background: isToday ? 'rgba(178,102,255,0.02)' : 'transparent', minHeight: '100%' }}>
                     {/* Hour lines */}
                     {HOURS.map((_, hi) => (
                       <div key={hi} style={{ position: 'absolute', top: `${hi / 10 * 100}%`, left: 0, right: 0, height: 1, background: BDR }} />
@@ -1045,7 +1045,7 @@ function SettingsTab({ appointments, hours, setHours, blockedSlots, blockSlot, u
                 rows={5}
                 style={{ width: '100%', padding: '0.75rem 1rem', background: B3, border: `1px solid ${BDR}`, borderRadius: R, fontSize: '0.8rem', color: T, lineHeight: 1.65, direction: 'rtl', resize: 'vertical', fontFamily: 'inherit' }}
               />
-              <div style={{ marginTop: '0.5rem', padding: '0.625rem 0.875rem', background: 'rgba(201,168,76,0.05)', border: `1px solid ${BDR}`, borderRadius: R, fontSize: '0.75rem', color: TD, lineHeight: 1.6, whiteSpace: 'pre-wrap', direction: 'rtl' }}>
+              <div style={{ marginTop: '0.5rem', padding: '0.625rem 0.875rem', background: 'rgba(178,102,255,0.05)', border: `1px solid ${BDR}`, borderRadius: R, fontSize: '0.75rem', color: TD, lineHeight: 1.6, whiteSpace: 'pre-wrap', direction: 'rtl' }}>
                 <span style={{ fontSize: '0.65rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: TD, display: 'block', marginBottom: '0.25rem' }}>תצוגה מקדימה</span>
                 {fillTemplate(editTemplates[key], previewAppt)}
               </div>
@@ -1098,7 +1098,7 @@ function FullAppCard({ appt: a, selected, onToggle, onUpdate, isReturning, templ
 }) {
   const cfg = S_CFG[a.status as keyof typeof S_CFG];
   return (
-    <div style={{ background: selected ? 'rgba(201,168,76,0.06)' : B2, border: `1px solid ${selected ? BDRG : BDR}`, borderRadius: RL, padding: '1.125rem 1.25rem', transition: 'all 0.2s' }}>
+    <div style={{ background: selected ? 'rgba(178,102,255,0.06)' : B2, border: `1px solid ${selected ? BDRG : BDR}`, borderRadius: RL, padding: '1.125rem 1.25rem', transition: 'all 0.2s' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
         {/* Checkbox */}
         <div onClick={onToggle} style={{

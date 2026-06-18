@@ -21,7 +21,8 @@ export async function POST(req: NextRequest) {
   }
 
   const sb = supabaseAdmin();
-  const { error } = await sb.from('blocked_slots').upsert(slots);
+  const rows = slots.map(s => ({ blocked_date: s.date, blocked_time: s.time, barber_id: null }));
+  const { error } = await sb.from('blocked_slots').insert(rows);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ ok: true });
@@ -40,7 +41,12 @@ export async function DELETE(req: NextRequest) {
 
   const sb = supabaseAdmin();
   for (const s of slots) {
-    const { error } = await sb.from('blocked_slots').delete().eq('date', s.date).eq('time', s.time);
+    const { error } = await sb
+      .from('blocked_slots')
+      .delete()
+      .eq('blocked_date', s.date)
+      .eq('blocked_time', s.time)
+      .is('barber_id', null);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

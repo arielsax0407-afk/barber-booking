@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { SERVICES } from '@/lib/services';
+import { SERVICES, LOYALTY_THRESHOLD, LOYALTY_REWARD_LABEL } from '@/lib/services';
 import type { Appointment } from '@/lib/supabase';
 
 const MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
@@ -92,6 +92,61 @@ function AppointmentCard({ appt }: { appt: Appointment }) {
           </p>
         </div>
       )}
+    </div>
+  );
+}
+
+function LoyaltyCard({ appointments }: { appointments: Appointment[] }) {
+  const completedCount = appointments.filter(a => a.status === 'completed').length;
+  const progress = completedCount % LOYALTY_THRESHOLD;
+  const rewardReady = completedCount > 0 && progress === 0;
+  const remaining = LOYALTY_THRESHOLD - progress;
+  const stampsFilled = rewardReady ? LOYALTY_THRESHOLD : progress;
+
+  if (completedCount === 0) return null;
+
+  return (
+    <div
+      className={`glass-card-amber animate-fade-up${rewardReady ? ' animate-pulse-gold' : ''}`}
+      style={{ padding: '1.5rem', marginBottom: '2rem' }}
+    >
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.125rem' }}>
+        <div>
+          <p style={{ fontSize: '0.65rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--amber)', fontWeight: 700, marginBottom: '0.25rem' }}>
+            מועדון הלקוחות
+          </p>
+          <p className="serif" style={{ fontSize: '1.15rem', fontWeight: 600, color: 'var(--text)' }}>
+            {rewardReady ? `🎉 מגיע לך ${LOYALTY_REWARD_LABEL}!` : `עוד ${remaining} ביקורים ל${LOYALTY_REWARD_LABEL}`}
+          </p>
+        </div>
+        <span style={{ fontSize: '1.75rem', flexShrink: 0 }}>{rewardReady ? '🎁' : '✂️'}</span>
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+        {Array.from({ length: LOYALTY_THRESHOLD }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              width: 34, height: 34, borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '0.95rem',
+              background: i < stampsFilled ? 'linear-gradient(135deg, var(--amber-dark), var(--amber-light))' : 'rgba(157,78,221,0.06)',
+              border: i < stampsFilled ? '1.5px solid var(--amber)' : '1.5px dashed rgba(157,78,221,0.30)',
+              color: i < stampsFilled ? '#fff' : 'var(--text-dim)',
+              boxShadow: i < stampsFilled ? 'var(--shadow-amber)' : 'none',
+              transition: 'var(--transition)',
+            }}
+          >
+            {i < stampsFilled ? '✂️' : i + 1}
+          </div>
+        ))}
+      </div>
+
+      <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+        {rewardReady
+          ? 'הציגו את המסך הזה לספר בתור הבא לקבלת המתנה'
+          : `סה״כ ${completedCount} תספורות הושלמו — כל ${LOYALTY_THRESHOLD} מקנות ${LOYALTY_REWARD_LABEL}`}
+      </p>
     </div>
   );
 }
@@ -202,6 +257,10 @@ function MyAppointmentsInner() {
               <div style={{ background: 'rgba(239,68,68,0.07)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius)', padding: '1rem', textAlign: 'center', color: '#991b1b', fontSize: '0.875rem' }}>
                 {error}
               </div>
+            )}
+
+            {!loading && !error && appointments.length > 0 && (
+              <LoyaltyCard appointments={appointments} />
             )}
 
             {!loading && !error && appointments.length === 0 && (

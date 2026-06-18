@@ -23,4 +23,24 @@ export type Appointment = {
   time: string;
   status: 'pending' | 'approved' | 'rejected' | 'in_progress' | 'completed' | 'cancelled';
   created_at: string;
+  barber_id?: string | null;
+  barbers?: { name: string; specialty: string | null } | null;
+};
+
+export type Barber = {
+  id: string;
+  name: string;
+  specialty: string | null;
+  image_url: string | null;
+  is_active: boolean;
+  created_at: string;
+  email?: string | null;
+};
+
+export type BlockedSlot = {
+  id: string;
+  barber_id: string | null;
+  blocked_date: string;
+  blocked_time: string;
+  reason: string | null;
 };

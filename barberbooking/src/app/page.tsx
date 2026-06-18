@@ -2,6 +2,143 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
+import { LOYALTY_THRESHOLD, LOYALTY_REWARD_LABEL } from '@/lib/services';
+
+type Barber = { id: string; name: string; specialty: string | null; image_url: string | null };
+
+const BARBER_COLORS = ['#7C3AED', '#A855F7', '#5B21B6', '#C026D3'];
+
+function BarberCard({ barber, index }: { barber: Barber; index: number }) {
+  const color = BARBER_COLORS[index % BARBER_COLORS.length];
+  return (
+    <div style={{
+      background: 'rgba(243,236,251,0.03)',
+      border: '1px solid rgba(178,102,255,0.18)',
+      borderRadius: 4,
+      padding: 'clamp(1.5rem, 4vw, 2.5rem) clamp(1.25rem, 3vw, 2rem)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      textAlign: 'center',
+      gap: '1.125rem',
+      transition: 'background 0.35s ease, border-color 0.35s ease, transform 0.35s ease',
+      cursor: 'pointer',
+    }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLElement).style.background = 'rgba(178,102,255,0.06)';
+        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(178,102,255,0.40)';
+        (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)';
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLElement).style.background = 'rgba(243,236,251,0.03)';
+        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(178,102,255,0.18)';
+        (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+      }}
+    >
+      {/* Avatar */}
+      {barber.image_url ? (
+        <img src={barber.image_url} alt={barber.name} style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(178,102,255,0.40)' }} />
+      ) : (
+        <div style={{
+          width: 80, height: 80, borderRadius: '50%',
+          background: `linear-gradient(135deg, ${color}, rgba(178,102,255,0.22))`,
+          border: '2px solid rgba(178,102,255,0.40)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '2rem', fontWeight: 700, color: '#F3E8FF',
+          fontFamily: 'var(--font-display)',
+          boxShadow: '0 0 24px rgba(178,102,255,0.15)',
+        }}>
+          {barber.name[0]}
+        </div>
+      )}
+
+      <div>
+        <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', fontWeight: 600, color: 'var(--cream)', marginBottom: '0.4rem' }}>
+          {barber.name}
+        </p>
+        {barber.specialty && (
+          <p style={{ fontSize: '0.78rem', color: 'var(--cream-dim)', lineHeight: 1.6 }}>
+            {barber.specialty}
+          </p>
+        )}
+      </div>
+
+      <Link
+        href={`/book?barber=${barber.id}`}
+        style={{
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+          padding: '0.7rem 1.75rem',
+          border: '1.5px solid rgba(178,102,255,0.45)',
+          borderRadius: 2,
+          color: 'var(--gold-light)',
+          background: 'transparent',
+          fontFamily: 'var(--font-body)',
+          fontSize: '0.7rem',
+          fontWeight: 600,
+          letterSpacing: '0.22em',
+          textTransform: 'uppercase' as const,
+          textDecoration: 'none',
+          transition: 'all 0.35s ease',
+          marginTop: '0.25rem',
+        }}
+        onMouseEnter={e => {
+          (e.currentTarget as HTMLElement).style.background = 'var(--gold)';
+          (e.currentTarget as HTMLElement).style.color = '#0d0712';
+          (e.currentTarget as HTMLElement).style.borderColor = 'var(--gold)';
+        }}
+        onMouseLeave={e => {
+          (e.currentTarget as HTMLElement).style.background = 'transparent';
+          (e.currentTarget as HTMLElement).style.color = 'var(--gold-light)';
+          (e.currentTarget as HTMLElement).style.borderColor = 'rgba(178,102,255,0.45)';
+        }}
+      >
+        קבע תור
+      </Link>
+    </div>
+  );
+}
+
+function BarbersSection() {
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+
+  useEffect(() => {
+    fetch('/api/barbers')
+      .then(r => r.json())
+      .then(json => setBarbers(json.barbers ?? []))
+      .catch(() => {});
+  }, []);
+
+  if (barbers.length === 0) return null;
+
+  return (
+    <section style={{ background: 'var(--g0)', borderTop: '1px solid var(--line)' }}>
+      <div className="bph-section">
+        <Reveal>
+          <div className="bph-header">
+            <p className="bph-eyebrow">הצוות שלנו</p>
+            <h2 className="display display-lg" style={{ color: 'var(--cream)' }}>
+              <span className="bph-gold-text" style={{ fontStyle: 'italic' }}>הספרים</span> שלנו
+            </h2>
+          </div>
+        </Reveal>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${Math.min(barbers.length, 4)}, 1fr)`,
+          gap: 'clamp(1rem, 3vw, 1.75rem)',
+        }}
+          className="bph-barbers-grid"
+        >
+          {barbers.map((b, i) => (
+            <Reveal key={b.id} delay={i * 80}>
+              <BarberCard barber={b} index={i} />
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 // ── Static data ───────────────────────────────────────────
 
@@ -28,11 +165,11 @@ const GALLERY = [
 ];
 
 const TESTIMONIALS = [
-  { name: 'דוד כהן', service: 'תספורת + עיצוב זקן', text: 'הכי טוב שהיה לי. הספר ידע בדיוק מה אני רוצה רק ממבט אחד. אני מגיע כל שבוע ולא מוכן לשנות.', stars: 5, initial: 'ד', color: '#1A50A8' },
-  { name: 'יוסי לוי', service: 'פייד', text: 'כבר שנה שאני מגיע פעמיים בחודש. הצוות מקצועי, נעים ותמיד בדיוק לשעה. תספורת מושלמת כל פעם.', stars: 5, initial: 'י', color: '#CC1A1A' },
-  { name: 'אמיר חדד', service: 'עיצוב זקן', text: 'עיצוב הזקן שינה לי את המראה לגמרי. אנשים שואלים מה עשיתי, תמיד עונה: ברבר פרמיום. ממליץ בחום!', stars: 5, initial: 'א', color: '#1A50A8' },
-  { name: 'רון ביטון', service: 'תספורת ילדים', text: 'הבן שלי פחד מספרים, כאן הוא מתרגש לבוא. הצוות יודע לעבוד עם ילדים בצורה מדהימה. תודה רבה!', stars: 5, initial: 'ר', color: '#CC1A1A' },
-  { name: 'עמית שלום', service: 'תספורת', text: 'קביעת תור אונליין זה שינוי משחק. 2 דקות ויש לי תור. תמיד יוצא מרוצה ומרגיש כמו מלך. 10/10.', stars: 5, initial: 'ע', color: '#1A50A8' },
+  { name: 'דוד כהן', service: 'תספורת + עיצוב זקן', text: 'הכי טוב שהיה לי. הספר ידע בדיוק מה אני רוצה רק ממבט אחד. אני מגיע כל שבוע ולא מוכן לשנות.', stars: 5, initial: 'ד', color: '#7C3AED' },
+  { name: 'יוסי לוי', service: 'פייד', text: 'כבר שנה שאני מגיע פעמיים בחודש. הצוות מקצועי, נעים ותמיד בדיוק לשעה. תספורת מושלמת כל פעם.', stars: 5, initial: 'י', color: '#C026D3' },
+  { name: 'אמיר חדד', service: 'עיצוב זקן', text: 'עיצוב הזקן שינה לי את המראה לגמרי. אנשים שואלים מה עשיתי, תמיד עונה: ברבר פרמיום. ממליץ בחום!', stars: 5, initial: 'א', color: '#5B21B6' },
+  { name: 'רון ביטון', service: 'תספורת ילדים', text: 'הבן שלי פחד מספרים, כאן הוא מתרגש לבוא. הצוות יודע לעבוד עם ילדים בצורה מדהימה. תודה רבה!', stars: 5, initial: 'ר', color: '#A855F7' },
+  { name: 'עמית שלום', service: 'תספורת', text: 'קביעת תור אונליין זה שינוי משחק. 2 דקות ויש לי תור. תמיד יוצא מרוצה ומרגיש כמו מלך. 10/10.', stars: 5, initial: 'ע', color: '#7C3AED' },
 ];
 
 const WHY_US = [
@@ -46,6 +183,7 @@ const PROOF = [
   { icon: '⭐', text: 'דירוג 4.9 בגוגל' },
   { icon: '✂️', text: 'א׳–ו׳ · 9:00–19:00' },
   { icon: '💬', text: 'אישור WhatsApp מיידי' },
+  { icon: '🎁', text: 'כל תספורת 6 — במתנה' },
 ];
 
 // ── Scroll-reveal wrapper (visual only) ─────────────────────
@@ -180,8 +318,8 @@ export default function HomePage() {
 
         {/* Gold glow accents */}
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1 }}>
-          <div style={{ position: 'absolute', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(201,164,73,0.14), transparent 70%)', top: '4%', right: '8%', filter: 'blur(70px)', animation: 'drift1 22s ease-in-out infinite' }} />
-          <div style={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(201,164,73,0.08), transparent 70%)', bottom: '18%', left: '28%', filter: 'blur(60px)', animation: 'drift2 18s ease-in-out infinite' }} />
+          <div style={{ position: 'absolute', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(178,102,255,0.14), transparent 70%)', top: '4%', right: '8%', filter: 'blur(70px)', animation: 'drift1 22s ease-in-out infinite' }} />
+          <div style={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(178,102,255,0.08), transparent 70%)', bottom: '18%', left: '28%', filter: 'blur(60px)', animation: 'drift2 18s ease-in-out infinite' }} />
         </div>
 
         {/* Faint decorative clipper accent */}
@@ -193,9 +331,9 @@ export default function HomePage() {
         <nav className="bph-nav animate-fade-in">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
             <img
-              src="/images/barber-pole.png"
+              src="/images/logo.png"
               alt="לוגו ברבר פרמיום"
-              style={{ height: 42, filter: 'drop-shadow(0 2px 10px rgba(201,164,73,0.45))', animation: 'barber-pole-spin 10s linear infinite' }}
+              style={{ height: 42, width: 42, borderRadius: '50%', filter: 'drop-shadow(0 2px 10px rgba(178,102,255,0.45))' }}
             />
             <span className="serif" style={{ color: 'var(--cream)', fontSize: '1.1rem', fontWeight: 600, letterSpacing: '0.04em' }}>
               ברבר פרמיום
@@ -298,6 +436,9 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── Barbers ──────────────────────────────────────── */}
+      <BarbersSection />
+
       {/* ── How it works ─────────────────────────────────── */}
       <section style={{ background: 'var(--g0)', position: 'relative', overflow: 'hidden' }}>
         {/* faint rotating clipper icon */}
@@ -377,6 +518,47 @@ export default function HomePage() {
       {/* ── Testimonials ─────────────────────────────────── */}
       <TestimonialsSection />
 
+      {/* ── Loyalty club ─────────────────────────────────── */}
+      <section style={{ background: 'var(--g0)', position: 'relative', overflow: 'hidden' }}>
+        <div className="bph-final-glow" aria-hidden="true" style={{ opacity: 0.6 }} />
+        <div className="bph-section" style={{ position: 'relative', zIndex: 1 }}>
+          <Reveal>
+            <div className="bph-header">
+              <p className="bph-eyebrow">תגמול ללקוחות שלנו</p>
+              <h2 className="display display-lg" style={{ color: 'var(--cream)' }}>
+                <span className="bph-gold-text" style={{ fontStyle: 'italic' }}>מועדון</span> הלקוחות
+              </h2>
+              <p style={{ color: 'var(--cream-dim)', marginTop: '1.25rem', maxWidth: 480, marginInline: 'auto', lineHeight: 1.8, fontSize: '0.95rem' }}>
+                כל לקוח צובר תור אוטומטית — בלי כרטיסיות, בלי קודים.
+                כל {LOYALTY_THRESHOLD} תספורות שמושלמות, ה־{LOYALTY_THRESHOLD === 6 ? 'שישית' : `${LOYALTY_THRESHOLD}-ית`} <span style={{ color: 'var(--gold-light)', fontWeight: 600 }}>{LOYALTY_REWARD_LABEL}</span> — עלינו.
+              </p>
+            </div>
+          </Reveal>
+
+          <Reveal>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                {Array.from({ length: LOYALTY_THRESHOLD }).map((_, i) => (
+                  <div key={i} style={{
+                    width: 42, height: 42, borderRadius: '50%',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1.05rem',
+                    background: i < LOYALTY_THRESHOLD - 1 ? 'rgba(178,102,255,0.08)' : 'linear-gradient(135deg, #6A0DAD, #C77DFF)',
+                    border: i < LOYALTY_THRESHOLD - 1 ? '1.5px dashed rgba(178,102,255,0.35)' : 'none',
+                    boxShadow: i === LOYALTY_THRESHOLD - 1 ? '0 0 28px rgba(178,102,255,0.5)' : 'none',
+                  }}>
+                    {i < LOYALTY_THRESHOLD - 1 ? '✂️' : '🎁'}
+                  </div>
+                ))}
+              </div>
+              <Link href="/my-appointments" className="bph-btn">
+                בדיקת הסטטוס שלי במועדון
+              </Link>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* ── Why us ───────────────────────────────────────── */}
       <section style={{ background: 'var(--g1)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)' }}>
         <div className="bph-section">
@@ -428,15 +610,15 @@ export default function HomePage() {
           width: 'calc(100% - 48px)',
           maxWidth: '400px',
           height: '56px',
-          background: 'linear-gradient(135deg, #7A5F23, #E0C275)',
-          color: '#0a0908',
+          background: 'linear-gradient(135deg, #6A0DAD, #C77DFF)',
+          color: '#0d0712',
           fontFamily: 'var(--font-body)',
           fontWeight: 800,
           fontSize: '0.9375rem',
           letterSpacing: '0.07em',
           textDecoration: 'none',
           borderRadius: 'var(--radius-lg)',
-          boxShadow: '0 8px 32px rgba(156,122,46,0.50), 0 2px 8px rgba(0,0,0,0.25)',
+          boxShadow: '0 8px 32px rgba(178,102,255,0.50), 0 2px 8px rgba(0,0,0,0.25)',
           opacity: floatVisible ? 1 : 0,
           pointerEvents: floatVisible ? 'auto' : 'none',
           transition: 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease',
@@ -454,9 +636,10 @@ export default function HomePage() {
       {/* ── Footer ───────────────────────────────────────── */}
       <footer className="bph-footer">
         <img
-          src="/images/barber-pole.png"
+          src="/images/logo.png"
           alt=""
           className="bph-footer-pole"
+          style={{ borderRadius: '50%' }}
         />
         <p className="serif bph-gold-text" style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>ברבר פרמיום</p>
         <p style={{ fontSize: '0.75rem', color: 'var(--cream-faint)', letterSpacing: '0.1em' }}>תל אביב · א׳–ו׳ 9:00–19:00</p>
@@ -465,16 +648,16 @@ export default function HomePage() {
       {/* ── Styles ───────────────────────────────────────── */}
       <style>{`
         .bph {
-          --g0: #0a0908;
-          --g1: #141210;
-          --g2: #1c1916;
-          --cream: #f3ecdd;
-          --cream-dim: rgba(243,236,221,0.62);
-          --cream-faint: rgba(243,236,221,0.30);
-          --line: rgba(243,236,221,0.10);
-          --gold: #c9a449;
-          --gold-light: #e8d5a3;
-          --gold-dark: #9c7a2e;
+          --g0: #0d0712;
+          --g1: #160f22;
+          --g2: #1f1430;
+          --cream: #f3ecfb;
+          --cream-dim: rgba(243,236,251,0.62);
+          --cream-faint: rgba(243,236,251,0.30);
+          --line: rgba(243,236,251,0.10);
+          --gold: #B266FF;
+          --gold-light: #D9A8FF;
+          --gold-dark: #8B2FE0;
           color: var(--cream);
           background: var(--g0);
         }
@@ -532,9 +715,9 @@ export default function HomePage() {
         }
         .bph-btn:hover {
           background: var(--gold);
-          color: #0a0908;
+          color: #0d0712;
           letter-spacing: 0.32em;
-          box-shadow: 0 0 44px rgba(201,164,73,0.35);
+          box-shadow: 0 0 44px rgba(178,102,255,0.35);
         }
         .bph-link {
           color: var(--cream-dim);
@@ -586,7 +769,7 @@ export default function HomePage() {
           opacity: 0.14;
           z-index: 2;
           pointer-events: none;
-          filter: grayscale(1) brightness(1.9) drop-shadow(0 0 50px rgba(201,164,73,0.25));
+          filter: grayscale(1) brightness(1.9) drop-shadow(0 0 50px rgba(178,102,255,0.25));
           animation: clipper-float 6.5s ease-in-out infinite;
           transform-origin: center bottom;
         }
@@ -600,7 +783,7 @@ export default function HomePage() {
           gap: clamp(1.5rem, 6vw, 3.5rem);
           margin-top: clamp(3rem, 7vw, 4.5rem);
           padding: 1.5rem clamp(1.75rem, 5vw, 3.5rem);
-          background: rgba(243,236,221,0.04);
+          background: rgba(243,236,251,0.04);
           border: 1px solid var(--line);
           backdrop-filter: blur(24px) saturate(1.4);
           -webkit-backdrop-filter: blur(24px) saturate(1.4);
@@ -663,30 +846,30 @@ export default function HomePage() {
           transform: translateY(-50%);
           transition: height 0.4s ease;
         }
-        .bph-service:hover { background: rgba(243,236,221,0.025); }
+        .bph-service:hover { background: rgba(243,236,251,0.025); }
         .bph-service:hover::before { height: 64%; }
         .bph-service-num {
           font-family: var(--font-display);
           font-size: clamp(2.25rem, 6vw, 4rem);
           font-weight: 700;
           color: transparent;
-          -webkit-text-stroke: 1px rgba(201,164,73,0.35);
+          -webkit-text-stroke: 1px rgba(178,102,255,0.35);
           flex-shrink: 0;
           line-height: 1;
           transition: -webkit-text-stroke 0.4s ease;
         }
-        .bph-service:hover .bph-service-num { -webkit-text-stroke: 1px rgba(201,164,73,0.75); }
+        .bph-service:hover .bph-service-num { -webkit-text-stroke: 1px rgba(178,102,255,0.75); }
         .bph-service-info { flex: 1; min-width: 0; }
         .bph-service-info h3 { font-family: var(--font-display); font-size: clamp(1.2rem, 3vw, 1.875rem); color: var(--cream); font-weight: 500; margin-bottom: 0.35rem; }
         .bph-service-info p { font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--cream-faint); }
         .bph-service-price {
           font-size: clamp(1.1rem, 2.5vw, 1.625rem);
           font-weight: 600;
-          color: rgba(243,236,221,0.32);
+          color: rgba(243,236,251,0.32);
           flex-shrink: 0;
           transition: all 0.45s cubic-bezier(0.4,0,0.2,1);
         }
-        .bph-service:hover .bph-service-price { color: var(--gold-light); transform: scale(1.1); text-shadow: 0 0 26px rgba(201,164,73,0.4); }
+        .bph-service:hover .bph-service-price { color: var(--gold-light); transform: scale(1.1); text-shadow: 0 0 26px rgba(178,102,255,0.4); }
 
         /* How it works — editorial numerals */
         .bph-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: clamp(2.5rem, 6vw, 4.5rem); }
@@ -696,7 +879,7 @@ export default function HomePage() {
           font-size: clamp(3.25rem, 8vw, 5.5rem);
           font-weight: 700;
           color: transparent;
-          -webkit-text-stroke: 1px rgba(201,164,73,0.30);
+          -webkit-text-stroke: 1px rgba(178,102,255,0.30);
           line-height: 1;
           margin-bottom: 1.25rem;
         }
@@ -716,7 +899,7 @@ export default function HomePage() {
           position: relative;
           overflow: hidden;
           background: var(--g2);
-          border: 1px solid rgba(243,236,221,0.08);
+          border: 1px solid rgba(243,236,251,0.08);
           padding: 6px;
           cursor: pointer;
           transition: transform 0.4s ease, z-index 0.4s ease;
@@ -747,7 +930,7 @@ export default function HomePage() {
         .bph-why-item { text-align: center; }
         .bph-why-icon {
           width: 52px; height: 52px; margin: 0 auto 1.25rem;
-          border: 1.5px solid rgba(201,164,73,0.35); border-radius: 50%;
+          border: 1.5px solid rgba(178,102,255,0.35); border-radius: 50%;
           display: flex; align-items: center; justify-content: center;
           font-size: 1.25rem; color: var(--gold-light);
         }
@@ -765,7 +948,7 @@ export default function HomePage() {
         .bph-final-glow {
           position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
           width: 640px; height: 640px; border-radius: 50%;
-          background: radial-gradient(circle, rgba(201,164,73,0.10), transparent 70%);
+          background: radial-gradient(circle, rgba(178,102,255,0.10), transparent 70%);
           filter: blur(50px);
           pointer-events: none;
         }
@@ -777,7 +960,7 @@ export default function HomePage() {
         .bph-footer-pole {
           height: 64px; margin: 0 auto 1rem; display: block;
           animation: barber-pole-spin 10s linear infinite;
-          filter: drop-shadow(0 4px 20px rgba(201,164,73,0.35));
+          filter: drop-shadow(0 4px 20px rgba(178,102,255,0.35));
         }
 
         /* Scroll reveal */
@@ -815,8 +998,8 @@ export default function HomePage() {
           50%  { box-shadow: 0 4px 32px rgba(37,211,102,0.68), 0 0 0 10px rgba(37,211,102,0.08); }
         }
         @keyframes bph-pulse-gold {
-          0%,100% { box-shadow: 0 0 0 0 rgba(201,164,73,0.28); }
-          50%       { box-shadow: 0 0 0 14px rgba(201,164,73,0); }
+          0%,100% { box-shadow: 0 0 0 0 rgba(178,102,255,0.28); }
+          50%       { box-shadow: 0 0 0 14px rgba(178,102,255,0); }
         }
         @keyframes slide-in {
           from { opacity: 0; transform: translateX(20px); }
@@ -904,8 +1087,8 @@ export default function HomePage() {
           width: 0;
           height: 1px;
           margin: 1.5rem 0;
-          background: #C9A84C;
-          box-shadow: 0 0 10px rgba(201,168,76,0.55);
+          background: #B266FF;
+          box-shadow: 0 0 10px rgba(178,102,255,0.55);
           animation: bph-intro2-line-in 0.6s cubic-bezier(0.45,0,0.2,1) forwards;
         }
         .bph-intro2-tagline {
@@ -926,6 +1109,10 @@ export default function HomePage() {
           .bph-gallery-item { grid-column: span 1 !important; grid-row: span 1 !important; transform: none !important; }
           .bph-service { padding-left: 0.5rem; padding-right: 0.5rem; gap: 1rem; }
           .bph-ticker { gap: 1rem; }
+          .bph-barbers-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media (max-width: 480px) {
+          .bph-barbers-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
     </div>
@@ -973,11 +1160,11 @@ function TestimonialsSection() {
           animation: 'slide-in 0.35s ease both',
           minHeight: 220,
         }}>
-          <div style={{ position: 'absolute', top: 12, insetInlineEnd: 24, fontSize: '4.5rem', fontFamily: 'Georgia, serif', color: 'rgba(201,164,73,0.18)', lineHeight: 1, userSelect: 'none' }}>"</div>
+          <div style={{ position: 'absolute', top: 12, insetInlineEnd: 24, fontSize: '4.5rem', fontFamily: 'Georgia, serif', color: 'rgba(178,102,255,0.18)', lineHeight: 1, userSelect: 'none' }}>"</div>
 
           <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginBottom: '1.5rem' }}>
             {[1,2,3,4,5].map(s => (
-              <svg key={s} width="16" height="16" viewBox="0 0 24 24" fill={s <= t.stars ? '#c9a449' : 'rgba(243,236,221,0.15)'}>
+              <svg key={s} width="16" height="16" viewBox="0 0 24 24" fill={s <= t.stars ? '#B266FF' : 'rgba(243,236,251,0.15)'}>
                 <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
               </svg>
             ))}
@@ -990,8 +1177,8 @@ function TestimonialsSection() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.875rem' }}>
             <div style={{
               width: 46, height: 46, borderRadius: '50%',
-              background: 'linear-gradient(135deg, rgba(201,164,73,0.14), rgba(201,164,73,0.30))',
-              border: '1.5px solid rgba(201,164,73,0.40)',
+              background: 'linear-gradient(135deg, rgba(178,102,255,0.14), rgba(178,102,255,0.30))',
+              border: '1.5px solid rgba(178,102,255,0.40)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '1.05rem', fontWeight: 700, color: 'var(--gold-light)', fontFamily: 'var(--font-display)',
             }}>{t.initial}</div>
@@ -1008,7 +1195,7 @@ function TestimonialsSection() {
               key={i}
               onClick={() => setActive(i)}
               aria-label={`עבור לחוות דעת ${i + 1}`}
-              style={{ width: i === active ? 28 : 8, height: 8, borderRadius: 4, background: i === active ? 'var(--gold)' : 'rgba(243,236,221,0.18)', border: 'none', cursor: 'pointer', transition: 'all 0.32s ease', padding: 0 }}
+              style={{ width: i === active ? 28 : 8, height: 8, borderRadius: 4, background: i === active ? 'var(--gold)' : 'rgba(243,236,251,0.18)', border: 'none', cursor: 'pointer', transition: 'all 0.32s ease', padding: 0 }}
             />
           ))}
         </div>
@@ -1019,9 +1206,9 @@ function TestimonialsSection() {
               key={ai}
               onClick={() => setActive(a => ai === 0 ? (a - 1 + TESTIMONIALS.length) % TESTIMONIALS.length : (a + 1) % TESTIMONIALS.length)}
               aria-label={ai === 0 ? 'הקודם' : 'הבא'}
-              style={{ width: 36, height: 36, borderRadius: '50%', background: 'transparent', border: '1.5px solid rgba(243,236,221,0.16)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--cream-dim)', fontSize: '1.1rem', fontWeight: 600, transition: 'all 0.28s ease' }}
+              style={{ width: 36, height: 36, borderRadius: '50%', background: 'transparent', border: '1.5px solid rgba(243,236,251,0.16)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--cream-dim)', fontSize: '1.1rem', fontWeight: 600, transition: 'all 0.28s ease' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.color = 'var(--gold-light)'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(243,236,221,0.16)'; e.currentTarget.style.color = 'var(--cream-dim)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(243,236,251,0.16)'; e.currentTarget.style.color = 'var(--cream-dim)'; }}
             >{arrow}</button>
           ))}
         </div>
