@@ -135,15 +135,20 @@ export default function BarberAdminPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const res = await fetch('/api/admin/barber/data');
-    if (res.ok) {
-      const json = await res.json();
-      setAppointments(json.appointments ?? []);
-      setBlocked(json.blocked_slots ?? []);
-      setShopAvgMonthRevenuePerBarber(json.shopAvgMonthRevenuePerBarber ?? 0);
-      setShopAvgRevenuePerAppt(json.shopAvgRevenuePerAppt ?? 0);
+    try {
+      const res = await fetch('/api/admin/barber/data');
+      if (res.ok) {
+        const json = await res.json();
+        setAppointments(json.appointments ?? []);
+        setBlocked(json.blocked_slots ?? []);
+        setShopAvgMonthRevenuePerBarber(json.shopAvgMonthRevenuePerBarber ?? 0);
+        setShopAvgRevenuePerAppt(json.shopAvgRevenuePerAppt ?? 0);
+      }
+    } catch {
+      // Network blip — keep showing the last known data instead of clearing it.
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   function loadGoal(id: string) {
@@ -181,39 +186,60 @@ export default function BarberAdminPage() {
   }
 
   async function updateStatus(id: string, status: string) {
-    await fetch('/api/admin/barber/update-status', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status }),
-    });
-    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+    // Only apply the optimistic UI update once the server confirms it saved —
+    // otherwise a failed request (expired session, DB error, etc.) leaves the
+    // barber believing an appointment was updated when it actually wasn't,
+    // and that mismatch could persist until the next 30s auto-refresh.
+    try {
+      const res = await fetch('/api/admin/barber/update-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+      if (!res.ok) throw new Error();
+      setAppointments(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+    } catch {
+      alert('עדכון הסטטוס נכשל — נסה שוב 😕');
+    }
   }
 
   async function blockSlot() {
     if (!blockModal) return;
     setBlocking(true);
     const reason = blockReason === 'אחר' ? (blockCustom || 'אחר') : blockReason;
-    await fetch('/api/admin/barber/blocked-slots', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: blockModal.date, time: blockModal.time, reason }),
-    });
-    setBlockModal(null);
-    setBlockReason(BLOCK_REASONS[0]);
-    setBlockCustom('');
-    setBlocking(false);
-    await loadData();
+    try {
+      const res = await fetch('/api/admin/barber/blocked-slots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: blockModal.date, time: blockModal.time, reason }),
+      });
+      if (!res.ok) throw new Error();
+      setBlockModal(null);
+      setBlockReason(BLOCK_REASONS[0]);
+      setBlockCustom('');
+      await loadData();
+    } catch {
+      alert('חסימת השעה נכשלה — נסה שוב 😕');
+    } finally {
+      setBlocking(false);
+    }
   }
 
   async function unblockSlot(id: string) {
     setUnblockId(id);
-    await fetch('/api/admin/barber/blocked-slots', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    });
-    setUnblockId(null);
-    await loadData();
+    try {
+      const res = await fetch('/api/admin/barber/blocked-slots', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      alert('ביטול החסימה נכשל — נסה שוב 😕');
+    } finally {
+      setUnblockId(null);
+      await loadData();
+    }
   }
 
   async function logout() {
@@ -444,14 +470,24 @@ export default function BarberAdminPage() {
                         <span style={{ fontSize: '0.6rem', color: TD }}>{slot}</span>
                       </div>
                       {weekDays.map(day => {
-                        const appt = appointments.find(a => a.date === day && a.time === slot && !['cancelled','rejected'].includes(a.status));
+                        // Use filter (not find) — the booking API has no DB-level uniqueness
+                        // constraint on (date, time, barber), so two appointments can in rare
+                        // cases collide on the same slot. Showing only the first one would
+                        // silently hide the second customer from the barber entirely.
+                        const apptsHere = appointments.filter(a => a.date === day && a.time === slot && !['cancelled','rejected'].includes(a.status));
+                        const appt = apptsHere[0];
                         const blk  = blocked.find(b => b.blocked_date === day && normTime(b.blocked_time) === slot);
 
                         if (appt) {
                           const ac = APPT_COLORS[appt.status] ?? APPT_COLORS.approved;
                           return (
                             <div key={day} style={{ borderLeft: `1px solid ${BDR}`, padding: '0.2rem 0.25rem' }}>
-                              <div style={{ background: ac.bg, border: `1px solid ${ac.bdr}`, borderRadius: 5, padding: '0.2rem 0.3rem', height: '100%' }}>
+                              <div style={{ background: ac.bg, border: `1px solid ${ac.bdr}`, borderRadius: 5, padding: '0.2rem 0.3rem', height: '100%', position: 'relative' }}>
+                                {apptsHere.length > 1 && (
+                                  <span title={`${apptsHere.length} תורים חופפים בשעה זו`} style={{ position: 'absolute', top: 2, left: 2, background: '#ef4444', color: '#fff', fontSize: '0.5rem', fontWeight: 700, borderRadius: 999, padding: '0 0.3rem', lineHeight: '1.3' }}>
+                                    +{apptsHere.length - 1}
+                                  </span>
+                                )}
                                 <p style={{ fontSize: '0.6rem', color: ac.txt, fontWeight: 700, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{appt.name}</p>
                                 <p style={{ fontSize: '0.55rem', color: TM, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svcName(appt.service)}</p>
                               </div>
@@ -493,7 +529,10 @@ export default function BarberAdminPage() {
             {calView === 'day' && (
               <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, overflow: 'hidden' }}>
                 {TIME_SLOTS.map((slot, si) => {
-                  const appt = appointments.find(a => a.date === selectedDay && a.time === slot && !['cancelled','rejected'].includes(a.status));
+                  // See the week-view comment above — filter, not find, so a rare
+                  // double-booked slot is never silently hidden from the barber.
+                  const apptsHere = appointments.filter(a => a.date === selectedDay && a.time === slot && !['cancelled','rejected'].includes(a.status));
+                  const appt = apptsHere[0];
                   const blk  = blocked.find(b => b.blocked_date === selectedDay && normTime(b.blocked_time) === slot);
 
                   return (
@@ -506,6 +545,11 @@ export default function BarberAdminPage() {
                         <div style={{ flex: 1, padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <div>
+                              {apptsHere.length > 1 && (
+                                <p style={{ fontSize: '0.68rem', color: '#ef4444', fontWeight: 700, marginBottom: '0.2rem' }}>
+                                  ⚠️ {apptsHere.length} תורים חופפים בשעה זו — {apptsHere.slice(1).map(x => x.name).join(', ')}
+                                </p>
+                              )}
                               <p style={{ fontSize: '0.95rem', fontWeight: 600, color: T }}>{appt.name}</p>
                               <p style={{ fontSize: '0.75rem', color: TM }}>{svcName(appt.service)} · ₪{PRICE_MAP[appt.service] ?? 0}</p>
                               <a href={`tel:${appt.phone}`} style={{ fontSize: '0.72rem', color: TD, textDecoration: 'none' }}>📞 {appt.phone}</a>
