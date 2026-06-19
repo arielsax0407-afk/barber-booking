@@ -45,21 +45,26 @@ export default function QueuePage() {
   const prevStatusRef = useRef<string | null>(null);
 
   const loadData = useCallback(async () => {
-    const res = await fetch(`/api/queue/${appointmentId}`);
-    if (!res.ok) { setNotFound(true); setLoading(false); return; }
+    try {
+      const res = await fetch(`/api/queue/${appointmentId}`);
+      if (!res.ok) { setNotFound(true); return; }
 
-    const json = await res.json();
-    const a = json.appointment as Appointment;
+      const json = await res.json();
+      const a = json.appointment as Appointment;
 
-    if (prevStatusRef.current !== null && prevStatusRef.current !== a.status) {
-      setFlash(true);
-      setTimeout(() => setFlash(false), 1200);
+      if (prevStatusRef.current !== null && prevStatusRef.current !== a.status) {
+        setFlash(true);
+        setTimeout(() => setFlash(false), 1200);
+      }
+      prevStatusRef.current = a.status;
+
+      setAppt(a);
+      setDayAppts((json.queue ?? []) as QueueAppt[]);
+    } catch {
+      // Network blip — the 8s interval will retry; don't show "not found" for this.
+    } finally {
+      setLoading(false);
     }
-    prevStatusRef.current = a.status;
-
-    setAppt(a);
-    setDayAppts((json.queue ?? []) as QueueAppt[]);
-    setLoading(false);
   }, [appointmentId]);
 
   useEffect(() => {

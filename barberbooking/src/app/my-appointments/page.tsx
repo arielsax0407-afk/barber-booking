@@ -190,7 +190,9 @@ function MyAppointmentsInner() {
     setSubmitted(true);
   }
 
-  const upcoming = appointments.filter(a => !['cancelled','rejected'].includes(a.status));
+  // Completed must only appear in history — excluding it from `upcoming` too
+  // (in addition to cancelled/rejected) keeps the two lists mutually exclusive.
+  const upcoming = appointments.filter(a => !['cancelled','rejected','completed'].includes(a.status));
   const past = appointments.filter(a => ['cancelled','rejected','completed'].includes(a.status));
 
   return (

@@ -1,54 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-function stripBOM(s: string | undefined): string {
-  if (!s) return '';
-  return s.charCodeAt(0) === 0xfeff ? s.slice(1) : s;
-}
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export async function GET(req: NextRequest) {
-  const phone = req.nextUrl.searchParams.get('phone')?.trim() ?? '';
-  if (!phone) return NextResponse.json({ appointments: [] });
+  const rawPhone = req.nextUrl.searchParams.get('phone')?.trim() ?? '';
+  if (!rawPhone) return NextResponse.json({ appointments: [] });
 
-  const url = stripBOM(process.env.NEXT_PUBLIC_SUPABASE_URL);
-  const key = stripBOM(process.env.SUPABASE_SERVICE_ROLE_KEY) || stripBOM(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const sb = supabaseAdmin();
 
-  const supabase = createClient(url, key);
+  // Phone numbers may have been stored with or without dashes/spaces depending
+  // on how the customer typed them at booking time. An exact match alone can
+  // miss a real appointment if the customer searches with a different format
+  // than they booked with — so we also match on the last 9 digits (Israeli
+  // operator prefix + subscriber number), which stays stable across leading
+  // "0"/"+972"/dash/space variations without being short enough to risk
+  // matching a different customer's number.
+  const digits = rawPhone.replace(/\D/g, '');
+  const suffix = digits.length >= 9 ? digits.slice(-9) : null;
 
-  const { data, error } = await supabase
-    .from('appointments')
-    .select('*')
-    .eq('phone', phone)
-    .order('date', { ascending: false })
-    .order('time', { ascending: false });
+  const [exactRes, suffixRes] = await Promise.all([
+    sb.from('appointments').select('*').eq('phone', rawPhone),
+    suffix
+      ? sb.from('appointments').select('*').ilike('phone', `%${suffix}`)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
 
-  if (error) {
-    const stripped = phone.replace(/[-\s]/g, '');
-    if (stripped !== phone) {
-      const { data: data2, error: err2 } = await supabase
-        .from('appointments')
-        .select('*')
-        .eq('phone', stripped)
-        .order('date', { ascending: false })
-        .order('time', { ascending: false });
-      if (err2) return NextResponse.json({ error: err2.message }, { status: 500 });
-      return NextResponse.json({ appointments: data2 ?? [] });
-    }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (exactRes.error) {
+    return NextResponse.json({ error: exactRes.error.message }, { status: 500 });
   }
 
-  if (!data || data.length === 0) {
-    const stripped = phone.replace(/[-\s]/g, '');
-    if (stripped !== phone) {
-      const { data: data2 } = await supabase
-        .from('appointments')
-        .select('*')
-        .eq('phone', stripped)
-        .order('date', { ascending: false })
-        .order('time', { ascending: false });
-      return NextResponse.json({ appointments: data2 ?? [] });
-    }
-  }
+  const merged = new Map<string, Record<string, unknown>>();
+  for (const row of exactRes.data ?? []) merged.set(row.id, row);
+  for (const row of suffixRes.data ?? []) merged.set(row.id, row);
 
-  return NextResponse.json({ appointments: data ?? [] });
+  const appointments = Array.from(merged.values()).sort((a, b) => {
+    const dateCmp = String(b.date).localeCompare(String(a.date));
+    return dateCmp !== 0 ? dateCmp : String(b.time).localeCompare(String(a.time));
+  });
+
+  return NextResponse.json({ appointments });
 }

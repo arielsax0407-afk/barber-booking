@@ -142,20 +142,33 @@ function BookContent() {
     else setStep(STEPS[stepIndex - 1]);
   }
 
-  async function loadSlots(selectedDate: string): Promise<string[]> {
+  // Returns null on a network/server failure — callers must NOT treat that as
+  // "everything is free", since that risks letting a customer book an
+  // already-taken slot.
+  async function loadSlots(selectedDate: string): Promise<string[] | null> {
     setLoadingSlots(true);
-    const url = `/api/availability?date=${selectedDate}${barberId ? `&barber_id=${barberId}` : ''}`;
-    const res = await fetch(url);
-    const json = await res.json();
-    const taken = (json.takenSlots ?? []) as string[];
-    setTakenSlots(taken);
-    setLoadingSlots(false);
-    return taken;
+    try {
+      const url = `/api/availability?date=${selectedDate}${barberId ? `&barber_id=${barberId}` : ''}`;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const json = await res.json();
+      const taken = (json.takenSlots ?? []) as string[];
+      setTakenSlots(taken);
+      return taken;
+    } catch {
+      return null;
+    } finally {
+      setLoadingSlots(false);
+    }
   }
 
   async function handleDateContinue() {
     setDateError('');
     const taken = await loadSlots(date);
+    if (taken === null) {
+      setDateError('שגיאה בבדיקת השעות הפנויות — בדוק את החיבור ונסה שוב.');
+      return;
+    }
     if (TIME_SLOTS.every((t) => taken.includes(t))) {
       setDateError('אין תורים פנויים בתאריך זה. נסה תאריך אחר.');
       return;
@@ -166,22 +179,41 @@ function BookContent() {
   async function handleSubmit() {
     setSubmitting(true);
     setError('');
-    const res = await fetch('/api/book', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone, service, date, time, barber_id: barberId || null }),
-    });
-    const json = await res.json();
-    setSubmitting(false);
-    if (!res.ok || !json.id) { setError('שגיאה בשמירת התור. אנא נסה שוב.'); return; }
-    fetch('/api/notify-admin', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, phone, service, date, time }),
-    });
-    try { localStorage.setItem(LAST_BOOKING_KEY, JSON.stringify({ name, phone, service })); } catch {}
-    setAppointmentId(json.id);
-    setDone(true);
+    try {
+      // Re-check availability right before submitting — the customer may have
+      // spent a while on the details step, and another customer could have
+      // taken this exact slot in the meantime.
+      const stillFree = await loadSlots(date);
+      if (stillFree === null) {
+        setError('שגיאה בבדיקת זמינות. אנא נסה שוב.');
+        return;
+      }
+      if (stillFree.includes(time)) {
+        setError('השעה הזו נתפסה הרגע — אנא בחר שעה אחרת.');
+        setStep('time');
+        return;
+      }
+
+      const res = await fetch('/api/book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, service, date, time, barber_id: barberId || null }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.id) { setError('שגיאה בשמירת התור. אנא נסה שוב.'); return; }
+      fetch('/api/notify-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, service, date, time }),
+      }).catch(() => {});
+      try { localStorage.setItem(LAST_BOOKING_KEY, JSON.stringify({ name, phone, service })); } catch {}
+      setAppointmentId(json.id);
+      setDone(true);
+    } catch {
+      setError('שגיאת תקשורת — בדוק את החיבור לאינטרנט ונסה שוב.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   /* ── Success screen ───────────────────────────────────────── */

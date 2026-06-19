@@ -82,7 +82,13 @@ async function sendBookingEmails(params: {
 export async function POST(req: NextRequest) {
   const { name, phone, service, date, time, barber_id } = await req.json();
 
-  if (!name?.trim() || !phone?.trim() || !service || !date || !time) {
+  // Normalize to digits-only at write time so every booking entry point (web
+  // form, chat bot, future clients) stores phone numbers in one consistent
+  // format — this is what lets /api/my-appointments reliably find a customer
+  // regardless of whether they typed dashes/spaces when they booked.
+  const cleanPhone = typeof phone === 'string' ? phone.replace(/\D/g, '') : '';
+
+  if (!name?.trim() || !cleanPhone || !service || !date || !time) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
 
@@ -91,7 +97,7 @@ export async function POST(req: NextRequest) {
     .from('appointments')
     .insert({
       name: name.trim(),
-      phone: phone.trim(),
+      phone: cleanPhone,
       service,
       date,
       time,
