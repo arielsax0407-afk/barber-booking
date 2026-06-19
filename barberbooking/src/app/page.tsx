@@ -339,7 +339,7 @@ export default function HomePage() {
 
       {/* ── WhatsApp float ───────────────────────────────── */}
       <a
-        href="https://wa.me/972558824429"
+        href="https://wa.me/972527070788"
         target="_blank"
         rel="noopener noreferrer"
         aria-label="צור קשר בוואטסאפ"
@@ -700,7 +700,7 @@ export default function HomePage() {
         <p className="serif bph-gold-text" style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>YAIR ZIV</p>
         <p style={{ fontSize: '0.75rem', color: 'var(--cream-faint)', letterSpacing: '0.1em', marginBottom: '1.5rem' }}>רחובות · א׳–ו׳ 08:00–18:00</p>
         <a
-          href="https://wa.me/972558824429"
+          href="https://wa.me/972527070788"
           target="_blank"
           rel="noopener noreferrer"
           className="bph-footer-wa"
