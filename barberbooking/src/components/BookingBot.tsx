@@ -551,7 +551,7 @@ export default function BookingBot() {
           right: 24px;
           z-index: 200;
           width: min(380px, calc(100vw - 32px));
-          height: min(560px, calc(100vh - 160px));
+          height: min(560px, calc(100dvh - 160px));
           background: #fff;
           border: 1px solid rgba(157,78,221,0.16);
           border-radius: 20px;
@@ -682,9 +682,15 @@ export default function BookingBot() {
         .bbot-send:disabled { opacity: 0.4; cursor: not-allowed; }
         .bbot-send:not(:disabled):hover { transform: scaleX(-1) scale(1.07); }
 
-        @media (max-width: 420px) {
+        @media (max-width: 480px) {
           .bbot-fab { right: 16px; }
-          .bbot-panel { right: 16px; width: calc(100vw - 24px); }
+          .bbot-panel {
+            right: 16px;
+            left: 16px;
+            width: auto;
+            bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+            height: min(65dvh, calc(100dvh - 140px));
+          }
         }
       `}</style>
     </>

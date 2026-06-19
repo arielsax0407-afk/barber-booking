@@ -19,6 +19,10 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: '#FAF8F4',
+  // Without this, mobile browsers (mainly iOS Safari) overlay the keyboard on top
+  // of the page instead of shrinking it — fixed-position elements like the chat
+  // widget then get covered by the keyboard instead of resizing above it.
+  interactiveWidget: 'resizes-content',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
