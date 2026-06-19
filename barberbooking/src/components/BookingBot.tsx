@@ -43,6 +43,11 @@ const CONFIRM_BUTTONS: QuickReply[] = [
   { label: 'בטל', value: 'cancel' },
 ];
 
+const BOOKING_INTENT = ['לקבוע', 'לקבע', 'תור', 'להזמין', 'הזמנה', 'לתאם', 'תספורת', 'להסתפר', 'רוצה תור', 'אפשר תור'];
+function hasBookingIntent(text: string): boolean {
+  return BOOKING_INTENT.some((w) => text.includes(w));
+}
+
 function formatDateHebrew(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
   const weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
@@ -346,14 +351,26 @@ export default function BookingBot() {
     }
 
     const changed = JSON.stringify(updated) !== JSON.stringify(booking);
+    const alreadyInFlow = pendingField !== null || booking.service !== null || booking.barberId !== null || booking.date !== null;
     setBooking(updated);
 
-    if (!changed && !timeGuess) {
-      addMessage('bot', 'לא הבנתי בדיוק 🙏 אפשר לפרט עוד קצת?');
+    if (changed || timeGuess) {
+      void advance(updated, timeGuess);
       return;
     }
 
-    void advance(updated, timeGuess);
+    if (alreadyInFlow) {
+      void advance(updated, timeGuess);
+      return;
+    }
+
+    if (hasBookingIntent(text)) {
+      void advance(updated);
+      return;
+    }
+
+    addMessage('bot', 'לא הבנתי בדיוק 🙏 אפשר לקבוע תור — פשוט תכתבו "תספורת" או לחצו על הכפתור:', SERVICE_QUICK_REPLIES);
+    setPendingField('service');
   }
 
   return (
