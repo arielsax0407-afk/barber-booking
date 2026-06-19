@@ -3,6 +3,8 @@
 import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import { TIME_SLOTS, LOYALTY_THRESHOLD, LOYALTY_REWARD_LABEL } from '@/lib/services';
+import Aurora from '@/components/ui/Aurora';
+import BookingBot from '@/components/BookingBot';
 
 type Barber = { id: string; name: string; specialty: string | null; image_url: string | null };
 
@@ -810,6 +812,12 @@ export default function HomePage() {
       {/* ── Final CTA ────────────────────────────────────── */}
       <section className="bph-final">
         <div className="bph-final-glow" aria-hidden="true" />
+        <Aurora
+          colorStops={["#0d0712", "#160f22", "#8B2FE0"]}
+          amplitude={0.5}
+          blend={0.12}
+          speed={0.18}
+        />
         <Reveal className="bph-final-inner">
           <p className="bph-eyebrow">מוכן?</p>
           <h2 className="display display-lg" style={{ color: 'var(--cream)', marginBottom: '2.5rem' }}>
@@ -901,6 +909,9 @@ export default function HomePage() {
           >‹</button>
         </div>
       )}
+
+      {/* ── Booking chat assistant ────────────────────────── */}
+      <BookingBot />
 
       {/* ── Styles ───────────────────────────────────────── */}
       <style>{`
