@@ -85,13 +85,6 @@ const STEPS = [
 ];
 
 const GALLERY = [
-  { url: '/images/work/work-01.png', label: 'פייד עור · קונטור מדויק' },
-  { url: '/images/work/work-02.png', label: 'אדגר קאט מודרני' },
-  { url: '/images/work/work-03.png', label: 'פייד נמוך · קו עליון חד' },
-  { url: '/images/work/work-04.png', label: 'טאפר טבעי עם טקסטורה' },
-  { url: '/images/work/work-05.png', label: 'עיצוב פסיפס מיוחד' },
-  { url: '/images/work/work-06.png', label: 'פייד קלאסי · גימור חלק' },
-  { url: '/images/work/work-07.png', label: 'פייד לשיער קרלי' },
   { url: '/images/work/work-08.png', label: 'מוהוק וזקן מעוצב' },
   { url: '/images/work/work-09.png', label: 'אפרו פייד נקי' },
   { url: '/images/work/work-10.png', label: 'עיצוב שיער אומנותי' },
@@ -104,7 +97,7 @@ const GALLERY = [
 const TESTIMONIALS = [
   { name: 'דוד כהן', service: 'תספורת + עיצוב זקן', text: 'הכי טוב שהיה לי. הספר ידע בדיוק מה אני רוצה רק ממבט אחד. אני מגיע כל שבוע ולא מוכן לשנות.', stars: 5, initial: 'ד', color: '#1A50A8' },
   { name: 'יוסי לוי', service: 'פייד', text: 'כבר שנה שאני מגיע פעמיים בחודש. הצוות מקצועי, נעים ותמיד בדיוק לשעה. תספורת מושלמת כל פעם.', stars: 5, initial: 'י', color: '#CC1A1A' },
-  { name: 'אמיר חדד', service: 'עיצוב זקן', text: 'עיצוב הזקן שינה לי את המראה לגמרי. אנשים שואלים מה עשיתי, תמיד עונה: EK Royal Barber. ממליץ בחום!', stars: 5, initial: 'א', color: '#1A50A8' },
+  { name: 'אמיר חדד', service: 'עיצוב זקן', text: 'עיצוב הזקן שינה לי את המראה לגמרי. אנשים שואלים מה עשיתי, תמיד עונה: YAIR ZIV. ממליץ בחום!', stars: 5, initial: 'א', color: '#1A50A8' },
   { name: 'רון ביטון', service: 'תספורת ילדים', text: 'הבן שלי פחד מספרים, כאן הוא מתרגש לבוא. הצוות יודע לעבוד עם ילדים בצורה מדהימה. תודה רבה!', stars: 5, initial: 'ר', color: '#CC1A1A' },
   { name: 'עמית שלום', service: 'תספורת', text: 'קביעת תור אונליין זה שינוי משחק. 2 דקות ויש לי תור. תמיד יוצא מרוצה ומרגיש כמו מלך. 10/10.', stars: 5, initial: 'ע', color: '#1A50A8' },
 ];
@@ -332,7 +325,7 @@ export default function HomePage() {
           <div className="bph-intro2-grain" />
           <div className="bph-intro2-content">
             <h1 className="bph-intro2-title serif">
-              {Array.from('EK Royal Barber').map((ch, i) => (
+              {Array.from('YAIR ZIV').map((ch, i) => (
                 <span key={i} className="bph-intro2-letter" style={{ animationDelay: `${0.5 + i * 0.045}s` }}>
                   {ch === ' ' ? ' ' : ch}
                 </span>
@@ -424,11 +417,11 @@ export default function HomePage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
             <img
               src="/images/logo.png"
-              alt="לוגו EK Royal Barber"
+              alt="לוגו YAIR ZIV"
               style={{ height: 42, filter: 'drop-shadow(0 2px 10px rgba(201,164,73,0.45))' }}
             />
             <span className="serif" style={{ color: 'var(--cream)', fontSize: '1.1rem', fontWeight: 600, letterSpacing: '0.04em' }}>
-              EK Royal Barber
+              YAIR ZIV
             </span>
           </div>
           <OpenStatusBadge />
@@ -443,9 +436,9 @@ export default function HomePage() {
           </div>
 
           <h1 className={`display display-xl ${heroAnim(1)}`} style={{ maxWidth: 760 }}>
-            <span className="bph-gold-text">EK Royal</span>
+            <span className="bph-gold-text">YAIR</span>
             <br />
-            <span style={{ color: 'var(--cream)', fontStyle: 'italic', fontWeight: 300 }}>Barber</span>
+            <span style={{ color: 'var(--cream)', fontStyle: 'italic', fontWeight: 300 }}>ZIV</span>
           </h1>
 
           <p className={heroAnim(2)} style={{ fontSize: 'clamp(1rem, 2.5vw, 1.25rem)', color: 'var(--cream-dim)', marginTop: '1.5rem', maxWidth: 420, lineHeight: 1.8, fontWeight: 300 }}>
@@ -704,7 +697,7 @@ export default function HomePage() {
           alt=""
           className="bph-footer-pole"
         />
-        <p className="serif bph-gold-text" style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>EK Royal Barber</p>
+        <p className="serif bph-gold-text" style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>YAIR ZIV</p>
         <p style={{ fontSize: '0.75rem', color: 'var(--cream-faint)', letterSpacing: '0.1em', marginBottom: '1.5rem' }}>רחובות · א׳–ו׳ 08:00–18:00</p>
         <a
           href="https://wa.me/972558824429"

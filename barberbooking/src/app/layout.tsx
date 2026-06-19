@@ -2,17 +2,17 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'EK Royal Barber — מספרה יוקרתית ברחובות',
+  title: 'YAIR ZIV — מספרה יוקרתית ברחובות',
   description: 'חווית טיפוח גברית מהשורה הראשונה. קבע תור עכשיו.',
   openGraph: {
-    title: 'EK Royal Barber — מספרה יוקרתית ברחובות',
+    title: 'YAIR ZIV — מספרה יוקרתית ברחובות',
     description: 'חווית טיפוח גברית מהשורה הראשונה. קבע תור עכשיו.',
     locale: 'he_IL',
     type: 'website',
   },
   twitter: {
     card: 'summary',
-    title: 'EK Royal Barber — מספרה יוקרתית ברחובות',
+    title: 'YAIR ZIV — מספרה יוקרתית ברחובות',
     description: 'חווית טיפוח גברית מהשורה הראשונה. קבע תור עכשיו.',
   },
 };
