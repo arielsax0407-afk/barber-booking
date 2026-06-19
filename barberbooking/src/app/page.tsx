@@ -3,6 +3,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { Lens } from '@/components/ui/lens';
 import { TIME_SLOTS } from '@/lib/services';
 
 // ── Static data ───────────────────────────────────────────
@@ -603,7 +604,9 @@ export default function HomePage() {
                 viewport={{ once: true, margin: '-60px' }}
                 transition={{ duration: 0.5, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
               >
-                <img src={img.url} alt={img.label} loading="lazy" />
+                <Lens>
+                  <img src={img.url} alt={img.label} loading="lazy" />
+                </Lens>
               </motion.div>
             ))}
           </div>
@@ -1105,9 +1108,11 @@ export default function HomePage() {
         .bph-masonry-item::after {
           content: '';
           position: absolute; inset: 0;
+          z-index: 25;
           background: rgba(0,0,0,0.45);
           opacity: 0;
           transition: opacity 0.35s ease;
+          pointer-events: none;
         }
         .bph-masonry-item:hover::after { opacity: 1; }
 
