@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { TIME_SLOTS } from '@/lib/services';
 
 // ── Static data ───────────────────────────────────────────
@@ -324,7 +325,7 @@ export default function HomePage() {
         <div className="bph-intro2" aria-hidden="true" dir="rtl">
           <div className="bph-intro2-grain" />
           <div className="bph-intro2-content">
-            <h1 className="bph-intro2-title serif">
+            <h1 className="bph-intro2-title serif" dir="ltr">
               {Array.from('YAIR ZIV').map((ch, i) => (
                 <span key={i} className="bph-intro2-letter" style={{ animationDelay: `${0.5 + i * 0.045}s` }}>
                   {ch === ' ' ? ' ' : ch}
@@ -573,7 +574,7 @@ export default function HomePage() {
       </section>
 
       {/* ── Gallery — real client work ───────────────────── */}
-      <section style={{ background: 'var(--g1)' }}>
+      <section style={{ background: '#0a0a0a' }}>
         <div className="bph-section">
           <Reveal>
             <div className="bph-header">
@@ -587,21 +588,23 @@ export default function HomePage() {
             </div>
           </Reveal>
 
-          <div className="bph-work">
+          <div className="bph-masonry">
             {GALLERY.map((img, i) => (
-              <div
+              <motion.div
                 key={img.url}
-                className="bph-work-item"
+                className="bph-masonry-item"
                 onClick={() => setLightboxIndex(i)}
                 role="button"
                 tabIndex={0}
                 aria-label={`הצג ${img.label} בתצוגה מלאה`}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setLightboxIndex(i); }}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-60px' }}
+                transition={{ duration: 0.5, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
               >
-                <span className="bph-work-tag">{String(i + 1).padStart(2, '0')}</span>
                 <img src={img.url} alt={img.label} loading="lazy" />
-                <div className="bph-work-caption">{img.label}</div>
-              </div>
+              </motion.div>
             ))}
           </div>
 
@@ -1072,56 +1075,41 @@ export default function HomePage() {
         .bph-step h3 { font-family: var(--font-display); font-size: 1.3rem; color: var(--cream); margin-bottom: 0.6rem; font-weight: 500; }
         .bph-step p { font-size: 0.875rem; line-height: 1.85; color: var(--cream-dim); }
 
-        /* Work gallery — real client photos, asymmetric collage with numbered tags */
-        .bph-work {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          grid-auto-rows: clamp(100px, 12vw, 180px);
-          gap: 1rem;
-          grid-auto-flow: dense;
+        /* Work gallery — premium masonry, real client photos */
+        .bph-masonry {
+          column-count: 1;
+          column-gap: 12px;
         }
-        .bph-work-item {
+        @media (min-width: 641px) {
+          .bph-masonry { column-count: 2; }
+        }
+        @media (min-width: 1024px) {
+          .bph-masonry { column-count: 3; }
+        }
+        .bph-masonry-item {
           position: relative;
           overflow: hidden;
-          background: var(--g2);
-          border: 1px solid rgba(243,236,221,0.08);
-          border-radius: 3px;
+          break-inside: avoid;
+          margin-bottom: 12px;
+          border-radius: 8px;
+          border: 1px solid transparent;
           cursor: pointer;
-          transition: transform 0.4s ease, border-color 0.4s ease, z-index 0.4s ease;
+          transition: border-color 0.35s ease;
         }
-        .bph-work-item:hover { z-index: 2; transform: translateY(-4px); border-color: rgba(201,164,73,0.4); }
-        .bph-work-item img {
-          width: 100%; height: 100%; object-fit: cover; display: block;
-          filter: grayscale(0.15) contrast(1.08);
-          transition: transform 0.6s ease, filter 0.6s ease;
+        .bph-masonry-item:hover { border-color: #C9A84C; }
+        .bph-masonry-item img {
+          width: 100%; height: auto; display: block;
+          transition: transform 0.5s ease;
         }
-        .bph-work-item:hover img { transform: scale(1.07); filter: grayscale(0) contrast(1.12); }
-        .bph-work-tag {
-          position: absolute; top: 10px; z-index: 2;
-          inset-inline-start: 10px;
-          font-family: var(--font-display); font-size: 0.85rem; font-weight: 700;
-          color: var(--gold-light);
-          background: rgba(10,9,8,0.55);
-          border: 1px solid rgba(201,164,73,0.45);
-          padding: 0.15rem 0.55rem;
-          border-radius: 2px;
-          letter-spacing: 0.05em;
-          backdrop-filter: blur(4px);
+        .bph-masonry-item:hover img { transform: scale(1.05); }
+        .bph-masonry-item::after {
+          content: '';
+          position: absolute; inset: 0;
+          background: rgba(0,0,0,0.45);
+          opacity: 0;
+          transition: opacity 0.35s ease;
         }
-        .bph-work-caption {
-          position: absolute; bottom: 0; left: 0; right: 0;
-          padding: 1.5rem 0.75rem 0.6rem;
-          background: linear-gradient(transparent, rgba(10,9,8,0.88));
-          color: var(--cream-dim);
-          font-size: 0.7rem; text-align: center; letter-spacing: 0.06em; font-weight: 500;
-        }
-        .bph-work-item:nth-child(1) { grid-column: span 2; grid-row: span 2; }
-        .bph-work-item:nth-child(2) { grid-column: span 1; grid-row: span 1; }
-        .bph-work-item:nth-child(3) { grid-column: span 1; grid-row: span 2; }
-        .bph-work-item:nth-child(4) { grid-column: span 1; grid-row: span 1; }
-        .bph-work-item:nth-child(5) { grid-column: span 2; grid-row: span 1; }
-        .bph-work-item:nth-child(6) { grid-column: span 1; grid-row: span 1; }
-        .bph-work-item:nth-child(7) { grid-column: span 1; grid-row: span 2; }
+        .bph-masonry-item:hover::after { opacity: 1; }
 
         /* Why us */
         .bph-whyus { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: clamp(2.5rem, 6vw, 4rem); }
@@ -1346,8 +1334,6 @@ export default function HomePage() {
         @media (max-width: 640px) {
           .bph-clipper { display: none; }
           .bph-stats { flex-wrap: wrap; gap: 1.5rem 1rem; }
-          .bph-work { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 38vw; }
-          .bph-work-item { grid-column: span 1 !important; grid-row: span 1 !important; }
           .bph-service { padding-left: 0.5rem; padding-right: 0.5rem; gap: 1rem; }
           .bph-ticker { gap: 1rem; }
           .bph-open-badge { font-size: 0.62rem; }
