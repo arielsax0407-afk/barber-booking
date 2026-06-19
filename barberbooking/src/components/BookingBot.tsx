@@ -43,6 +43,10 @@ const CONFIRM_BUTTONS: QuickReply[] = [
   { label: 'בטל', value: 'cancel' },
 ];
 
+const WHATSAPP_BUTTON: QuickReply[] = [{ label: 'שלח הודעה בוואטסאפ 💬', value: WHATSAPP_FALLBACK }];
+const RETRY_TIME_BUTTON: QuickReply[] = [{ label: 'נסה שוב 🔄', value: 'retry-time' }];
+const RETRY_CONFIRM_BUTTON: QuickReply[] = [{ label: 'נסה שוב 🔄', value: 'retry-confirm' }];
+
 const BOOKING_INTENT = ['לקבוע', 'לקבע', 'תור', 'להזמין', 'הזמנה', 'לתאם', 'תספורת', 'להסתפר', 'רוצה תור', 'אפשר תור'];
 function hasBookingIntent(text: string): boolean {
   return BOOKING_INTENT.some((w) => text.includes(w));
@@ -54,22 +58,26 @@ function formatDateHebrew(dateStr: string): string {
   return `יום ${HEBREW_WEEKDAYS[weekday]} ${d}.${m}`;
 }
 
-async function fetchFreeSlots(date: string, barberId: string | null): Promise<string[]> {
+// Returns null on a network/server failure — callers must NOT treat that as
+// "everything is free", since that risks letting a customer book an already-taken slot.
+async function fetchFreeSlots(date: string, barberId: string | null): Promise<string[] | null> {
   try {
     const qs = new URLSearchParams({ date });
     if (barberId) qs.set('barber_id', barberId);
     const res = await fetch(`/api/availability?${qs.toString()}`);
+    if (!res.ok) return null;
     const json: { takenSlots?: string[] } = await res.json();
     const taken = new Set(json.takenSlots ?? []);
     return TIME_SLOTS.filter((t) => !taken.has(t));
   } catch {
-    return TIME_SLOTS;
+    return null;
   }
 }
 
 export default function BookingBot() {
   const [open, setOpen] = useState(false);
   const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [barbersLoaded, setBarbersLoaded] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [booking, setBooking] = useState<Booking>(EMPTY_BOOKING);
   const [pendingField, setPendingField] = useState<PendingField>(null);
@@ -79,6 +87,8 @@ export default function BookingBot() {
   const idRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const greetedRef = useRef(false);
+  const waitingForBarbersRef = useRef(false);
+  const confirmLockRef = useRef(false);
 
   function nextId() {
     idRef.current += 1;
@@ -93,8 +103,20 @@ export default function BookingBot() {
     fetch('/api/barbers')
       .then((r) => r.json())
       .then((json) => setBarbers(json.barbers ?? []))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setBarbersLoaded(true));
   }, []);
+
+  // If the bot told the customer "loading barbers…" because the fetch above was
+  // still in flight, resume the conversation automatically once it settles —
+  // otherwise the chat just dead-ends with nothing to click or type that helps.
+  useEffect(() => {
+    if (barbersLoaded && waitingForBarbersRef.current) {
+      waitingForBarbersRef.current = false;
+      void advance(booking);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [barbersLoaded]);
 
   useEffect(() => {
     if (!open || greetedRef.current) return;
@@ -118,8 +140,13 @@ export default function BookingBot() {
     }
 
     if (!b.barberId) {
-      if (barbers.length === 0) {
+      if (!barbersLoaded) {
+        waitingForBarbersRef.current = true;
         addMessage('bot', 'רק רגע, טוען את רשימת הספרים… 🙏');
+        return;
+      }
+      if (barbers.length === 0) {
+        addMessage('bot', 'מצטערים, לא הצלחנו לטעון את רשימת הספרים כרגע 😕 אפשר לקבוע ישירות בוואטסאפ:', WHATSAPP_BUTTON);
         return;
       }
       setPendingField('barber');
@@ -141,6 +168,12 @@ export default function BookingBot() {
       setBusy(true);
       const free = await fetchFreeSlots(b.date, b.barberId);
       setBusy(false);
+
+      if (free === null) {
+        setPendingField('time');
+        addMessage('bot', 'הייתה תקלה בבדיקת השעות הפנויות 😕 אפשר לנסות שוב?', RETRY_TIME_BUTTON);
+        return;
+      }
 
       if (free.length === 0) {
         addMessage('bot', 'אין שעות פנויות בתאריך הזה 😕 איזה יום אחר מתאים?');
@@ -221,8 +254,8 @@ export default function BookingBot() {
       setBusy(false);
 
       if (!res.ok || json.error) {
-        addMessage('bot', `משהו השתבש בקביעת התור 😕 ${json.error ?? ''}`.trim());
-        addMessage('bot', 'אפשר גם לקבוע ישירות בוואטסאפ:', [{ label: 'שלח הודעה בוואטסאפ 💬', value: WHATSAPP_FALLBACK }]);
+        // Never surface the raw backend/DB error text to the customer.
+        addMessage('bot', 'משהו השתבש בקביעת התור 😕 אפשר גם לקבוע ישירות בוואטסאפ:', WHATSAPP_BUTTON);
         return;
       }
 
@@ -230,29 +263,40 @@ export default function BookingBot() {
       resetBooking();
     } catch {
       setBusy(false);
-      addMessage('bot', 'משהו השתבש בחיבור 😕 אפשר לקבוע ישירות בוואטסאפ:', [
-        { label: 'שלח הודעה בוואטסאפ 💬', value: WHATSAPP_FALLBACK },
-      ]);
+      addMessage('bot', 'משהו השתבש בחיבור 😕 אפשר לקבוע ישירות בוואטסאפ:', WHATSAPP_BUTTON);
     }
   }
 
   async function doConfirm() {
-    setBusy(true);
-    const free = await fetchFreeSlots(booking.date!, booking.barberId);
-    setBusy(false);
+    // Guards against a fast double-click/double-tap firing two concurrent
+    // booking requests before React has re-rendered the disabled button.
+    if (confirmLockRef.current) return;
+    confirmLockRef.current = true;
+    try {
+      setBusy(true);
+      const free = await fetchFreeSlots(booking.date!, booking.barberId);
+      setBusy(false);
 
-    if (!booking.time || !free.includes(booking.time)) {
-      addMessage(
-        'bot',
-        'אופס, השעה הזו נתפסה הרגע 😕 הנה השעות הפנויות:',
-        free.map((t) => ({ label: t, value: t }))
-      );
-      setBooking({ ...booking, time: null });
-      setPendingField('time');
-      return;
+      if (free === null) {
+        addMessage('bot', 'הייתה תקלה בבדיקת השעה לפני האישור 😕 אפשר לנסות שוב?', RETRY_CONFIRM_BUTTON);
+        return;
+      }
+
+      if (!booking.time || !free.includes(booking.time)) {
+        addMessage(
+          'bot',
+          'אופס, השעה הזו נתפסה הרגע 😕 הנה השעות הפנויות:',
+          free.map((t) => ({ label: t, value: t }))
+        );
+        setBooking({ ...booking, time: null });
+        setPendingField('time');
+        return;
+      }
+
+      await doBook(booking);
+    } finally {
+      confirmLockRef.current = false;
     }
-
-    await doBook(booking);
   }
 
   function doCancel() {
@@ -265,7 +309,7 @@ export default function BookingBot() {
     addMessage('user', button.label);
 
     if (pendingField === 'confirm') {
-      if (button.value === 'confirm') void doConfirm();
+      if (button.value === 'confirm' || button.value === 'retry-confirm') void doConfirm();
       else doCancel();
       return;
     }
@@ -285,6 +329,10 @@ export default function BookingBot() {
     }
 
     if (pendingField === 'time') {
+      if (button.value === 'retry-time') {
+        void advance(booking);
+        return;
+      }
       const updated = { ...booking, time: button.value };
       setBooking(updated);
       void advance(updated);
@@ -298,17 +346,20 @@ export default function BookingBot() {
     setInputValue('');
     addMessage('user', text);
 
-    if (pendingField === 'confirm') {
-      if (text.includes('כן')) void doConfirm();
-      else if (text.includes('בטל') || text.includes('לא')) doCancel();
-      else addMessage('bot', 'אפשר לבחור "כן, לקבוע" או "בטל" 🙂', CONFIRM_BUTTONS);
-      return;
-    }
-
+    // FAQ is checked before the confirm-step gate so a customer who asks a
+    // question right at "כן/בטל" (e.g. "כמה זה עולה?") gets answered instead
+    // of just being told to pick yes or no again.
     const faqAnswer = matchFaq(text);
     if (faqAnswer) {
       addMessage('bot', faqAnswer);
       void advance(booking);
+      return;
+    }
+
+    if (pendingField === 'confirm') {
+      if (text.includes('כן')) void doConfirm();
+      else if (text.includes('בטל') || text.includes('לא')) doCancel();
+      else addMessage('bot', 'אפשר לבחור "כן, לקבוע" או "בטל" 🙂', CONFIRM_BUTTONS);
       return;
     }
 
