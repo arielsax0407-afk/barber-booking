@@ -92,16 +92,13 @@ const GALLERY = [
   { url: '/images/work/work-05.png', label: 'עיצוב פסיפס מיוחד' },
   { url: '/images/work/work-06.png', label: 'פייד קלאסי · גימור חלק' },
   { url: '/images/work/work-07.png', label: 'פייד לשיער קרלי' },
-];
-
-const PRODUCTS = [
-  { name: "ג'ל לשיער AGIVA", desc: 'לאחיזה חזקה וריח מרענן', img: 'https://images.unsplash.com/photo-1585751119414-ef2636f8aede?w=480&h=480&fit=crop&q=80' },
-  { name: 'וואקס AGIVA Aqua', desc: 'מראה טבעי, צבעים חזקים', img: 'https://images.unsplash.com/photo-1612817288484-6f916006741a?w=480&h=480&fit=crop&q=80' },
-  { name: 'טוניק לשיער AGIVA', desc: 'מחזק ומעבה את השיער', img: 'https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=480&h=480&fit=crop&q=80' },
-  { name: 'שמן לזקן O&B', desc: 'לעיצוב וטיפוח הזקן', img: 'https://images.unsplash.com/photo-1576426863848-c21f53c60b19?w=480&h=480&fit=crop&q=80' },
-  { name: 'מסיכת פנים AGIVA Gold', desc: 'טיפול פנים שומני', img: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=480&h=480&fit=crop&q=80' },
-  { name: 'מסיכת פנים AGIVA Black', desc: 'הוצאת שחורים', img: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=480&h=480&fit=crop&q=80' },
-  { name: 'בשמי BLANCO', desc: 'לגברים ולנשים, ריחות חדשים', img: 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=480&h=480&fit=crop&q=80' },
+  { url: '/images/work/work-08.png', label: 'מוהוק וזקן מעוצב' },
+  { url: '/images/work/work-09.png', label: 'אפרו פייד נקי' },
+  { url: '/images/work/work-10.png', label: 'עיצוב שיער אומנותי' },
+  { url: '/images/work/work-11.png', label: 'מוהוק ספייקים' },
+  { url: '/images/work/work-12.png', label: 'פייד קרלי מלוחים' },
+  { url: '/images/work/work-13.png', label: 'מוהוק בצבע ירוק' },
+  { url: '/images/work/work-14.png', label: 'תספורת מעוצבת' },
 ];
 
 const TESTIMONIALS = [
@@ -426,9 +423,9 @@ export default function HomePage() {
         <nav className="bph-nav animate-fade-in">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
             <img
-              src="/images/barber-pole.png"
+              src="/images/logo.png"
               alt="לוגו EK Royal Barber"
-              style={{ height: 42, filter: 'drop-shadow(0 2px 10px rgba(201,164,73,0.45))', animation: 'barber-pole-spin 10s linear infinite' }}
+              style={{ height: 42, filter: 'drop-shadow(0 2px 10px rgba(201,164,73,0.45))' }}
             />
             <span className="serif" style={{ color: 'var(--cream)', fontSize: '1.1rem', fontWeight: 600, letterSpacing: '0.04em' }}>
               EK Royal Barber
@@ -620,50 +617,6 @@ export default function HomePage() {
               <Link href="/book" className="bph-link">קבע תור עכשיו</Link>
             </div>
           </Reveal>
-        </div>
-      </section>
-
-      {/* ── Products ─────────────────────────────────────── */}
-      <section style={{ background: 'var(--g0)' }}>
-        <div className="bph-section">
-          <Reveal>
-            <div className="bph-header">
-              <p className="bph-eyebrow">החנות שלנו</p>
-              <h2 className="display display-lg" style={{ color: 'var(--cream)' }}>
-                מוצרי <span className="bph-gold-text" style={{ fontStyle: 'italic' }}>פרמיום</span>
-              </h2>
-              <p style={{ color: 'var(--cream-dim)', fontSize: '0.9rem', marginTop: '0.75rem', fontWeight: 300 }}>
-                מוצרי פרמיום לטיפוח — זמינים במספרה
-              </p>
-            </div>
-          </Reveal>
-
-          <div className="bph-products">
-            {PRODUCTS.map((p, i) => (
-              <Reveal key={p.name} delay={i * 60}>
-                <div className="bph-product-card">
-                  <div className="bph-product-img-wrap">
-                    <img src={p.img} alt={p.name} loading="lazy" />
-                  </div>
-                  <div className="bph-product-body">
-                    <h3>{p.name}</h3>
-                    <p>{p.desc}</p>
-                    <a
-                      href="https://wa.me/972558824429"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bph-product-cta"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                      </svg>
-                      לפרטים ורכישה — WhatsApp
-                    </a>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -1177,48 +1130,6 @@ export default function HomePage() {
         .bph-work-item:nth-child(6) { grid-column: span 1; grid-row: span 1; }
         .bph-work-item:nth-child(7) { grid-column: span 1; grid-row: span 2; }
 
-        /* Products — dark luxury cards */
-        .bph-products {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-          gap: clamp(1.5rem, 4vw, 2rem);
-        }
-        .bph-product-card {
-          height: 100%;
-          display: flex;
-          flex-direction: column;
-          background: var(--g1);
-          border: 1px solid var(--line);
-          border-radius: 4px;
-          overflow: hidden;
-          transition: transform 0.4s ease, border-color 0.4s ease;
-        }
-        .bph-product-card:hover { transform: translateY(-5px); border-color: rgba(201,164,73,0.4); }
-        .bph-product-img-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: hidden; background: var(--g2); }
-        .bph-product-img-wrap img {
-          width: 100%; height: 100%; object-fit: cover; display: block;
-          filter: grayscale(0.1) contrast(1.05);
-          transition: transform 0.6s ease, filter 0.6s ease;
-        }
-        .bph-product-card:hover .bph-product-img-wrap img { transform: scale(1.06); filter: grayscale(0) contrast(1.1); }
-        .bph-product-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; flex: 1; }
-        .bph-product-body h3 { font-family: var(--font-display); font-size: 1.1rem; color: var(--cream); font-weight: 500; line-height: 1.3; }
-        .bph-product-body p { font-size: 0.8rem; color: var(--cream-dim); line-height: 1.6; flex: 1; }
-        .bph-product-cta {
-          display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-          margin-top: 0.25rem;
-          padding: 0.7rem 1rem;
-          border: 1px solid rgba(37,211,102,0.4);
-          border-radius: 2px;
-          background: rgba(37,211,102,0.08);
-          color: #3ddc73;
-          font-size: 0.68rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
-          text-decoration: none;
-          text-align: center;
-          transition: all 0.3s ease;
-        }
-        .bph-product-cta:hover { background: #25D366; color: #0a0908; border-color: #25D366; }
-
         /* Why us */
         .bph-whyus { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: clamp(2.5rem, 6vw, 4rem); }
         .bph-why-item { text-align: center; }
@@ -1444,17 +1355,12 @@ export default function HomePage() {
           .bph-stats { flex-wrap: wrap; gap: 1.5rem 1rem; }
           .bph-work { grid-template-columns: repeat(2, 1fr); grid-auto-rows: 38vw; }
           .bph-work-item { grid-column: span 1 !important; grid-row: span 1 !important; }
-          .bph-products { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
-          .bph-product-body { padding: 1.1rem; }
           .bph-service { padding-left: 0.5rem; padding-right: 0.5rem; gap: 1rem; }
           .bph-ticker { gap: 1rem; }
           .bph-open-badge { font-size: 0.62rem; }
           .bph-open-sub { display: none; }
           .bph-next-slot { padding: 0.6rem 1rem; }
           .bph-lightbox-nav { width: 38px; height: 38px; font-size: 1.1rem; margin: 0 0.4rem; }
-        }
-        @media (max-width: 420px) {
-          .bph-products { grid-template-columns: 1fr; }
         }
       `}</style>
     </div>
