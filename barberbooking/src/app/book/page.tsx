@@ -296,9 +296,15 @@ function BookContent() {
             <>
               <p style={{ fontSize: '0.7rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--amber)', marginBottom: '0.75rem', fontWeight: 600 }}>הצלחה</p>
               <h2 className="serif" style={{ fontSize: '2.25rem', fontWeight: 400, marginBottom: '0.75rem', color: 'var(--text)' }}>נקבעו {recurringResult.booked} תורים ✅</h2>
-              <p style={{ color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '2rem', fontSize: '0.9rem' }}>
+              <p style={{ color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: endDate === maxRecurringEnd(date) ? '1rem' : '2rem', fontSize: '0.9rem' }}>
                 התור הקבוע שלך נקבע בהצלחה. מחכים לך!
               </p>
+
+              {endDate === maxRecurringEnd(date) && (
+                <p style={{ color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: '1.5rem', fontSize: '0.78rem' }}>
+                  תורים קבועים מוגבלים ל-3 חודשים מהתאריך הראשון — {formatDate(endDate)} הוא הטווח המקסימלי, ולכן זה תאריך הסיום שנקבע.
+                </p>
+              )}
 
               <div className="glass-card p-6 text-right mb-6" style={{ gap: '0.75rem', display: 'flex', flexDirection: 'column', background: '#fff' }}>
                 {[
@@ -743,7 +749,17 @@ function BookContent() {
                         min={date}
                         max={maxRecurringEnd(date)}
                         value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          const maxEnd = maxRecurringEnd(date);
+                          if (v && v > maxEnd) {
+                            setEndDate(maxEnd);
+                            setError(`טווח התור הקבוע מוגבל ל-3 חודשים — נקבע עד ${formatDate(maxEnd)}.`);
+                            return;
+                          }
+                          setEndDate(v);
+                          setError('');
+                        }}
                         className="input-field"
                       />
                       <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '0.25rem' }}>עד 3 חודשים קדימה</p>
