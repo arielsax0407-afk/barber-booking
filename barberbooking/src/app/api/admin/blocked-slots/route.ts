@@ -39,16 +39,24 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'Missing slots' }, { status: 400 });
   }
 
-  const sb = supabaseAdmin();
-  for (const s of slots) {
-    const { error } = await sb
-      .from('blocked_slots')
-      .delete()
-      .eq('blocked_date', s.date)
-      .eq('blocked_time', s.time)
-      .is('barber_id', null);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  // Validated before being interpolated into the .or() filter string below.
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const TIME_RE = /^\d{2}:\d{2}$/;
+  if (slots.some(s => !DATE_RE.test(s.date) || !TIME_RE.test(s.time))) {
+    return NextResponse.json({ error: 'Invalid slot format' }, { status: 400 });
   }
+
+  const sb = supabaseAdmin();
+  // Single atomic delete instead of looping per slot — a failure partway
+  // through the loop used to leave some slots deleted and others not.
+  const orFilter = slots.map(s => `and(blocked_date.eq.${s.date},blocked_time.eq.${s.time})`).join(',');
+  const { error } = await sb
+    .from('blocked_slots')
+    .delete()
+    .is('barber_id', null)
+    .or(orFilter);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json({ ok: true });
 }

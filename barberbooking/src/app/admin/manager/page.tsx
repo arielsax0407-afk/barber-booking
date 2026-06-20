@@ -244,14 +244,19 @@ export default function ManagerPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const res = await fetch('/api/admin/manager/data');
-    if (res.ok) {
-      const json = await res.json();
-      setAppointments(json.appointments ?? []);
-      setBarbers(json.barbers ?? []);
-      setBlockedSlots(json.blocked_slots ?? []);
+    try {
+      const res = await fetch('/api/admin/manager/data');
+      if (res.ok) {
+        const json = await res.json();
+        setAppointments(json.appointments ?? []);
+        setBarbers(json.barbers ?? []);
+        setBlockedSlots(json.blocked_slots ?? []);
+      }
+    } catch {
+      // Network blip — keep showing the last known data instead of clearing it.
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   async function login() {
@@ -267,32 +272,48 @@ export default function ManagerPage() {
   }
 
   async function cancelAppointment(id: string) {
-    await fetch('/api/admin/manager/cancel', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    });
-    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'cancelled' } : a));
+    try {
+      const res = await fetch('/api/admin/manager/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) throw new Error();
+      setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'cancelled' } : a));
+    } catch {
+      alert('ביטול התור נכשל — נסה שוב 😕');
+    }
   }
 
   async function toggleBarber(id: string, newActive: boolean) {
     setTogglingBarber(id);
-    await fetch('/api/admin/manager/toggle-barber', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, is_active: newActive }),
-    });
-    setBarbers(prev => prev.map(b => b.id === id ? { ...b, is_active: newActive } : b));
-    setTogglingBarber(null);
+    try {
+      const res = await fetch('/api/admin/manager/toggle-barber', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, is_active: newActive }),
+      });
+      if (!res.ok) throw new Error();
+      setBarbers(prev => prev.map(b => b.id === id ? { ...b, is_active: newActive } : b));
+    } catch {
+      alert('עדכון סטטוס הספר נכשל — נסה שוב 😕');
+    } finally {
+      setTogglingBarber(null);
+    }
   }
 
   async function unblockSlot(id: string) {
-    await fetch('/api/admin/manager/blocked-slots', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    });
-    setBlockedSlots(prev => prev.filter(b => b.id !== id));
+    try {
+      const res = await fetch('/api/admin/manager/blocked-slots', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) throw new Error();
+      setBlockedSlots(prev => prev.filter(b => b.id !== id));
+    } catch {
+      alert('ביטול החסימה נכשל — נסה שוב 😕');
+    }
   }
 
   async function addBlock() {

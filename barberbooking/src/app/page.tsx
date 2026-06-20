@@ -1555,7 +1555,7 @@ function TestimonialsSection() {
           animation: 'slide-in 0.35s ease both',
           minHeight: 220,
         }}>
-          <div style={{ position: 'absolute', top: 12, insetInlineEnd: 24, fontSize: '4.5rem', fontFamily: 'Georgia, serif', color: 'rgba(178,102,255,0.18)', lineHeight: 1, userSelect: 'none' }}>"</div>
+          <div style={{ position: 'absolute', top: 12, insetInlineEnd: 24, fontSize: '4.5rem', fontFamily: 'Georgia, serif', color: 'rgba(178,102,255,0.18)', lineHeight: 1, userSelect: 'none' }}>&quot;</div>
 
           <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginBottom: '1.5rem' }}>
             {[1,2,3,4,5].map(s => (
@@ -1566,7 +1566,7 @@ function TestimonialsSection() {
           </div>
 
           <p className="display" style={{ fontSize: '1.15rem', lineHeight: 1.85, color: 'var(--cream)', fontStyle: 'italic', fontWeight: 400, marginBottom: '2rem' }}>
-            "{t.text}"
+            &quot;{t.text}&quot;
           </p>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.875rem' }}>

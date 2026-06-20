@@ -250,29 +250,34 @@ export default function AdminPage() {
 
   async function loadAll() {
     setLoading(true);
-    const res = await fetch('/api/admin/data');
-    if (res.ok) {
-      const json = await res.json();
-      const appts = (json.appointments as Appointment[]) ?? [];
-      setAppointments(appts);
-      setBlockedSlots(json.blockedSlots ?? []);
-      setTemplates({ ...DEFAULT_WA_TEMPLATES, ...(json.templates ?? {}) });
+    try {
+      const res = await fetch('/api/admin/data');
+      if (res.ok) {
+        const json = await res.json();
+        const appts = (json.appointments as Appointment[]) ?? [];
+        setAppointments(appts);
+        setBlockedSlots(json.blockedSlots ?? []);
+        setTemplates({ ...DEFAULT_WA_TEMPLATES, ...(json.templates ?? {}) });
 
-      let lastSeen = Date.now();
-      try {
-        const stored = localStorage.getItem('barber_last_seen_ts');
-        if (stored !== null) lastSeen = Number(stored);
-      } catch {}
-      const fresh = appts
-        .filter(a => new Date(a.created_at).getTime() > lastSeen)
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      if (fresh.length > 0) {
-        setNewSinceLogin(fresh);
-        playChime(audioCtxRef.current);
+        let lastSeen = Date.now();
+        try {
+          const stored = localStorage.getItem('barber_last_seen_ts');
+          if (stored !== null) lastSeen = Number(stored);
+        } catch {}
+        const fresh = appts
+          .filter(a => new Date(a.created_at).getTime() > lastSeen)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        if (fresh.length > 0) {
+          setNewSinceLogin(fresh);
+          playChime(audioCtxRef.current);
+        }
+        try { localStorage.setItem('barber_last_seen_ts', String(Date.now())); } catch {}
       }
-      try { localStorage.setItem('barber_last_seen_ts', String(Date.now())); } catch {}
+    } catch {
+      // Network blip — keep showing the last known data instead of clearing it.
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function updateTemplates(next: Record<WaTemplateKey, string>) {
@@ -284,27 +289,42 @@ export default function AdminPage() {
   }
 
   async function updateStatus(id: string, status: 'approved' | 'rejected' | 'completed' | 'cancelled') {
-    await fetch('/api/admin/update-status', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status }),
-    });
-    setAppointments(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+    try {
+      const res = await fetch('/api/admin/update-status', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status }),
+      });
+      if (!res.ok) throw new Error();
+      setAppointments(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+    } catch {
+      alert('עדכון הסטטוס נכשל — נסה שוב 😕');
+    }
   }
 
   async function blockSlot(date: string, time: string) {
-    await fetch('/api/admin/blocked-slots', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slots: [{ date, time }] }),
-    });
-    setBlockedSlots(prev => [...prev, { date, time }]);
+    try {
+      const res = await fetch('/api/admin/blocked-slots', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slots: [{ date, time }] }),
+      });
+      if (!res.ok) throw new Error();
+      setBlockedSlots(prev => [...prev, { date, time }]);
+    } catch {
+      alert('חסימת השעה נכשלה — נסה שוב 😕');
+    }
   }
 
   async function unblockSlot(date: string, time: string) {
-    await fetch('/api/admin/blocked-slots', {
-      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slots: [{ date, time }] }),
-    });
-    setBlockedSlots(prev => prev.filter(s => !(s.date === date && s.time === time)));
+    try {
+      const res = await fetch('/api/admin/blocked-slots', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slots: [{ date, time }] }),
+      });
+      if (!res.ok) throw new Error();
+      setBlockedSlots(prev => prev.filter(s => !(s.date === date && s.time === time)));
+    } catch {
+      alert('ביטול החסימה נכשל — נסה שוב 😕');
+    }
   }
 
   useEffect(() => {

@@ -15,6 +15,10 @@ export async function POST(req: NextRequest) {
 
   const { id, status } = await req.json();
 
+  if (!id) {
+    return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+  }
+
   if (!['approved', 'rejected', 'pending', 'in_progress', 'completed', 'cancelled'].includes(status)) {
     return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
   }
