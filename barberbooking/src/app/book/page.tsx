@@ -170,6 +170,10 @@ function BookContent() {
 
   async function handleDateContinue() {
     setDateError('');
+    if (date < getMinDate()) {
+      setDateError('לא ניתן לבחור תאריך שעבר. בחר תאריך אחר.');
+      return;
+    }
     if (new Date(`${date}T12:00:00`).getDay() === 6) {
       setDateError('המספרה סגורה בשבת — בחר תאריך אחר.');
       return;
@@ -459,7 +463,12 @@ function BookContent() {
                   type="date"
                   min={getMinDate()}
                   value={date}
-                  onChange={(e) => { setDate(e.target.value); setDateError(''); }}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v && v < getMinDate()) { setDateError('לא ניתן לבחור תאריך שעבר. בחר תאריך אחר.'); return; }
+                    setDate(v);
+                    setDateError('');
+                  }}
                   className="input-field"
                   style={{ textAlign: 'center', fontSize: '1.125rem', background: 'transparent', border: 'none', boxShadow: 'none', padding: '1.25rem' }}
                 />
