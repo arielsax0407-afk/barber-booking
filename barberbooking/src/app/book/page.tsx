@@ -48,6 +48,20 @@ function getNowTimeJerusalem() {
   return new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
 }
 
+function maxRecurringEnd(start: string) {
+  const d = new Date(`${start}T12:00:00`);
+  d.setMonth(d.getMonth() + 3);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+}
+
+const HEBREW_WEEKDAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+
+const SKIP_REASON_LABELS: Record<string, string> = {
+  taken: 'כבר תפוס',
+  saturday: 'שבת',
+  past: 'תאריך עבר',
+};
+
 function BarberAvatar({ barber, size = 72 }: { barber: Barber; size?: number }) {
   const colors = ['#7C3AED', '#A855F7', '#5B21B6', '#C026D3'];
   const colorIndex = barber.name.charCodeAt(0) % colors.length;
@@ -97,6 +111,10 @@ function BookContent() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [appointmentId, setAppointmentId] = useState('');
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [frequency, setFrequency] = useState<'weekly' | 'monthly'>('weekly');
+  const [endDate, setEndDate] = useState('');
+  const [recurringResult, setRecurringResult] = useState<{ booked: number; skipped: { date: string; reason: string }[] } | null>(null);
   const [error, setError]         = useState('');
   const [dateError, setDateError] = useState('');
   const [welcomeBack, setWelcomeBack] = useState<{ name: string; phone: string; service: string } | null>(null);
@@ -232,6 +250,31 @@ function BookContent() {
     }
   }
 
+  async function handleRecurringSubmit() {
+    if (!endDate) {
+      setError('בחר תאריך סיום לתור הקבוע');
+      return;
+    }
+    setSubmitting(true);
+    setError('');
+    try {
+      const res = await fetch('/api/book-recurring', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, service, barber_id: barberId || null, time, startDate: date, frequency, endDate }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setError(json.error || 'שגיאה בקביעת התור הקבוע. אנא נסה שוב.'); return; }
+      try { localStorage.setItem(LAST_BOOKING_KEY, JSON.stringify({ name, phone, service })); } catch {}
+      setRecurringResult({ booked: json.booked, skipped: json.skipped ?? [] });
+      setDone(true);
+    } catch {
+      setError('שגיאת תקשורת — בדוק את החיבור לאינטרנט ונסה שוב.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   /* ── Success screen ───────────────────────────────────────── */
   if (done) {
     void appointmentId;
@@ -249,32 +292,79 @@ function BookContent() {
             </svg>
           </div>
 
-          <p style={{ fontSize: '0.7rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--amber)', marginBottom: '0.75rem', fontWeight: 600 }}>הצלחה</p>
-          <h2 className="serif" style={{ fontSize: '2.25rem', fontWeight: 400, marginBottom: '0.75rem', color: 'var(--text)' }}>התור נקבע!</h2>
-          <p style={{ color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '2rem', fontSize: '0.9rem' }}>
-            התור שלך אושר ונקבע בהצלחה. מחכים לך!
-          </p>
+          {recurringResult ? (
+            <>
+              <p style={{ fontSize: '0.7rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--amber)', marginBottom: '0.75rem', fontWeight: 600 }}>הצלחה</p>
+              <h2 className="serif" style={{ fontSize: '2.25rem', fontWeight: 400, marginBottom: '0.75rem', color: 'var(--text)' }}>נקבעו {recurringResult.booked} תורים ✅</h2>
+              <p style={{ color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '2rem', fontSize: '0.9rem' }}>
+                התור הקבוע שלך נקבע בהצלחה. מחכים לך!
+              </p>
 
-          <div className="glass-card p-6 text-right mb-6" style={{ gap: '0.75rem', display: 'flex', flexDirection: 'column', background: '#fff' }}>
-            {[
-              ['ספר', barberName || '—'],
-              ['שירות', svcObj?.name ?? ''],
-              ['תאריך', formatDate(date)],
-              ['שעה', time],
-              ['שם', name],
-              ['טלפון', phone],
-            ].map(([l, v]) => (
-              <div key={l} className="flex justify-between items-start" style={{ fontSize: '0.875rem', gap: '0.75rem' }}>
-                <span style={{ color: 'var(--text-dim)', fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600, flexShrink: 0, paddingTop: 2 }}>{l}</span>
-                <span style={{ fontWeight: 600, color: 'var(--text)', wordBreak: 'break-word', textAlign: 'left', minWidth: 0 }}>{v}</span>
+              <div className="glass-card p-6 text-right mb-6" style={{ gap: '0.75rem', display: 'flex', flexDirection: 'column', background: '#fff' }}>
+                {[
+                  ['ספר', barberName || '—'],
+                  ['שירות', svcObj?.name ?? ''],
+                  ['שם', name],
+                  ['טלפון', phone],
+                ].map(([l, v]) => (
+                  <div key={l} className="flex justify-between items-start" style={{ fontSize: '0.875rem', gap: '0.75rem' }}>
+                    <span style={{ color: 'var(--text-dim)', fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600, flexShrink: 0, paddingTop: 2 }}>{l}</span>
+                    <span style={{ fontWeight: 600, color: 'var(--text)', wordBreak: 'break-word', textAlign: 'left', minWidth: 0 }}>{v}</span>
+                  </div>
+                ))}
+                <div className="divider" style={{ margin: '0.25rem 0' }} />
+                <div className="flex justify-between items-center">
+                  <span style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 600 }}>תורים שנקבעו</span>
+                  <span className="badge badge-approved">{recurringResult.booked}</span>
+                </div>
               </div>
-            ))}
-            <div className="divider" style={{ margin: '0.25rem 0' }} />
-            <div className="flex justify-between items-center">
-              <span style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 600 }}>סטטוס</span>
-              <span className="badge badge-approved">מאושר</span>
-            </div>
-          </div>
+
+              {recurringResult.skipped.length > 0 && (
+                <div className="glass-card p-4 text-right mb-6" style={{ background: '#fff' }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontWeight: 700, marginBottom: '0.5rem' }}>
+                    דילגנו על {recurringResult.skipped.length} תאריכים:
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                    {recurringResult.skipped.map((s) => (
+                      <div key={s.date} className="flex justify-between items-center" style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        <span>{formatDate(s.date)}</span>
+                        <span>{SKIP_REASON_LABELS[s.reason] ?? s.reason}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: '0.7rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--amber)', marginBottom: '0.75rem', fontWeight: 600 }}>הצלחה</p>
+              <h2 className="serif" style={{ fontSize: '2.25rem', fontWeight: 400, marginBottom: '0.75rem', color: 'var(--text)' }}>התור נקבע!</h2>
+              <p style={{ color: 'var(--text-muted)', lineHeight: 1.7, marginBottom: '2rem', fontSize: '0.9rem' }}>
+                התור שלך אושר ונקבע בהצלחה. מחכים לך!
+              </p>
+
+              <div className="glass-card p-6 text-right mb-6" style={{ gap: '0.75rem', display: 'flex', flexDirection: 'column', background: '#fff' }}>
+                {[
+                  ['ספר', barberName || '—'],
+                  ['שירות', svcObj?.name ?? ''],
+                  ['תאריך', formatDate(date)],
+                  ['שעה', time],
+                  ['שם', name],
+                  ['טלפון', phone],
+                ].map(([l, v]) => (
+                  <div key={l} className="flex justify-between items-start" style={{ fontSize: '0.875rem', gap: '0.75rem' }}>
+                    <span style={{ color: 'var(--text-dim)', fontSize: '0.7rem', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600, flexShrink: 0, paddingTop: 2 }}>{l}</span>
+                    <span style={{ fontWeight: 600, color: 'var(--text)', wordBreak: 'break-word', textAlign: 'left', minWidth: 0 }}>{v}</span>
+                  </div>
+                ))}
+                <div className="divider" style={{ margin: '0.25rem 0' }} />
+                <div className="flex justify-between items-center">
+                  <span style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 600 }}>סטטוס</span>
+                  <span className="badge badge-approved">מאושר</span>
+                </div>
+              </div>
+            </>
+          )}
 
           <button className="btn-primary w-full" onClick={() => router.push(`/my-appointments?phone=${encodeURIComponent(phone)}`)} style={{ width: '100%', marginBottom: '0.75rem' }}>
             התורים שלי
@@ -614,6 +704,62 @@ function BookContent() {
                 </div>
               </div>
 
+              <div className="glass-card-amber mb-6" style={{ padding: '1rem 1.25rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', gap: '0.75rem' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)' }}>הפוך לתור קבוע 🔁</span>
+                  <input
+                    type="checkbox"
+                    checked={isRecurring}
+                    onChange={(e) => setIsRecurring(e.target.checked)}
+                    style={{ width: 20, height: 20, accentColor: 'var(--amber)', cursor: 'pointer' }}
+                  />
+                </label>
+
+                {isRecurring && (
+                  <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setFrequency('weekly')}
+                        className={`glass-card ${frequency === 'weekly' ? 'card-selected' : ''}`}
+                        style={{ flex: 1, padding: '0.6rem', textAlign: 'center', cursor: 'pointer', background: frequency === 'weekly' ? undefined : '#fff', border: '1px solid var(--glass-border)', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)' }}
+                      >
+                        כל שבוע
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFrequency('monthly')}
+                        className={`glass-card ${frequency === 'monthly' ? 'card-selected' : ''}`}
+                        style={{ flex: 1, padding: '0.6rem', textAlign: 'center', cursor: 'pointer', background: frequency === 'monthly' ? undefined : '#fff', border: '1px solid var(--glass-border)', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)' }}
+                      >
+                        כל חודש
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="input-label">עד תאריך</label>
+                      <input
+                        type="date"
+                        min={date}
+                        max={maxRecurringEnd(date)}
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="input-field"
+                      />
+                      <p style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '0.25rem' }}>עד 3 חודשים קדימה</p>
+                    </div>
+
+                    {endDate && (
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                        {frequency === 'weekly'
+                          ? `ייקבע תור כל שבוע ביום ${HEBREW_WEEKDAYS[new Date(`${date}T12:00:00`).getDay()]} בשעה ${time}, עד ${formatDate(endDate)}. נדלג אוטומטית על תאריכים תפוסים.`
+                          : `ייקבע תור כל חודש בתאריך ${parseInt(date.split('-')[2])} לחודש בשעה ${time}, עד ${formatDate(endDate)}. נדלג אוטומטית על תאריכים תפוסים.`}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {error && (
                 <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 'var(--radius)', padding: '0.75rem 1rem', marginBottom: '1.25rem', color: '#991B1B', fontSize: '0.875rem', textAlign: 'center', fontWeight: 500 }}>
                   {error}
@@ -622,13 +768,13 @@ function BookContent() {
 
               <div className="flex gap-3">
                 <button className="btn-ghost" onClick={goBack} disabled={submitting} style={{ flex: 1 }}>חזור</button>
-                <button className="btn-primary" onClick={handleSubmit} disabled={submitting} style={{ flex: 2 }}>
+                <button className="btn-primary" onClick={isRecurring ? handleRecurringSubmit : handleSubmit} disabled={submitting} style={{ flex: 2 }}>
                   {submitting ? (
                     <span className="flex items-center justify-center gap-2">
                       <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.6)', borderTopColor: 'transparent', borderRadius: '50%', display: 'inline-block', animation: 'spin-slow 0.7s linear infinite' }} />
                       שולח...
                     </span>
-                  ) : 'אשר וקבע תור'}
+                  ) : isRecurring ? 'קבע תור קבוע' : 'אשר וקבע תור'}
                 </button>
               </div>
               <p style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.75rem', marginTop: '1rem', letterSpacing: '0.05em' }}>
