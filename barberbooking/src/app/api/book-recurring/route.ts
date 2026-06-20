@@ -84,11 +84,6 @@ async function sendRecurringSummaryEmail(params: {
     if (data?.email) barberEmail = data.email;
   }
   if (barberEmail) await sendEmail(barberEmail, subject, html);
-
-  const managerEmail = process.env.ADMIN_EMAIL;
-  if (managerEmail && managerEmail !== 'admin@example.com') {
-    await sendEmail(managerEmail, subject, html);
-  }
 }
 
 function toDateStr(d: Date): string {

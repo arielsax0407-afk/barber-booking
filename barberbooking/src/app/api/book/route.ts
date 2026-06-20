@@ -82,12 +82,6 @@ async function sendBookingEmails(params: {
     if (data?.email) barberEmail = data.email;
   }
   if (barberEmail) await sendEmail(barberEmail, subject, html);
-
-  // Send to manager
-  const managerEmail = process.env.ADMIN_EMAIL;
-  if (managerEmail && managerEmail !== 'admin@example.com') {
-    await sendEmail(managerEmail, subject, html);
-  }
 }
 
 export async function POST(req: NextRequest) {
