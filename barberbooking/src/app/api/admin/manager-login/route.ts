@@ -3,9 +3,11 @@ import { managerSessionToken } from '@/lib/barberAuth';
 
 export async function POST(req: NextRequest) {
   const { password } = await req.json();
-  const managerPassword = process.env.MANAGER_PASSWORD || 'manager123';
+  const managerPassword = process.env.MANAGER_PASSWORD;
 
-  if (password !== managerPassword) {
+  // No hardcoded fallback — this file is public source, so a default
+  // password baked into it would let anyone log in as the manager.
+  if (!managerPassword || password !== managerPassword) {
     return NextResponse.json({ error: 'סיסמה שגויה' }, { status: 401 });
   }
 

@@ -16,6 +16,17 @@ function formatDate(d: string) {
   return `${parseInt(parts[2])} ${MONTHS[parseInt(parts[1]) - 1]}`;
 }
 
+function jerusalemNow(): { date: string; time: string } {
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+  const map: Record<string, string> = {};
+  for (const p of fmt.formatToParts(new Date())) map[p.type] = p.value;
+  return { date: `${map.year}-${map.month}-${map.day}`, time: `${map.hour}:${map.minute}` };
+}
+
 async function sendEmail(to: string, subject: string, html: string) {
   const key = process.env.RESEND_API_KEY;
   if (!key || key.startsWith('re_xxx')) return;
@@ -92,6 +103,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
 
+  const { date: todayJ, time: nowJ } = jerusalemNow();
+  if (date < todayJ || (date === todayJ && time < nowJ)) {
+    return NextResponse.json({ error: 'לא ניתן לקבוע תור לתאריך או שעה שכבר עברו' }, { status: 400 });
+  }
+
+  // The shop is closed on Saturday — parsing at noon avoids any timezone edge
+  // case shifting the calendar date when resolving its day of week.
+  if (new Date(`${date}T12:00:00`).getDay() === 6) {
+    return NextResponse.json({ error: 'המספרה סגורה בשבת — בחר תאריך אחר' }, { status: 400 });
+  }
+
   const sb = supabaseAdmin();
   const { data, error } = await sb
     .from('appointments')
@@ -108,6 +130,9 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error || !data) {
+    if (error?.code === '23505') {
+      return NextResponse.json({ error: 'השעה הזו נתפסה הרגע — אנא בחר שעה אחרת' }, { status: 409 });
+    }
     return NextResponse.json({ error: error?.message ?? 'Insert failed' }, { status: 500 });
   }
 

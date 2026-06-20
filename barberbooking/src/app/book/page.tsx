@@ -40,7 +40,13 @@ function formatDate(d: string) {
   return `${parseInt(day)} ${months[parseInt(m) - 1]} ${y}`;
 }
 
-function getMinDate() { return new Date().toISOString().split('T')[0]; }
+function getMinDate() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+}
+
+function getNowTimeJerusalem() {
+  return new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
+}
 
 function BarberAvatar({ barber, size = 72 }: { barber: Barber; size?: number }) {
   const colors = ['#7C3AED', '#A855F7', '#5B21B6', '#C026D3'];
@@ -164,12 +170,18 @@ function BookContent() {
 
   async function handleDateContinue() {
     setDateError('');
+    if (new Date(`${date}T12:00:00`).getDay() === 6) {
+      setDateError('המספרה סגורה בשבת — בחר תאריך אחר.');
+      return;
+    }
     const taken = await loadSlots(date);
     if (taken === null) {
       setDateError('שגיאה בבדיקת השעות הפנויות — בדוק את החיבור ונסה שוב.');
       return;
     }
-    if (TIME_SLOTS.every((t) => taken.includes(t))) {
+    const isToday = date === getMinDate();
+    const nowTime = isToday ? getNowTimeJerusalem() : null;
+    if (TIME_SLOTS.every((t) => taken.includes(t) || (nowTime !== null && t < nowTime))) {
       setDateError('אין תורים פנויים בתאריך זה. נסה תאריך אחר.');
       return;
     }
@@ -200,7 +212,7 @@ function BookContent() {
         body: JSON.stringify({ name, phone, service, date, time, barber_id: barberId || null }),
       });
       const json = await res.json();
-      if (!res.ok || !json.id) { setError('שגיאה בשמירת התור. אנא נסה שוב.'); return; }
+      if (!res.ok || !json.id) { setError(json.error || 'שגיאה בשמירת התור. אנא נסה שוב.'); return; }
       fetch('/api/notify-admin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -502,7 +514,8 @@ function BookContent() {
               ) : (
                 <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
                   {TIME_SLOTS.map((slot) => {
-                    const taken    = takenSlots.includes(slot);
+                    const isPastToday = date === getMinDate() && slot < getNowTimeJerusalem();
+                    const taken    = takenSlots.includes(slot) || isPastToday;
                     const selected = time === slot;
                     return (
                       <button

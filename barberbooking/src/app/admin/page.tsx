@@ -66,7 +66,9 @@ function fmtDate(d: string) {
   return `${parseInt(day)} ${months[parseInt(m) - 1]}`;
 }
 
-function getToday() { return new Date().toISOString().split('T')[0]; }
+function getToday() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+}
 
 function getWeekDays(ref: string): string[] {
   const d = new Date(ref);

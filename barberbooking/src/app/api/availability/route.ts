@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { TIME_SLOTS } from '@/lib/services';
 
 export async function GET(req: NextRequest) {
   const date = req.nextUrl.searchParams.get('date');
   const barberId = req.nextUrl.searchParams.get('barber_id');
   if (!date) return NextResponse.json({ takenSlots: [] });
+
+  // The shop is closed on Saturday — report every slot as taken instead of
+  // silently saying the day is wide open.
+  if (new Date(`${date}T12:00:00`).getDay() === 6) {
+    return NextResponse.json({ takenSlots: TIME_SLOTS });
+  }
 
   const sb = supabaseAdmin();
 

@@ -66,7 +66,9 @@ type BlockedSlot = {
 };
 
 function svcName(id: string) { return SERVICES.find(s => s.id === id)?.name ?? id; }
-function getToday() { return new Date().toISOString().split('T')[0]; }
+function getToday() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+}
 
 function fmtDate(d: string) {
   if (!d) return '';

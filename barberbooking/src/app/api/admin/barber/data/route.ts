@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   ]);
 
   // Shop-wide averages (no other barber's identity/numbers exposed — aggregate only)
-  const today = new Date().toISOString().split('T')[0];
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const monthPfx = today.slice(0, 7);
   const activeStatuses = ['approved', 'in_progress', 'completed'];
   const monthAll = (allAppts ?? []).filter(a => a.date.startsWith(monthPfx) && activeStatuses.includes(a.status));
