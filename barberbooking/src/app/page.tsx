@@ -4,7 +4,6 @@ import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from 're
 import Link from 'next/link';
 import { TIME_SLOTS, LOYALTY_THRESHOLD, LOYALTY_REWARD_LABEL } from '@/lib/services';
 import Aurora from '@/components/ui/Aurora';
-import BookingBot from '@/components/BookingBot';
 
 type Barber = { id: string; name: string; specialty: string | null; image_url: string | null };
 
@@ -909,9 +908,6 @@ export default function HomePage() {
           >‹</button>
         </div>
       )}
-
-      {/* ── Booking chat assistant ────────────────────────── */}
-      <BookingBot />
 
       {/* ── Styles ───────────────────────────────────────── */}
       <style>{`
