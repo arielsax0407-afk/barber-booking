@@ -72,6 +72,9 @@ type BlockedSlot = {
 };
 
 function svcName(id: string) { return SERVICES.find(s => s.id === id)?.name ?? id; }
+function apptPrice(a: { service: string; is_premium?: boolean; premium_price?: number | null }): number {
+  return a.is_premium && a.premium_price ? a.premium_price : (PRICE_MAP[a.service] ?? 0);
+}
 function getToday() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 }
@@ -95,9 +98,9 @@ function getWeekDays(ref: string): string[] {
 
 function normTime(t: string): string { return t ? t.slice(0, 5) : t; }
 
-function cancelWaLink(a: { name: string; phone: string; service: string; date: string; time: string }): string {
+function cancelWaLink(a: { name: string; phone: string; service: string; date: string; time: string; is_premium?: boolean; premium_price?: number | null }): string {
   const msg = fillTemplate(DEFAULT_WA_TEMPLATES.cancel, {
-    name: a.name, service: svcName(a.service), date: fmtDate(a.date), time: a.time, price: PRICE_MAP[a.service] ?? 0,
+    name: a.name, service: svcName(a.service), date: fmtDate(a.date), time: a.time, price: apptPrice(a),
   });
   return waLink(a.phone, msg);
 }
@@ -377,9 +380,9 @@ export default function BarberAdminPage() {
   const monthAppts  = appointments.filter(a => a.date.startsWith(monthPrefix));
 
   const activeStatuses = ['approved', 'in_progress', 'completed'];
-  const todayRev  = todayAppts.filter(a => activeStatuses.includes(a.status)).reduce((s, a) => s + (PRICE_MAP[a.service] ?? 0), 0);
-  const weekRev   = weekAppts.filter(a => activeStatuses.includes(a.status)).reduce((s, a) => s + (PRICE_MAP[a.service] ?? 0), 0);
-  const monthRev  = monthAppts.filter(a => activeStatuses.includes(a.status)).reduce((s, a) => s + (PRICE_MAP[a.service] ?? 0), 0);
+  const todayRev  = todayAppts.filter(a => activeStatuses.includes(a.status)).reduce((s, a) => s + apptPrice(a), 0);
+  const weekRev   = weekAppts.filter(a => activeStatuses.includes(a.status)).reduce((s, a) => s + apptPrice(a), 0);
+  const monthRev  = monthAppts.filter(a => activeStatuses.includes(a.status)).reduce((s, a) => s + apptPrice(a), 0);
 
   const svcCount: Record<string, number> = {};
   appointments.forEach(a => { if (activeStatuses.includes(a.status)) svcCount[a.service] = (svcCount[a.service] ?? 0) + 1; });
@@ -395,7 +398,7 @@ export default function BarberAdminPage() {
   const topDay = Object.entries(dayCount).sort((a, b) => b[1] - a[1])[0];
 
   const allActive = appointments.filter(a => activeStatuses.includes(a.status));
-  const avgRevenue = allActive.length ? Math.round(allActive.reduce((s, a) => s + (PRICE_MAP[a.service] ?? 0), 0) / allActive.length) : 0;
+  const avgRevenue = allActive.length ? Math.round(allActive.reduce((s, a) => s + apptPrice(a), 0) / allActive.length) : 0;
 
   // Utilization, cancellation rate, goal progress, shop comparison
   const currentWeekDays  = getWeekDays(today);
@@ -577,7 +580,7 @@ export default function BarberAdminPage() {
                                     +{apptsHere.length - 1}
                                   </span>
                                 )}
-                                <p style={{ fontSize: '0.6rem', color: ac.txt, fontWeight: 700, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{appt.name}</p>
+                                <p style={{ fontSize: '0.6rem', color: ac.txt, fontWeight: 700, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{appt.is_premium && '⭐ '}{appt.name}</p>
                                 <p style={{ fontSize: '0.55rem', color: TM, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svcName(appt.service)}</p>
                               </div>
                             </div>
@@ -653,8 +656,8 @@ export default function BarberAdminPage() {
                                   ⚠️ {apptsHere.length} תורים חופפים בשעה זו — {apptsHere.slice(1).map(x => x.name).join(', ')}
                                 </p>
                               )}
-                              <p style={{ fontSize: '0.95rem', fontWeight: 600, color: T }}>{appt.name}</p>
-                              <p style={{ fontSize: '0.75rem', color: TM }}>{svcName(appt.service)} · ₪{PRICE_MAP[appt.service] ?? 0}</p>
+                              <p style={{ fontSize: '0.95rem', fontWeight: 600, color: T }}>{appt.is_premium && '⭐ '}{appt.name}</p>
+                              <p style={{ fontSize: '0.75rem', color: TM }}>{svcName(appt.service)} · ₪{apptPrice(appt)}</p>
                               <a href={`tel:${appt.phone}`} style={{ fontSize: '0.72rem', color: TD, textDecoration: 'none' }}>📞 {appt.phone}</a>
                             </div>
                           </div>
@@ -1019,7 +1022,7 @@ function ApptCard({ appt: a, onUpdate }: { appt: Appointment; onUpdate: (id: str
     <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, padding: '1rem 1.25rem' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.5rem' }}>
         <div>
-          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 600, color: T }}>{a.name}</p>
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1rem', fontWeight: 600, color: T }}>{a.is_premium && '⭐ '}{a.name}</p>
           <a href={`tel:${a.phone}`} style={{ fontSize: '0.75rem', color: TM, textDecoration: 'none' }}>📞 {a.phone}</a>
         </div>
         <div style={{ textAlign: 'left', flexShrink: 0 }}>
@@ -1033,7 +1036,7 @@ function ApptCard({ appt: a, onUpdate }: { appt: Appointment; onUpdate: (id: str
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.75rem' }}>
         <span style={{ fontSize: '0.8rem', color: TM }}>{svcName(a.service)}</span>
-        <span style={{ fontSize: '0.7rem', color: TD }}>· ₪{PRICE_MAP[a.service] ?? 0}</span>
+        <span style={{ fontSize: '0.7rem', color: TD }}>· ₪{apptPrice(a)}</span>
       </div>
 
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>

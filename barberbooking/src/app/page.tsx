@@ -584,9 +584,14 @@ export default function HomePage() {
             <Link href="/book" className="bph-btn">
               קבע תור עכשיו
             </Link>
-            <Link href="/my-appointments" className="bph-link">
-              התורים שלי
-            </Link>
+            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+              <Link href="/my-appointments" className="bph-link">
+                התורים שלי
+              </Link>
+              <Link href="/premium" className="bph-link-premium">
+                ⭐ תורי פרמיום
+              </Link>
+            </div>
           </div>
 
           <div className={heroAnim(4)} style={{ marginTop: '1.75rem' }}>
@@ -1003,6 +1008,18 @@ export default function HomePage() {
           transition: all 0.3s ease;
         }
         .bph-link:hover { color: var(--gold-light); border-color: var(--gold); }
+        .bph-link-premium {
+          color: #D4AF37;
+          font-size: 0.75rem;
+          font-weight: 600;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          text-decoration: none;
+          border-bottom: 1px solid transparent;
+          padding-bottom: 4px;
+          transition: all 0.3s ease;
+        }
+        .bph-link-premium:hover { color: #F0CB66; border-color: #D4AF37; }
 
         /* Hero */
         .bph-hero {

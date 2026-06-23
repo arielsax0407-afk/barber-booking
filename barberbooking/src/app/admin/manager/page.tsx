@@ -51,6 +51,7 @@ type Appointment = {
   date: string; time: string; status: string; created_at: string;
   barber_id?: string | null;
   barbers?: { name: string; specialty: string | null } | null;
+  is_premium?: boolean; premium_price?: number | null;
 };
 type Barber = {
   id: string; name: string; specialty: string | null;
@@ -63,6 +64,9 @@ type BlockedSlot = {
 };
 
 function svcName(id: string) { return SERVICES.find(s => s.id === id)?.name ?? id; }
+function apptPrice(a: { service: string; is_premium?: boolean; premium_price?: number | null }): number {
+  return a.is_premium && a.premium_price ? a.premium_price : (PRICE_MAP[a.service] ?? 0);
+}
 function getToday() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 }
@@ -103,9 +107,9 @@ function pctChange(curr: number, prev: number): number {
   return curr > 0 ? 100 : 0;
 }
 
-function cancelWaLink(a: { name: string; phone: string; service: string; date: string; time: string }): string {
+function cancelWaLink(a: { name: string; phone: string; service: string; date: string; time: string; is_premium?: boolean; premium_price?: number | null }): string {
   const msg = fillTemplate(DEFAULT_WA_TEMPLATES.cancel, {
-    name: a.name, service: svcName(a.service), date: fmtDate(a.date), time: a.time, price: PRICE_MAP[a.service] ?? 0,
+    name: a.name, service: svcName(a.service), date: fmtDate(a.date), time: a.time, price: apptPrice(a),
   });
   return waLink(a.phone, msg);
 }
@@ -117,7 +121,7 @@ function BarChart({ barbers, appointments }: { barbers: Barber[]; appointments: 
   const data = barbers.map(b => {
     const rev = appointments
       .filter(a => a.barber_id === b.id && a.date.startsWith(monthPfx) && ['approved','completed'].includes(a.status))
-      .reduce((s, a) => s + (PRICE_MAP[a.service] ?? 0), 0);
+      .reduce((s, a) => s + apptPrice(a), 0);
     return { name: b.name, revenue: rev };
   });
   const max = Math.max(...data.map(d => d.revenue), 1);
@@ -155,7 +159,7 @@ function LineChart({ appointments }: { appointments: Appointment[] }) {
     day,
     rev: appointments
       .filter(a => a.date === day && ['approved','completed'].includes(a.status))
-      .reduce((s, a) => s + (PRICE_MAP[a.service] ?? 0), 0),
+      .reduce((s, a) => s + apptPrice(a), 0),
   }));
 
   const maxRev = Math.max(...data.map(d => d.rev), 1);
@@ -353,10 +357,10 @@ export default function ManagerPage() {
       const bName = barbers.find(b => b.id === a.barber_id)?.name ?? '—';
       return [
         a.date, a.time, a.name, a.phone,
-        SVC_LABELS[a.service] || a.service,
+        (a.is_premium ? '⭐ ' : '') + (SVC_LABELS[a.service] || a.service),
         bName,
         STATUS_LABELS[a.status] || a.status,
-        PRICE_MAP[a.service] ?? 0,
+        apptPrice(a),
       ].map(v => `"${v}"`).join(',');
     });
     const csv  = '﻿' + header.join(',') + '\n' + rows.join('\n');
@@ -421,7 +425,7 @@ export default function ManagerPage() {
   const monthAppts   = appointments.filter(a => a.date.startsWith(monthPfx));
 
   const active       = (arr: Appointment[]) => arr.filter(a => ['approved','completed'].includes(a.status));
-  const totalRev     = (arr: Appointment[]) => active(arr).reduce((s, a) => s + (PRICE_MAP[a.service] ?? 0), 0);
+  const totalRev     = (arr: Appointment[]) => active(arr).reduce((s, a) => s + apptPrice(a), 0);
 
   const todayRev     = totalRev(todayAppts);
   const weekRev      = totalRev(weekAppts);
@@ -484,7 +488,7 @@ export default function ManagerPage() {
     if (sortBy === 'date')    cmp = a.date.localeCompare(b.date) || a.time.localeCompare(b.time);
     if (sortBy === 'barber')  cmp = (a.barbers?.name ?? '').localeCompare(b.barbers?.name ?? '');
     if (sortBy === 'service') cmp = (a.service).localeCompare(b.service);
-    if (sortBy === 'revenue') cmp = (PRICE_MAP[a.service] ?? 0) - (PRICE_MAP[b.service] ?? 0);
+    if (sortBy === 'revenue') cmp = apptPrice(a) - apptPrice(b);
     return sortDir === 'asc' ? cmp : -cmp;
   });
 
@@ -633,7 +637,7 @@ export default function ManagerPage() {
               <p style={{ fontSize: '0.7rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: G, marginBottom: '1rem' }}>תורים היום לפי ספר</p>
               {barbers.filter(b => b.is_active).map(b => {
                 const cnt = todayAppts.filter(a => a.barber_id === b.id && a.status !== 'cancelled').length;
-                const rev = todayAppts.filter(a => a.barber_id === b.id && ['approved','completed'].includes(a.status)).reduce((s, a) => s + (PRICE_MAP[a.service] ?? 0), 0);
+                const rev = todayAppts.filter(a => a.barber_id === b.id && ['approved','completed'].includes(a.status)).reduce((s, a) => s + apptPrice(a), 0);
                 return (
                   <div key={b.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: `1px solid ${BDR}` }}>
                     <span style={{ fontSize: '0.875rem', color: T, fontWeight: 500 }}>{b.name}</span>
@@ -715,7 +719,7 @@ export default function ManagerPage() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                           {upcoming.slice(0, 5).map(a => (
                             <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0.875rem', background: B2, borderRadius: R, border: `1px solid ${BDR}`, alignItems: 'center' }}>
-                              <span style={{ fontSize: '0.85rem', color: T, fontWeight: 500 }}>{a.name}</span>
+                              <span style={{ fontSize: '0.85rem', color: T, fontWeight: 500 }}>{a.is_premium && '⭐ '}{a.name}</span>
                               <span style={{ fontSize: '0.78rem', color: TM }}>{svcName(a.service)}</span>
                               <span style={{ fontSize: '0.78rem', color: G }}>{fmtDate(a.date)} {a.time}</span>
                             </div>
@@ -811,13 +815,13 @@ export default function ManagerPage() {
                   return (
                     <div key={a.id} style={{ display: 'grid', gridTemplateColumns: '1fr 60px 1.2fr 1fr 80px 1fr 60px', gap: '0.5rem', padding: '0.75rem 1rem', borderBottom: idx < filteredSorted.length - 1 ? `1px solid rgba(178,102,255,0.06)` : 'none', alignItems: 'center' }}>
                       <div>
-                        <p style={{ fontSize: '0.875rem', fontWeight: 600, color: T }}>{a.name}</p>
+                        <p style={{ fontSize: '0.875rem', fontWeight: 600, color: T }}>{a.is_premium && '⭐ '}{a.name}</p>
                         <a href={`tel:${a.phone}`} style={{ fontSize: '0.7rem', color: TD, textDecoration: 'none' }}>{a.phone}</a>
                       </div>
                       <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.9rem', color: G, fontWeight: 600 }}>{a.time}</span>
-                      <span style={{ fontSize: '0.82rem', color: TM }}>{svcName(a.service)}</span>
+                      <span style={{ fontSize: '0.82rem', color: TM }}>{a.is_premium && '⭐ '}{svcName(a.service)}</span>
                       <span style={{ fontSize: '0.82rem', color: TM }}>{bName}</span>
-                      <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.9rem', color: G, fontWeight: 600 }}>₪{PRICE_MAP[a.service] ?? 0}</span>
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.9rem', color: G, fontWeight: 600 }}>₪{apptPrice(a)}</span>
                       <span style={{ fontSize: '0.78rem', color: TM }}>{fmtDate(a.date)}</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                         {cfg && (
