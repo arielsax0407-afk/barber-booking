@@ -107,6 +107,20 @@ function pctChange(curr: number, prev: number): number {
   return curr > 0 ? 100 : 0;
 }
 
+// Same 3-month cap as /api/book-recurring (which clamps server-side too) —
+// this just keeps the manager's date picker from offering an out-of-range date.
+function maxRecurringEnd(start: string) {
+  const d = new Date(`${start}T12:00:00`);
+  d.setMonth(d.getMonth() + 3);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+}
+
+const RECURRING_SKIP_LABELS: Record<string, string> = {
+  taken: 'כבר תפוס',
+  saturday: 'שבת',
+  past: 'תאריך עבר',
+};
+
 function cancelWaLink(a: { name: string; phone: string; service: string; date: string; time: string; is_premium?: boolean; premium_price?: number | null }): string {
   const msg = fillTemplate(DEFAULT_WA_TEMPLATES.cancel, {
     name: a.name, service: svcName(a.service), date: fmtDate(a.date), time: a.time, price: apptPrice(a),
@@ -246,6 +260,20 @@ export default function ManagerPage() {
   const [addingBlock, setAddingBlock]       = useState(false);
   const [addBlockError, setAddBlockError]   = useState('');
 
+  // Recurring-appointment modal (manager creates on a customer's behalf)
+  const [recurringModalOpen, setRecurringModalOpen] = useState(false);
+  const [rcBarberId, setRcBarberId]     = useState('');
+  const [rcService, setRcService]       = useState(SERVICES[0].id);
+  const [rcName, setRcName]             = useState('');
+  const [rcPhone, setRcPhone]           = useState('');
+  const [rcStartDate, setRcStartDate]   = useState('');
+  const [rcTime, setRcTime]             = useState(TIME_SLOTS[0]);
+  const [rcFrequency, setRcFrequency]   = useState<'weekly' | 'monthly'>('weekly');
+  const [rcEndDate, setRcEndDate]       = useState('');
+  const [rcSubmitting, setRcSubmitting] = useState(false);
+  const [rcError, setRcError]           = useState('');
+  const [rcResult, setRcResult] = useState<{ booked: number; skipped: { date: string; reason: string }[] } | null>(null);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -343,6 +371,46 @@ export default function ManagerPage() {
     setNewBlockDate('');
     setNewBlockReason('');
     await loadData();
+  }
+
+  function openRecurringModal() {
+    setRcBarberId(barbers.find(b => b.is_active)?.id ?? '');
+    setRcService(SERVICES[0].id);
+    setRcName('');
+    setRcPhone('');
+    setRcStartDate(getToday());
+    setRcTime(TIME_SLOTS[0]);
+    setRcFrequency('weekly');
+    setRcEndDate('');
+    setRcError('');
+    setRcResult(null);
+    setRecurringModalOpen(true);
+  }
+
+  async function submitRecurring() {
+    if (!rcName.trim() || !rcPhone.trim()) { setRcError('נא למלא שם וטלפון'); return; }
+    if (!rcEndDate) { setRcError('בחר תאריך סיום'); return; }
+    setRcSubmitting(true);
+    setRcError('');
+    try {
+      const res = await fetch('/api/book-recurring', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: rcName, phone: rcPhone, service: rcService,
+          barber_id: rcBarberId || null, time: rcTime,
+          startDate: rcStartDate, frequency: rcFrequency, endDate: rcEndDate,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) { setRcError(json.error || 'שגיאה בקביעת התור הקבוע'); return; }
+      setRcResult({ booked: json.booked, skipped: json.skipped ?? [] });
+      await loadData();
+    } catch {
+      setRcError('שגיאת תקשורת — נסה שוב');
+    } finally {
+      setRcSubmitting(false);
+    }
   }
 
   async function logout() {
@@ -523,6 +591,10 @@ export default function ManagerPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
           <span style={{ fontSize: '0.8rem', color: G, fontWeight: 600, whiteSpace: 'nowrap' }}>👑 מנהל</span>
+          <button onClick={openRecurringModal}
+            style={{ padding: '0.3rem 0.75rem', background: GG, border: `1px solid ${BDRG}`, borderRadius: 8, color: GL, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+            צור תור קבוע ⭐
+          </button>
           <button onClick={toggleTheme} title={theme === 'dark' ? 'מצב בהיר' : 'מצב כהה'}
             style={{ padding: '0.3rem 0.6rem', background: B3, border: `1px solid ${BDR}`, borderRadius: 8, color: TM, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
             {theme === 'dark' ? '☀' : '☾'}
@@ -958,6 +1030,117 @@ export default function ManagerPage() {
           </div>
         )}
       </main>
+
+      {/* ── Recurring Appointment Modal ──────────────────────────── */}
+      {recurringModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+          onClick={e => { if (e.target === e.currentTarget) setRecurringModalOpen(false); }}>
+          <div style={{ background: B1, border: `1px solid ${BDRG}`, borderRadius: RL, padding: '2rem', width: '100%', maxWidth: 420, direction: 'rtl', maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box' }}>
+            {rcResult ? (
+              <>
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.35rem', color: G, marginBottom: '1.25rem' }}>נקבעו {rcResult.booked} תורים ✅</p>
+                {rcResult.skipped.length > 0 && (
+                  <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: R, padding: '1rem', marginBottom: '1.5rem' }}>
+                    <p style={{ fontSize: '0.75rem', color: TD, fontWeight: 700, marginBottom: '0.625rem' }}>דילגנו על {rcResult.skipped.length} תאריכים:</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem', maxHeight: 180, overflowY: 'auto' }}>
+                      {rcResult.skipped.map(s => (
+                        <div key={s.date} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: TM }}>
+                          <span>{fmtDate(s.date)}</span>
+                          <span>{RECURRING_SKIP_LABELS[s.reason] ?? s.reason}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <button onClick={() => setRecurringModalOpen(false)}
+                  style={{ width: '100%', padding: '0.75rem', background: `linear-gradient(135deg,${GD},${GL})`, border: 'none', borderRadius: R, color: '#080808', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>
+                  סגור
+                </button>
+              </>
+            ) : (
+              <>
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: T, marginBottom: '1.5rem' }}>צור תור קבוע ⭐</p>
+
+                <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: TM, marginBottom: '0.5rem' }}>ספר</label>
+                <select value={rcBarberId} onChange={e => setRcBarberId(e.target.value)}
+                  style={{ width: '100%', background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.625rem 0.875rem', color: T, fontSize: '0.875rem', outline: 'none', marginBottom: '1rem', boxSizing: 'border-box', direction: 'rtl' }}>
+                  {barbers.filter(b => b.is_active).map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+
+                <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: TM, marginBottom: '0.5rem' }}>שירות</label>
+                <select value={rcService} onChange={e => setRcService(e.target.value)}
+                  style={{ width: '100%', background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.625rem 0.875rem', color: T, fontSize: '0.875rem', outline: 'none', marginBottom: '1rem', boxSizing: 'border-box', direction: 'rtl' }}>
+                  {SERVICES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+
+                <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: TM, marginBottom: '0.5rem' }}>שם הלקוח</label>
+                <input value={rcName} onChange={e => setRcName(e.target.value)} placeholder="ישראל ישראלי"
+                  style={{ width: '100%', background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.625rem 0.875rem', color: T, fontSize: '0.875rem', outline: 'none', marginBottom: '1rem', boxSizing: 'border-box', direction: 'rtl' }} />
+
+                <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: TM, marginBottom: '0.5rem' }}>טלפון הלקוח</label>
+                <input value={rcPhone} onChange={e => setRcPhone(e.target.value)} placeholder="050-0000000" dir="ltr"
+                  style={{ width: '100%', background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.625rem 0.875rem', color: T, fontSize: '0.875rem', outline: 'none', marginBottom: '1rem', boxSizing: 'border-box', direction: 'ltr', fontFamily: 'monospace' }} />
+
+                <div style={{ display: 'flex', gap: '0.625rem', marginBottom: '1rem' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: TM, marginBottom: '0.5rem' }}>תאריך התחלה</label>
+                    <input type="date" min={getToday()} value={rcStartDate}
+                      onChange={e => {
+                        const v = e.target.value;
+                        setRcStartDate(v);
+                        const maxEnd = maxRecurringEnd(v);
+                        if (rcEndDate && rcEndDate > maxEnd) setRcEndDate(maxEnd);
+                      }}
+                      style={{ width: '100%', background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.625rem 0.875rem', color: T, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: TM, marginBottom: '0.5rem' }}>שעה</label>
+                    <select value={rcTime} onChange={e => setRcTime(e.target.value)}
+                      style={{ width: '100%', background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.625rem 0.875rem', color: T, fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', direction: 'rtl' }}>
+                      {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: TM, marginBottom: '0.5rem' }}>תדירות</label>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+                  <button type="button" onClick={() => setRcFrequency('weekly')}
+                    style={{ flex: 1, padding: '0.5rem', borderRadius: R, border: `1px solid ${rcFrequency === 'weekly' ? BDRG : BDR}`, background: rcFrequency === 'weekly' ? GG : B3, color: rcFrequency === 'weekly' ? GL : TM, fontSize: '0.8rem', fontWeight: rcFrequency === 'weekly' ? 600 : 400, cursor: 'pointer' }}>
+                    כל שבוע
+                  </button>
+                  <button type="button" onClick={() => setRcFrequency('monthly')}
+                    style={{ flex: 1, padding: '0.5rem', borderRadius: R, border: `1px solid ${rcFrequency === 'monthly' ? BDRG : BDR}`, background: rcFrequency === 'monthly' ? GG : B3, color: rcFrequency === 'monthly' ? GL : TM, fontSize: '0.8rem', fontWeight: rcFrequency === 'monthly' ? 600 : 400, cursor: 'pointer' }}>
+                    כל חודש
+                  </button>
+                </div>
+
+                <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: TM, marginBottom: '0.5rem' }}>עד תאריך</label>
+                <input type="date" min={rcStartDate || getToday()} max={rcStartDate ? maxRecurringEnd(rcStartDate) : undefined} value={rcEndDate}
+                  onChange={e => setRcEndDate(e.target.value)}
+                  style={{ width: '100%', background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.625rem 0.875rem', color: T, fontSize: '0.875rem', outline: 'none', marginBottom: '0.25rem', boxSizing: 'border-box' }} />
+                <p style={{ fontSize: '0.68rem', color: TD, marginBottom: '1rem' }}>עד 3 חודשים קדימה</p>
+
+                {rcError && (
+                  <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '0.625rem 1rem', marginBottom: '1rem', color: '#ef4444', fontSize: '0.8rem', textAlign: 'center' }}>
+                    {rcError}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '0.625rem' }}>
+                  <button onClick={submitRecurring} disabled={rcSubmitting}
+                    style={{ flex: 1, padding: '0.75rem', background: `linear-gradient(135deg,${GD},${GL})`, border: 'none', borderRadius: R, color: '#080808', fontWeight: 700, fontSize: '0.875rem', cursor: rcSubmitting ? 'default' : 'pointer', opacity: rcSubmitting ? 0.6 : 1 }}>
+                    {rcSubmitting ? 'קובע...' : 'צור תור קבוע'}
+                  </button>
+                  <button onClick={() => setRecurringModalOpen(false)}
+                    style={{ padding: '0.75rem 1.25rem', background: B3, border: `1px solid ${BDR}`, borderRadius: R, color: TM, fontSize: '0.875rem', cursor: 'pointer' }}>
+                    ביטול
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <style>{`@keyframes mgr-spin { to { transform: rotate(360deg); } }`}</style>
     </div>
