@@ -99,18 +99,19 @@ function addMonthsStr(dateStr: string, months: number): string {
   return toDateStr(d);
 }
 
-// weekly: same weekday every 7 days. monthly: same day-of-month each month —
-// a month that doesn't have that day-of-month is skipped entirely (not
-// rolled forward/back), so it never appears as an occurrence at all.
-function generateOccurrences(startDate: string, frequency: 'weekly' | 'monthly', endDate: string): string[] {
+// weekly/biweekly: same weekday every 7 or 14 days. monthly: same day-of-month
+// each month — a month that doesn't have that day-of-month is skipped
+// entirely (not rolled forward/back), so it never appears as an occurrence at all.
+function generateOccurrences(startDate: string, frequency: 'weekly' | 'biweekly' | 'monthly', endDate: string): string[] {
   const dates: string[] = [];
 
-  if (frequency === 'weekly') {
+  if (frequency === 'weekly' || frequency === 'biweekly') {
+    const stepDays = frequency === 'biweekly' ? 14 : 7;
     let cursor = new Date(`${startDate}T12:00:00`);
     while (toDateStr(cursor) <= endDate) {
       dates.push(toDateStr(cursor));
       cursor = new Date(cursor.getTime());
-      cursor.setDate(cursor.getDate() + 7);
+      cursor.setDate(cursor.getDate() + stepDays);
     }
     return dates;
   }
@@ -144,7 +145,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
 
-  if (frequency !== 'weekly' && frequency !== 'monthly') {
+  if (frequency !== 'weekly' && frequency !== 'biweekly' && frequency !== 'monthly') {
     return NextResponse.json({ error: 'Invalid frequency' }, { status: 400 });
   }
 

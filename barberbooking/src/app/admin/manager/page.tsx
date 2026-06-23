@@ -268,7 +268,7 @@ export default function ManagerPage() {
   const [rcPhone, setRcPhone]           = useState('');
   const [rcStartDate, setRcStartDate]   = useState('');
   const [rcTime, setRcTime]             = useState(TIME_SLOTS[0]);
-  const [rcFrequency, setRcFrequency]   = useState<'weekly' | 'monthly'>('weekly');
+  const [rcFrequency, setRcFrequency]   = useState<'weekly' | 'biweekly' | 'monthly'>('weekly');
   const [rcEndDate, setRcEndDate]       = useState('');
   const [rcSubmitting, setRcSubmitting] = useState(false);
   const [rcError, setRcError]           = useState('');
@@ -1107,6 +1107,10 @@ export default function ManagerPage() {
                   <button type="button" onClick={() => setRcFrequency('weekly')}
                     style={{ flex: 1, padding: '0.5rem', borderRadius: R, border: `1px solid ${rcFrequency === 'weekly' ? BDRG : BDR}`, background: rcFrequency === 'weekly' ? GG : B3, color: rcFrequency === 'weekly' ? GL : TM, fontSize: '0.8rem', fontWeight: rcFrequency === 'weekly' ? 600 : 400, cursor: 'pointer' }}>
                     כל שבוע
+                  </button>
+                  <button type="button" onClick={() => setRcFrequency('biweekly')}
+                    style={{ flex: 1, padding: '0.5rem', borderRadius: R, border: `1px solid ${rcFrequency === 'biweekly' ? BDRG : BDR}`, background: rcFrequency === 'biweekly' ? GG : B3, color: rcFrequency === 'biweekly' ? GL : TM, fontSize: '0.8rem', fontWeight: rcFrequency === 'biweekly' ? 600 : 400, cursor: 'pointer' }}>
+                    כל שבועיים
                   </button>
                   <button type="button" onClick={() => setRcFrequency('monthly')}
                     style={{ flex: 1, padding: '0.5rem', borderRadius: R, border: `1px solid ${rcFrequency === 'monthly' ? BDRG : BDR}`, background: rcFrequency === 'monthly' ? GG : B3, color: rcFrequency === 'monthly' ? GL : TM, fontSize: '0.8rem', fontWeight: rcFrequency === 'monthly' ? 600 : 400, cursor: 'pointer' }}>
