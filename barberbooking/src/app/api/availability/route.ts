@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     .from('appointments')
     .select('time')
     .eq('date', date)
-    .in('status', ['pending', 'approved', 'in_progress']);
+    .in('status', ['pending', 'approved', 'in_progress', 'premium_open']);
 
   if (barberId) {
     apptQuery = apptQuery.eq('barber_id', barberId);

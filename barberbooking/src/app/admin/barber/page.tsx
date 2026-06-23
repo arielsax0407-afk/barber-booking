@@ -22,6 +22,11 @@ const BDRG = 'var(--adm-bdrg)';
 const R    = 12;
 const RL   = 18;
 
+// ── Premium styling — gold, distinct from the regular purple theme ──
+const PG    = '#D4AF37';
+const PG_BG = 'rgba(212,175,55,0.14)';
+const PG_BDR= 'rgba(212,175,55,0.35)';
+
 const PRICE_MAP: Record<string, number> = {
   haircut: 60, beard: 40, 'haircut-beard': 90, kids: 40, fade: 70,
 };
@@ -60,6 +65,7 @@ const BLOCK_REASONS = ['הפסקה','יום חופש','פגישה','אחר'];
 type Appointment = {
   id: string; name: string; phone: string; service: string;
   date: string; time: string; status: string; created_at: string;
+  is_premium?: boolean; premium_price?: number | null;
 };
 type BlockedSlot = {
   id: string; blocked_date: string; blocked_time: string; reason: string | null; barber_id?: string | null;
@@ -116,6 +122,14 @@ export default function BarberAdminPage() {
   const [blockCustom, setBlockCustom] = useState('');
   const [blocking, setBlocking]     = useState(false);
   const [unblockId, setUnblockId]   = useState<string | null>(null);
+  const [premiumModalOpen, setPremiumModalOpen] = useState(false);
+  const [premiumDate, setPremiumDate]       = useState('');
+  const [premiumTime, setPremiumTime]       = useState(TIME_SLOTS[0]);
+  const [premiumService, setPremiumService] = useState(SERVICES[0].id);
+  const [premiumPriceInput, setPremiumPriceInput] = useState('');
+  const [premiumError, setPremiumError]     = useState('');
+  const [premiumSubmitting, setPremiumSubmitting] = useState(false);
+  const [cancelPremiumId, setCancelPremiumId] = useState<string | null>(null);
   const [shopAvgMonthRevenuePerBarber, setShopAvgMonthRevenuePerBarber] = useState(0);
   const [shopAvgRevenuePerAppt, setShopAvgRevenuePerAppt] = useState(0);
   const [monthlyGoal, setMonthlyGoal] = useState(0);
@@ -240,6 +254,60 @@ export default function BarberAdminPage() {
       alert('ביטול החסימה נכשל — נסה שוב 😕');
     } finally {
       setUnblockId(null);
+      await loadData();
+    }
+  }
+
+  function openPremiumModal() {
+    setPremiumDate(calView === 'day' ? selectedDay : getToday());
+    setPremiumTime(TIME_SLOTS[0]);
+    setPremiumService(SERVICES[0].id);
+    setPremiumPriceInput('');
+    setPremiumError('');
+    setPremiumModalOpen(true);
+  }
+
+  async function submitPremiumSlot() {
+    const price = parseInt(premiumPriceInput, 10);
+    if (!Number.isInteger(price) || price <= 0) {
+      setPremiumError('הזן מחיר פרמיום תקין');
+      return;
+    }
+    setPremiumSubmitting(true);
+    setPremiumError('');
+    try {
+      const res = await fetch('/api/admin/barber/premium-slots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: premiumDate, time: premiumTime, service: premiumService, premium_price: price }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setPremiumError(json.error || 'פתיחת תור הפרמיום נכשלה');
+        return;
+      }
+      setPremiumModalOpen(false);
+      await loadData();
+    } catch {
+      setPremiumError('פתיחת תור הפרמיום נכשלה — נסה שוב');
+    } finally {
+      setPremiumSubmitting(false);
+    }
+  }
+
+  async function cancelPremiumSlot(id: string) {
+    setCancelPremiumId(id);
+    try {
+      const res = await fetch('/api/admin/barber/premium-slots', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      alert('ביטול תור הפרמיום נכשל — נסה שוב 😕');
+    } finally {
+      setCancelPremiumId(null);
       await loadData();
     }
   }
@@ -396,6 +464,10 @@ export default function BarberAdminPage() {
                   style={{ padding: '0.4rem 0.875rem', borderRadius: R, border: `1px solid ${calView === 'day' ? BDRG : BDR}`, background: calView === 'day' ? GG : B2, color: calView === 'day' ? GL : TM, fontSize: '0.78rem', fontWeight: calView === 'day' ? 600 : 400, cursor: 'pointer' }}>
                   יום
                 </button>
+                <button onClick={openPremiumModal}
+                  style={{ padding: '0.4rem 0.875rem', borderRadius: R, border: `1px solid ${PG_BDR}`, background: PG_BG, color: PG, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+                  ⭐ פתח תור פרמיום
+                </button>
               </div>
 
               {calView === 'week' ? (
@@ -476,9 +548,24 @@ export default function BarberAdminPage() {
                         // constraint on (date, time, barber), so two appointments can in rare
                         // cases collide on the same slot. Showing only the first one would
                         // silently hide the second customer from the barber entirely.
-                        const apptsHere = appointments.filter(a => a.date === day && a.time === slot && !['cancelled','rejected'].includes(a.status));
+                        const apptsHere = appointments.filter(a => a.date === day && a.time === slot && !['cancelled','rejected'].includes(a.status) && !(a.is_premium && a.status === 'premium_open'));
                         const appt = apptsHere[0];
+                        const premiumOpen = appointments.find(a => a.date === day && a.time === slot && a.is_premium && a.status === 'premium_open');
                         const blk  = blocked.find(b => b.blocked_date === day && normTime(b.blocked_time) === slot);
+
+                        if (premiumOpen) {
+                          return (
+                            <div key={day} style={{ borderLeft: `1px solid ${BDR}`, padding: '0.2rem 0.25rem' }}>
+                              <div
+                                onClick={() => cancelPremiumSlot(premiumOpen.id)}
+                                title="תור פרמיום פנוי — לחץ לביטול"
+                                style={{ background: PG_BG, border: `1px solid ${PG_BDR}`, borderRadius: 5, padding: '0.2rem 0.3rem', height: '100%', cursor: cancelPremiumId === premiumOpen.id ? 'wait' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                <span style={{ fontSize: '0.65rem' }}>⭐</span>
+                                <span style={{ fontSize: '0.55rem', color: PG, fontWeight: 700 }}>₪{premiumOpen.premium_price}</span>
+                              </div>
+                            </div>
+                          );
+                        }
 
                         if (appt) {
                           const ac = APPT_COLORS[appt.status] ?? APPT_COLORS.approved;
@@ -533,8 +620,9 @@ export default function BarberAdminPage() {
                 {TIME_SLOTS.map((slot, si) => {
                   // See the week-view comment above — filter, not find, so a rare
                   // double-booked slot is never silently hidden from the barber.
-                  const apptsHere = appointments.filter(a => a.date === selectedDay && a.time === slot && !['cancelled','rejected'].includes(a.status));
+                  const apptsHere = appointments.filter(a => a.date === selectedDay && a.time === slot && !['cancelled','rejected'].includes(a.status) && !(a.is_premium && a.status === 'premium_open'));
                   const appt = apptsHere[0];
+                  const premiumOpen = appointments.find(a => a.date === selectedDay && a.time === slot && a.is_premium && a.status === 'premium_open');
                   const blk  = blocked.find(b => b.blocked_date === selectedDay && normTime(b.blocked_time) === slot);
 
                   return (
@@ -543,7 +631,20 @@ export default function BarberAdminPage() {
                         <span style={{ fontSize: '0.7rem', color: TD }}>{slot}</span>
                       </div>
 
-                      {appt ? (
+                      {premiumOpen ? (
+                        <div style={{ flex: 1, padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: PG_BG }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '1rem' }}>⭐</span>
+                            <p style={{ fontSize: '0.85rem', color: PG, fontWeight: 700 }}>תור פרמיום פנוי — ₪{premiumOpen.premium_price}</p>
+                          </div>
+                          <button
+                            onClick={() => cancelPremiumSlot(premiumOpen.id)}
+                            disabled={cancelPremiumId === premiumOpen.id}
+                            style={{ padding: '0.3rem 0.75rem', background: B3, border: `1px solid ${PG_BDR}`, borderRadius: 7, color: PG, fontSize: '0.72rem', cursor: 'pointer' }}>
+                            {cancelPremiumId === premiumOpen.id ? '...' : 'בטל תור פרמיום'}
+                          </button>
+                        </div>
+                      ) : appt ? (
                         <div style={{ flex: 1, padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <div>
@@ -847,6 +948,53 @@ export default function BarberAdminPage() {
                 {blocking ? 'חוסם...' : '🔒 חסום שעה'}
               </button>
               <button onClick={() => setBlockModal(null)}
+                style={{ padding: '0.75rem 1.25rem', background: B3, border: `1px solid ${BDR}`, borderRadius: R, color: TM, fontSize: '0.875rem', cursor: 'pointer' }}>
+                ביטול
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Premium Slot Modal ───────────────────────────────────── */}
+      {premiumModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+          onClick={e => { if (e.target === e.currentTarget) setPremiumModalOpen(false); }}>
+          <div style={{ background: B1, border: `1px solid ${PG_BDR}`, borderRadius: RL, padding: '2rem', width: '100%', maxWidth: 360, direction: 'rtl' }}>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: PG, marginBottom: '1.5rem' }}>⭐ פתיחת תור פרמיום</p>
+
+            <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: TM, marginBottom: '0.5rem' }}>תאריך</label>
+            <input type="date" value={premiumDate} min={getToday()} onChange={e => setPremiumDate(e.target.value)}
+              style={{ width: '100%', background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.625rem 0.875rem', color: T, fontSize: '0.875rem', outline: 'none', marginBottom: '1rem', boxSizing: 'border-box' }} />
+
+            <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: TM, marginBottom: '0.5rem' }}>שעה</label>
+            <select value={premiumTime} onChange={e => setPremiumTime(e.target.value)}
+              style={{ width: '100%', background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.625rem 0.875rem', color: T, fontSize: '0.875rem', outline: 'none', marginBottom: '1rem', boxSizing: 'border-box' }}>
+              {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+
+            <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: TM, marginBottom: '0.5rem' }}>שירות</label>
+            <select value={premiumService} onChange={e => setPremiumService(e.target.value)}
+              style={{ width: '100%', background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.625rem 0.875rem', color: T, fontSize: '0.875rem', outline: 'none', marginBottom: '1rem', boxSizing: 'border-box' }}>
+              {SERVICES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+
+            <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: TM, marginBottom: '0.5rem' }}>מחיר פרמיום (₪)</label>
+            <input type="number" placeholder="לדוגמה: 150" value={premiumPriceInput} onChange={e => setPremiumPriceInput(e.target.value)}
+              style={{ width: '100%', background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.625rem 0.875rem', color: T, fontSize: '0.875rem', outline: 'none', marginBottom: '1rem', boxSizing: 'border-box' }} />
+
+            {premiumError && (
+              <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '0.625rem 1rem', marginBottom: '1rem', color: '#ef4444', fontSize: '0.8rem', textAlign: 'center' }}>
+                {premiumError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '0.625rem' }}>
+              <button onClick={submitPremiumSlot} disabled={premiumSubmitting}
+                style={{ flex: 1, padding: '0.75rem', background: `linear-gradient(135deg,#B8932E,${PG})`, border: 'none', borderRadius: R, color: '#080808', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>
+                {premiumSubmitting ? 'פותח...' : '⭐ פתח תור'}
+              </button>
+              <button onClick={() => setPremiumModalOpen(false)}
                 style={{ padding: '0.75rem 1.25rem', background: B3, border: `1px solid ${BDR}`, borderRadius: R, color: TM, fontSize: '0.875rem', cursor: 'pointer' }}>
                 ביטול
               </button>
