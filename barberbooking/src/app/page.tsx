@@ -3,6 +3,8 @@
 import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import { TIME_SLOTS, LOYALTY_THRESHOLD, LOYALTY_REWARD_LABEL } from '@/lib/services';
+import { PRODUCTS } from '@/lib/products';
+import CoursePopup from '@/components/CoursePopup';
 import Aurora from '@/components/ui/Aurora';
 
 type Barber = { id: string; name: string; specialty: string | null; image_url: string | null };
@@ -813,6 +815,28 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── Products ─────────────────────────────────────── */}
+      <section style={{ background: 'var(--g1)' }}>
+        <div className="bph-section">
+          <Reveal>
+            <div className="bph-header">
+              <p className="bph-eyebrow">למכירה בסלון</p>
+              <h2 className="display display-lg" style={{ color: 'var(--cream)' }}>
+                <span className="bph-gold-text" style={{ fontStyle: 'italic' }}>המוצרים</span> שלנו
+              </h2>
+            </div>
+          </Reveal>
+
+          <div className="bph-products-grid">
+            {PRODUCTS.map((name, i) => (
+              <Reveal key={name} delay={i * 60}>
+                <div className="bph-product-card">{name}</div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── Final CTA ────────────────────────────────────── */}
       <section className="bph-final">
         <div className="bph-final-glow" aria-hidden="true" />
@@ -913,6 +937,8 @@ export default function HomePage() {
           >‹</button>
         </div>
       )}
+
+      <CoursePopup />
 
       {/* ── Styles ───────────────────────────────────────── */}
       <style>{`
@@ -1309,6 +1335,26 @@ export default function HomePage() {
         }
         .bph-why-item h3 { font-size: 1.2rem; color: var(--cream); margin-bottom: 0.6rem; font-weight: 600; }
         .bph-why-item p { font-size: 0.875rem; line-height: 1.8; color: var(--cream-dim); }
+
+        /* Products — name-only cards */
+        .bph-products-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; }
+        .bph-product-card {
+          text-align: center;
+          padding: 1.5rem 1rem;
+          background: rgba(243,236,251,0.03);
+          border: 1px solid var(--line);
+          border-radius: var(--radius-lg);
+          font-family: var(--font-display);
+          font-size: 1.05rem;
+          color: var(--cream);
+          transition: var(--transition);
+        }
+        .bph-product-card:hover {
+          border-color: rgba(178,102,255,0.35);
+          background: rgba(178,102,255,0.06);
+          color: var(--gold-light);
+          transform: translateY(-2px);
+        }
 
         /* Final CTA */
         .bph-final {
