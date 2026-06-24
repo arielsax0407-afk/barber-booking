@@ -699,8 +699,10 @@ export default function ManagerPage() {
             <p style={{ fontSize: '0.65rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: G, marginBottom: '0.625rem' }}>מדדים מתקדמים</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.875rem', marginBottom: '1.75rem' }}>
               {[
+                /* Hidden per client request - re-enable by uncommenting
                 { label: 'קצב חודשי צפוי',  value: `₪${runRate}`,        sub: 'תחזית לפי הקצב הנוכחי',                          color: GL },
                 { label: 'שינוי שבועי',     value: `${weekChangePct >= 0 ? '+' : ''}${weekChangePct}%`, sub: `לעומת ₪${prevWeekRev} שבוע שעבר`,  color: weekChangePct >= 0 ? '#22c55e' : '#ef4444' },
+                */
                 { label: 'שינוי חודשי',     value: `${monthChangePct >= 0 ? '+' : ''}${monthChangePct}%`, sub: `לעומת ₪${prevMonthRev} חודש שעבר`, color: monthChangePct >= 0 ? '#22c55e' : '#ef4444' },
                 { label: 'תפוסה היום',      value: `${utilToday}%`,       sub: 'מכל השעות הזמינות',                              color: utilToday >= 60 ? '#22c55e' : G },
                 { label: 'תפוסה השבוע',     value: `${utilWeek}%`,        sub: 'מכל השעות הזמינות',                              color: utilWeek >= 60 ? '#22c55e' : G },
