@@ -253,9 +253,8 @@ export default function ManagerPage() {
 
   // Blocked-slots tab: new-block form state
   const [newBlockBarber, setNewBlockBarber] = useState('all');
-  const [newBlockMode, setNewBlockMode]     = useState<'day' | 'time'>('day');
   const [newBlockDate, setNewBlockDate]     = useState('');
-  const [newBlockTime, setNewBlockTime]     = useState(TIME_SLOTS[0]);
+  const [newBlockTime, setNewBlockTime]     = useState('');
   const [newBlockReason, setNewBlockReason] = useState('');
   const [addingBlock, setAddingBlock]       = useState(false);
   const [addBlockError, setAddBlockError]   = useState('');
@@ -359,6 +358,7 @@ export default function ManagerPage() {
 
   async function addBlock() {
     if (!newBlockDate) { setAddBlockError('בחר תאריך'); return; }
+    if (!newBlockTime) { setAddBlockError('בחר שעה'); return; }
     setAddingBlock(true);
     setAddBlockError('');
     const res = await fetch('/api/admin/manager/blocked-slots', {
@@ -366,7 +366,7 @@ export default function ManagerPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         date: newBlockDate,
-        time: newBlockMode === 'time' ? newBlockTime : undefined,
+        time: newBlockTime,
         barber_id: newBlockBarber === 'all' ? null : newBlockBarber,
         reason: newBlockReason.trim() || null,
       }),
@@ -378,6 +378,7 @@ export default function ManagerPage() {
       return;
     }
     setNewBlockDate('');
+    setNewBlockTime('');
     setNewBlockReason('');
     await loadData();
   }
@@ -1003,35 +1004,26 @@ export default function ManagerPage() {
                   {barbers.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
 
-                <div style={{ display: 'flex', gap: '0.375rem' }}>
-                  <button onClick={() => setNewBlockMode('day')}
-                    style={{ padding: '0.5rem 0.875rem', borderRadius: R, border: `1px solid ${newBlockMode === 'day' ? BDRG : BDR}`, background: newBlockMode === 'day' ? GG : B3, color: newBlockMode === 'day' ? GL : TM, fontSize: '0.78rem', fontWeight: newBlockMode === 'day' ? 600 : 400, cursor: 'pointer' }}>
-                    יום שלם
-                  </button>
-                  <button onClick={() => setNewBlockMode('time')}
-                    style={{ padding: '0.5rem 0.875rem', borderRadius: R, border: `1px solid ${newBlockMode === 'time' ? BDRG : BDR}`, background: newBlockMode === 'time' ? GG : B3, color: newBlockMode === 'time' ? GL : TM, fontSize: '0.78rem', fontWeight: newBlockMode === 'time' ? 600 : 400, cursor: 'pointer' }}>
-                    שעה מסוימת
-                  </button>
-                </div>
-
                 <input type="date" value={newBlockDate} onChange={e => setNewBlockDate(e.target.value)}
                   style={{ background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.5rem 0.75rem', color: T, fontSize: '0.8rem' }} />
 
-                {newBlockMode === 'time' && (
-                  <select value={newBlockTime} onChange={e => setNewBlockTime(e.target.value)}
-                    style={{ background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.5rem 0.75rem', color: T, fontSize: '0.8rem', cursor: 'pointer', direction: 'rtl' }}>
-                    {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                )}
+                <select value={newBlockTime} onChange={e => setNewBlockTime(e.target.value)}
+                  style={{ background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.5rem 0.75rem', color: T, fontSize: '0.8rem', cursor: 'pointer', direction: 'rtl' }}>
+                  <option value="">בחר שעה</option>
+                  {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
 
                 <input type="text" placeholder="סיבה (אופציונלי)" value={newBlockReason} onChange={e => setNewBlockReason(e.target.value)}
                   style={{ background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.5rem 0.75rem', color: T, fontSize: '0.8rem', direction: 'rtl', minWidth: 140 }} />
 
-                <button onClick={addBlock} disabled={addingBlock || !newBlockDate}
-                  style={{ padding: '0.5rem 1.25rem', background: `linear-gradient(135deg,${GD},${GL})`, border: 'none', borderRadius: R, color: '#080808', fontSize: '0.8rem', fontWeight: 700, cursor: addingBlock || !newBlockDate ? 'default' : 'pointer', opacity: addingBlock || !newBlockDate ? 0.6 : 1 }}>
+                <button onClick={addBlock} disabled={addingBlock || !newBlockDate || !newBlockTime}
+                  style={{ padding: '0.5rem 1.25rem', background: `linear-gradient(135deg,${GD},${GL})`, border: 'none', borderRadius: R, color: '#080808', fontSize: '0.8rem', fontWeight: 700, cursor: addingBlock || !newBlockDate || !newBlockTime ? 'default' : 'pointer', opacity: addingBlock || !newBlockDate || !newBlockTime ? 0.6 : 1 }}>
                   {addingBlock ? 'חוסם...' : '🔒 חסום'}
                 </button>
               </div>
+              {!newBlockTime && (
+                <p style={{ color: TD, fontSize: '0.72rem', marginBottom: '0.5rem' }}>חסימה כאן היא לשעה ספציפית בלבד — לחסימת יום שלם השתמש בכרטיס האדום למטה</p>
+              )}
               {addBlockError && (
                 <p style={{ color: '#ef4444', fontSize: '0.78rem', marginBottom: '0.875rem' }}>{addBlockError}</p>
               )}
