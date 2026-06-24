@@ -672,10 +672,6 @@ export default function BarberAdminPage() {
                             })()}
                             {appt.status === 'approved' && (
                               <>
-                                <button onClick={() => updateStatus(appt.id, 'in_progress')}
-                                  style={{ padding: '0.3rem 0.6rem', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', borderRadius: 7, color: '#3b82f6', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600 }}>
-                                  ▶ התחל
-                                </button>
                                 <button onClick={() => updateStatus(appt.id, 'cancelled')}
                                   style={{ padding: '0.3rem 0.6rem', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 7, color: '#ef4444', fontSize: '0.7rem', cursor: 'pointer' }}>
                                   ✕
@@ -686,12 +682,6 @@ export default function BarberAdminPage() {
                                   💬
                                 </a>
                               </>
-                            )}
-                            {appt.status === 'in_progress' && (
-                              <button onClick={() => updateStatus(appt.id, 'completed')}
-                                style={{ padding: '0.3rem 0.6rem', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.28)', borderRadius: 7, color: '#10b981', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 600 }}>
-                                ✓ סיים
-                              </button>
                             )}
                           </div>
                         </div>
@@ -1042,10 +1032,6 @@ function ApptCard({ appt: a, onUpdate }: { appt: Appointment; onUpdate: (id: str
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         {a.status === 'approved' && (
           <>
-            <button onClick={() => onUpdate(a.id, 'in_progress')}
-              style={{ flex: 1, minWidth: 100, padding: '0.5rem', borderRadius: 8, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
-              ▶ התחל טיפול
-            </button>
             <button onClick={() => onUpdate(a.id, 'cancelled')}
               style={{ flex: 1, minWidth: 80, padding: '0.5rem', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', color: '#ef4444', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
               ✕ בטל תור
@@ -1058,10 +1044,6 @@ function ApptCard({ appt: a, onUpdate }: { appt: Appointment; onUpdate: (id: str
         )}
         {a.status === 'in_progress' && (
           <>
-            <button onClick={() => onUpdate(a.id, 'completed')}
-              style={{ flex: 1, minWidth: 100, padding: '0.5rem', borderRadius: 8, background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.28)', color: '#10b981', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
-              ✓ סיים טיפול
-            </button>
             <button onClick={() => onUpdate(a.id, 'cancelled')}
               style={{ flex: 1, minWidth: 80, padding: '0.5rem', borderRadius: 8, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', color: '#ef4444', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>
               ✕ בטל
