@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { SERVICES, TIME_SLOTS } from '@/lib/services';
 
 type Step = 'barber' | 'service' | 'date' | 'time' | 'details' | 'confirm';
@@ -97,6 +98,7 @@ function BookContent() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [appointmentId, setAppointmentId] = useState('');
+  const [cancelToken, setCancelToken] = useState('');
   const [error, setError]         = useState('');
   const [dateError, setDateError] = useState('');
   const [welcomeBack, setWelcomeBack] = useState<{ name: string; phone: string; service: string } | null>(null);
@@ -224,6 +226,7 @@ function BookContent() {
       }).catch(() => {});
       try { localStorage.setItem(LAST_BOOKING_KEY, JSON.stringify({ name, phone, service })); } catch {}
       setAppointmentId(json.id);
+      setCancelToken(json.cancel_token || '');
       setDone(true);
     } catch {
       setError('שגיאת תקשורת — בדוק את החיבור לאינטרנט ונסה שוב.');
@@ -282,6 +285,13 @@ function BookContent() {
           <button className="btn-ghost w-full" onClick={() => router.push('/')} style={{ width: '100%' }}>
             חזרה לדף הבית
           </button>
+          {cancelToken && (
+            <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.78rem' }}>
+              <Link href={`/cancel/${cancelToken}`} style={{ color: 'var(--text-dim)', textDecoration: 'underline' }}>
+                ביטול התור
+              </Link>
+            </p>
+          )}
         </div>
       </div>
     );

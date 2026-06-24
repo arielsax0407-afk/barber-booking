@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { generateCancelToken } from '@/lib/cancelToken';
 
 const SVC_NAMES: Record<string, string> = {
   haircut: 'תספורת',
@@ -219,6 +220,8 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Each occurrence is its own appointment row, so each gets its own
+  // independent self-cancel token (cancelling one shouldn't affect the rest).
   const rows = bookableDates.map((date) => ({
     name: name.trim(),
     phone: cleanPhone,
@@ -227,12 +230,14 @@ export async function POST(req: NextRequest) {
     time,
     status: 'approved',
     barber_id: barberId,
+    cancel_token: generateCancelToken(),
   }));
 
   let bookedDates: string[] = [];
+  const cancelTokens: Record<string, string> = {};
 
   if (rows.length > 0) {
-    const { data: inserted, error } = await sb.from('appointments').insert(rows).select('date');
+    const { data: inserted, error } = await sb.from('appointments').insert(rows).select('date, cancel_token');
 
     if (error) {
       if (error.code === '23505') {
@@ -249,12 +254,14 @@ export async function POST(req: NextRequest) {
             }
           } else {
             bookedDates.push(row.date);
+            cancelTokens[row.date] = row.cancel_token;
           }
         }
       } else {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
     } else {
+      for (const r of inserted ?? []) cancelTokens[r.date] = r.cancel_token;
       bookedDates = (inserted ?? []).map((r) => r.date);
     }
   }
@@ -265,5 +272,5 @@ export async function POST(req: NextRequest) {
   // Fire-and-forget — one summary email, never one per occurrence.
   void sendRecurringSummaryEmail({ name: name.trim(), phone: cleanPhone, service, time, barber_id: barberId, bookedDates });
 
-  return NextResponse.json({ booked: bookedDates.length, bookedDates, skipped });
+  return NextResponse.json({ booked: bookedDates.length, bookedDates, skipped, cancelTokens });
 }

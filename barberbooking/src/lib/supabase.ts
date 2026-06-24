@@ -25,6 +25,7 @@ export type Appointment = {
   created_at: string;
   barber_id?: string | null;
   barbers?: { name: string; specialty: string | null } | null;
+  cancel_token?: string | null;
 };
 
 export type Barber = {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { generateCancelToken } from '@/lib/cancelToken';
 
 const SVC_NAMES: Record<string, string> = {
   haircut: 'תספורת',
@@ -108,6 +109,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'המספרה סגורה בשבת — בחר תאריך אחר' }, { status: 400 });
   }
 
+  const cancelToken = generateCancelToken();
+
   const sb = supabaseAdmin();
   const { data, error } = await sb
     .from('appointments')
@@ -119,6 +122,7 @@ export async function POST(req: NextRequest) {
       time,
       status: 'approved',
       barber_id: barber_id || null,
+      cancel_token: cancelToken,
     })
     .select('id')
     .single();
@@ -133,5 +137,5 @@ export async function POST(req: NextRequest) {
   // Fire-and-forget email notifications
   void sendBookingEmails({ name, phone, service, date, time, barber_id });
 
-  return NextResponse.json({ id: data.id });
+  return NextResponse.json({ id: data.id, cancel_token: cancelToken });
 }

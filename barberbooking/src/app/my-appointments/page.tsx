@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { SERVICES, LOYALTY_THRESHOLD, LOYALTY_REWARD_LABEL } from '@/lib/services';
 import type { Appointment } from '@/lib/supabase';
 
@@ -19,6 +20,20 @@ function svcName(id: string) {
 
 function svcPrice(id: string) {
   return SERVICES.find(s => s.id === id)?.price ?? '';
+}
+
+// UX-only mirror of the server-side 3-hour rule in /api/cancel — this just
+// decides whether to show the link; the actual cancel is re-validated there.
+function isCancellable(appt: Appointment): boolean {
+  if (appt.status !== 'approved' || !appt.cancel_token) return false;
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+  const map: Record<string, string> = {};
+  for (const p of fmt.formatToParts(new Date(Date.now() + 3 * 60 * 60 * 1000))) map[p.type] = p.value;
+  const cutoff = `${map.year}-${map.month}-${map.day} ${map.hour}:${map.minute}`;
+  return `${appt.date} ${appt.time}` > cutoff;
 }
 
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; border: string }> = {
@@ -90,6 +105,14 @@ function AppointmentCard({ appt }: { appt: Appointment }) {
              appt.status === 'in_progress' ? 'הטיפול מתבצע עכשיו' :
              'התור אושר — נשמח לראותך!'}
           </p>
+        </div>
+      )}
+
+      {isCancellable(appt) && (
+        <div style={{ marginTop: '0.625rem', textAlign: 'center' }}>
+          <Link href={`/cancel/${appt.cancel_token}`} style={{ fontSize: '0.78rem', color: '#991b1b', textDecoration: 'underline' }}>
+            בטל תור
+          </Link>
         </div>
       )}
     </div>

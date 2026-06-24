@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { generateCancelToken } from '@/lib/cancelToken';
 
 const SVC_NAMES: Record<string, string> = {
   haircut: 'תספורת',
@@ -136,12 +137,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'המספרה סגורה בשבת — בחר תאריך אחר' }, { status: 400 });
   }
 
+  const cancelToken = generateCancelToken();
+
   // .eq('status', 'premium_open') on the update is the atomic re-check — if
   // two customers race for the same slot, only the first update matches a
   // row and the second gets back null here.
   const { data: updated, error } = await sb
     .from('appointments')
-    .update({ name: name.trim(), phone: cleanPhone, status: 'approved' })
+    .update({ name: name.trim(), phone: cleanPhone, status: 'approved', cancel_token: cancelToken })
     .eq('id', id)
     .eq('status', 'premium_open')
     .select('id')
@@ -164,5 +167,5 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  return NextResponse.json({ id: updated.id });
+  return NextResponse.json({ id: updated.id, cancel_token: cancelToken });
 }
