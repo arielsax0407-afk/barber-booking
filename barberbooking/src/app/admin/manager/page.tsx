@@ -260,6 +260,15 @@ export default function ManagerPage() {
   const [addingBlock, setAddingBlock]       = useState(false);
   const [addBlockError, setAddBlockError]   = useState('');
 
+  // Day-block-with-cancel modal (block a whole day + auto-cancel its appointments)
+  const [dayBlockModalOpen, setDayBlockModalOpen] = useState(false);
+  const [dbBarberId, setDbBarberId]   = useState('all');
+  const [dbDate, setDbDate]           = useState('');
+  const [dbStep, setDbStep]           = useState<'pick' | 'warn' | 'result'>('pick');
+  const [dbAffected, setDbAffected]   = useState<Appointment[]>([]);
+  const [dbSubmitting, setDbSubmitting] = useState(false);
+  const [dbError, setDbError]         = useState('');
+
   // Recurring-appointment modal (manager creates on a customer's behalf)
   const [recurringModalOpen, setRecurringModalOpen] = useState(false);
   const [rcBarberId, setRcBarberId]     = useState('');
@@ -371,6 +380,60 @@ export default function ManagerPage() {
     setNewBlockDate('');
     setNewBlockReason('');
     await loadData();
+  }
+
+  function openDayBlockModal() {
+    setDbBarberId('all');
+    setDbDate('');
+    setDbStep('pick');
+    setDbAffected([]);
+    setDbError('');
+    setDayBlockModalOpen(true);
+  }
+
+  function checkDayBlockImpact() {
+    if (!dbDate) { setDbError('בחר תאריך'); return; }
+    setDbError('');
+    const affected = appointments.filter(a =>
+      a.date === dbDate &&
+      (dbBarberId === 'all' || a.barber_id === dbBarberId) &&
+      !['cancelled', 'rejected', 'completed'].includes(a.status)
+    );
+    setDbAffected(affected);
+    setDbStep('warn');
+  }
+
+  async function confirmDayBlock() {
+    setDbSubmitting(true);
+    setDbError('');
+    try {
+      if (dbAffected.length > 0) {
+        const cancelRes = await fetch('/api/admin/manager/cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: dbAffected.map(a => a.id) }),
+        });
+        if (!cancelRes.ok) throw new Error();
+      }
+
+      const blockRes = await fetch('/api/admin/manager/blocked-slots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: dbDate,
+          barber_id: dbBarberId === 'all' ? null : dbBarberId,
+          reason: 'יום חסום ע"י מנהל',
+        }),
+      });
+      if (!blockRes.ok) throw new Error();
+
+      setDbStep('result');
+      await loadData();
+    } catch {
+      setDbError('הפעולה נכשלה — נסה שוב');
+    } finally {
+      setDbSubmitting(false);
+    }
   }
 
   function openRecurringModal() {
@@ -974,6 +1037,17 @@ export default function ManagerPage() {
               )}
             </div>
 
+            <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: RL, padding: '1.25rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <p style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.3rem' }}>חסימה עם ביטול תורים</p>
+                <p style={{ fontSize: '0.8rem', color: TM }}>חוסם יום שלם ומבטל אוטומטית את כל התורים הקיימים בו, עם קישורי וואטסאפ מוכנים לכל לקוח</p>
+              </div>
+              <button onClick={openDayBlockModal}
+                style={{ padding: '0.6rem 1.25rem', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: R, color: '#ef4444', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                ⚠️ חסום יום שלם
+              </button>
+            </div>
+
             <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, padding: '1.25rem', marginBottom: '1.25rem' }}>
               <p style={{ fontSize: '0.7rem', color: G, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.875rem' }}>חסימות השבוע הנוכחי</p>
               {thisWeekBlocked.length === 0 ? (
@@ -1030,6 +1104,128 @@ export default function ManagerPage() {
           </div>
         )}
       </main>
+
+      {/* ── Day Block + Cancel Modal ─────────────────────────────── */}
+      {dayBlockModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+          onClick={e => { if (e.target === e.currentTarget && !dbSubmitting) setDayBlockModalOpen(false); }}>
+          <div style={{ background: B1, border: '1px solid rgba(239,68,68,0.35)', borderRadius: RL, padding: '2rem', width: '100%', maxWidth: 460, direction: 'rtl', maxHeight: '90vh', overflowY: 'auto', boxSizing: 'border-box' }}>
+
+            {dbStep === 'pick' && (
+              <>
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: '#ef4444', marginBottom: '1.5rem' }}>⚠️ חסימת יום שלם</p>
+
+                <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: TM, marginBottom: '0.5rem' }}>ספר</label>
+                <select value={dbBarberId} onChange={e => setDbBarberId(e.target.value)}
+                  style={{ width: '100%', background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.625rem 0.875rem', color: T, fontSize: '0.875rem', outline: 'none', marginBottom: '1rem', boxSizing: 'border-box', direction: 'rtl' }}>
+                  <option value="all">כל המספרה</option>
+                  {barbers.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+
+                <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: TM, marginBottom: '0.5rem' }}>תאריך</label>
+                <input type="date" min={getToday()} value={dbDate} onChange={e => setDbDate(e.target.value)}
+                  style={{ width: '100%', background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.625rem 0.875rem', color: T, fontSize: '0.875rem', outline: 'none', marginBottom: '1rem', boxSizing: 'border-box' }} />
+
+                {dbError && (
+                  <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '0.625rem 1rem', marginBottom: '1rem', color: '#ef4444', fontSize: '0.8rem', textAlign: 'center' }}>
+                    {dbError}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '0.625rem' }}>
+                  <button onClick={checkDayBlockImpact}
+                    style={{ flex: 1, padding: '0.75rem', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: R, color: '#ef4444', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>
+                    בדוק תורים והמשך
+                  </button>
+                  <button onClick={() => setDayBlockModalOpen(false)}
+                    style={{ padding: '0.75rem 1.25rem', background: B3, border: `1px solid ${BDR}`, borderRadius: R, color: TM, fontSize: '0.875rem', cursor: 'pointer' }}>
+                    ביטול
+                  </button>
+                </div>
+              </>
+            )}
+
+            {dbStep === 'warn' && (
+              <>
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: dbAffected.length > 0 ? '#ef4444' : T, marginBottom: '0.75rem' }}>
+                  {dbAffected.length > 0
+                    ? `⚠️ ביום ${fmtDate(dbDate)} יש ${dbAffected.length} תורים`
+                    : `אין תורים פעילים ביום ${fmtDate(dbDate)}`}
+                </p>
+
+                {dbAffected.length > 0 && (
+                  <>
+                    <p style={{ fontSize: '0.82rem', color: TM, marginBottom: '0.875rem' }}>
+                      חסימת היום תבטל אוטומטית את כל התורים הבאים — לחסום בכל זאת?
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: 220, overflowY: 'auto', marginBottom: '1.25rem' }}>
+                      {dbAffected.map(a => (
+                        <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', padding: '0.5rem 0.75rem', background: B2, borderRadius: R, border: `1px solid ${BDR}`, fontSize: '0.8rem' }}>
+                          <span style={{ color: G, fontWeight: 600, flexShrink: 0 }}>{a.time}</span>
+                          <span style={{ color: T, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.is_premium && '⭐ '}{a.name}</span>
+                          <span style={{ color: TD, flexShrink: 0 }}>{svcName(a.service)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {dbError && (
+                  <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '0.625rem 1rem', marginBottom: '1rem', color: '#ef4444', fontSize: '0.8rem', textAlign: 'center' }}>
+                    {dbError}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '0.625rem' }}>
+                  <button onClick={confirmDayBlock} disabled={dbSubmitting}
+                    style={{ flex: 1, padding: '0.75rem', background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: R, color: '#ef4444', fontWeight: 700, fontSize: '0.875rem', cursor: dbSubmitting ? 'default' : 'pointer', opacity: dbSubmitting ? 0.6 : 1 }}>
+                    {dbSubmitting ? 'חוסם...' : dbAffected.length > 0 ? 'כן, חסום ובטל הכל' : 'חסום את היום'}
+                  </button>
+                  <button onClick={() => setDbStep('pick')} disabled={dbSubmitting}
+                    style={{ padding: '0.75rem 1.25rem', background: B3, border: `1px solid ${BDR}`, borderRadius: R, color: TM, fontSize: '0.875rem', cursor: 'pointer' }}>
+                    חזור
+                  </button>
+                </div>
+              </>
+            )}
+
+            {dbStep === 'result' && (
+              <>
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.25rem', color: '#22c55e', marginBottom: '1rem' }}>היום נחסם ✅</p>
+
+                {dbAffected.length > 0 ? (
+                  <>
+                    <p style={{ fontSize: '0.82rem', color: TM, marginBottom: '1rem' }}>
+                      בוטלו {dbAffected.length} תורים. שלח לכל לקוח הודעת ביטול בוואטסאפ:
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: 320, overflowY: 'auto', marginBottom: '1.5rem' }}>
+                      {dbAffected.map(a => (
+                        <div key={a.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.625rem', padding: '0.625rem 0.875rem', background: B2, borderRadius: R, border: `1px solid ${BDR}` }}>
+                          <div style={{ minWidth: 0 }}>
+                            <p style={{ fontSize: '0.85rem', fontWeight: 600, color: T, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.is_premium && '⭐ '}{a.name}</p>
+                            <p style={{ fontSize: '0.72rem', color: TD }}>{a.time} · {svcName(a.service)}</p>
+                          </div>
+                          <a href={cancelWaLink(a)} target="_blank" rel="noopener noreferrer"
+                            style={{ flexShrink: 0, padding: '0.4rem 0.75rem', background: 'rgba(37,211,102,0.10)', border: '1px solid rgba(37,211,102,0.30)', borderRadius: 7, color: '#25D366', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                            💬 שלח ביטול
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p style={{ fontSize: '0.85rem', color: TM, marginBottom: '1.5rem' }}>לא היו תורים פעילים ביום זה.</p>
+                )}
+
+                <button onClick={() => setDayBlockModalOpen(false)}
+                  style={{ width: '100%', padding: '0.75rem', background: `linear-gradient(135deg,${GD},${GL})`, border: 'none', borderRadius: R, color: '#080808', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer' }}>
+                  סגור
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Recurring Appointment Modal ──────────────────────────── */}
       {recurringModalOpen && (
