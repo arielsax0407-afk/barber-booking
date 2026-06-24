@@ -797,10 +797,12 @@ export default function ManagerPage() {
             </div>
 
             {/* Table header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr 80px 80px', gap: '0.5rem', padding: '0.5rem 1.25rem', marginBottom: '0.5rem' }}>
-              {['ספר','השבוע','תפוסה','ביטולים','הכנסות חודש','סטטוס',''].map(h => (
-                <span key={h} style={{ fontSize: '0.6rem', color: TD, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{h}</span>
-              ))}
+            <div style={{ overflowX: 'auto' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr 80px 80px', gap: '0.5rem', padding: '0.5rem 1.25rem', marginBottom: '0.5rem', minWidth: 640 }}>
+                {['ספר','השבוע','תפוסה','ביטולים','הכנסות חודש','סטטוס',''].map(h => (
+                  <span key={h} style={{ fontSize: '0.6rem', color: TD, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>{h}</span>
+                ))}
+              </div>
             </div>
 
             {[...leaderboard.map(r => r.barber), ...barbers.filter(b => !b.is_active)].map((b, idx) => {
@@ -818,31 +820,33 @@ export default function ManagerPage() {
 
               return (
                 <div key={b.id} style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, marginBottom: '0.625rem', overflow: 'hidden' }}>
-                  <div
-                    onClick={() => setExpandedBarber(isExpanded ? null : b.id)}
-                    style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr 80px 80px', gap: '0.5rem', padding: '1rem 1.25rem', cursor: 'pointer', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      {rank && <span style={{ fontSize: '0.9rem' }}>{rank}</span>}
-                      <div>
-                        <p style={{ fontSize: '0.95rem', fontWeight: 600, color: T }}>{b.name}</p>
-                        {b.specialty && <p style={{ fontSize: '0.7rem', color: TD }}>{b.specialty}</p>}
+                  <div style={{ overflowX: 'auto' }}>
+                    <div
+                      onClick={() => setExpandedBarber(isExpanded ? null : b.id)}
+                      style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr 80px 80px', gap: '0.5rem', padding: '1rem 1.25rem', cursor: 'pointer', alignItems: 'center', minWidth: 640 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {rank && <span style={{ fontSize: '0.9rem' }}>{rank}</span>}
+                        <div>
+                          <p style={{ fontSize: '0.95rem', fontWeight: 600, color: T }}>{b.name}</p>
+                          {b.specialty && <p style={{ fontSize: '0.7rem', color: TD }}>{b.specialty}</p>}
+                        </div>
                       </div>
-                    </div>
-                    <span style={{ fontSize: '0.9rem', color: TM, fontWeight: 500 }}>{weekCnt}</span>
-                    <span style={{ fontSize: '0.9rem', color: bUtilWeek >= 60 ? '#22c55e' : TM, fontWeight: 500 }}>{bUtilWeek}%</span>
-                    <span style={{ fontSize: '0.9rem', color: bCancelRate > 15 ? '#ef4444' : TM, fontWeight: 500 }}>{bCancelRate}%</span>
-                    <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', color: G, fontWeight: 600 }}>₪{monthRevB}</span>
-                    <span style={{ padding: '0.18rem 0.5rem', borderRadius: 999, fontSize: '0.6rem', fontWeight: 700, background: b.is_active ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: b.is_active ? '#22c55e' : '#6b7280', border: `1px solid ${b.is_active ? 'rgba(34,197,94,0.3)' : 'rgba(107,114,128,0.3)'}`, textAlign: 'center' }}>
-                      {b.is_active ? 'פעיל' : 'לא פעיל'}
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', justifyContent: 'flex-end' }}>
-                      <button
-                        onClick={e => { e.stopPropagation(); toggleBarber(b.id, !b.is_active); }}
-                        disabled={togglingBarber === b.id}
-                        style={{ padding: '0.28rem 0.55rem', background: B3, border: `1px solid ${BDR}`, borderRadius: 6, color: TM, fontSize: '0.65rem', cursor: 'pointer' }}>
-                        {togglingBarber === b.id ? '...' : b.is_active ? 'השבת' : 'הפעל'}
-                      </button>
-                      <span style={{ color: TD, fontSize: '0.7rem' }}>{isExpanded ? '▲' : '▼'}</span>
+                      <span style={{ fontSize: '0.9rem', color: TM, fontWeight: 500 }}>{weekCnt}</span>
+                      <span style={{ fontSize: '0.9rem', color: bUtilWeek >= 60 ? '#22c55e' : TM, fontWeight: 500 }}>{bUtilWeek}%</span>
+                      <span style={{ fontSize: '0.9rem', color: bCancelRate > 15 ? '#ef4444' : TM, fontWeight: 500 }}>{bCancelRate}%</span>
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', color: G, fontWeight: 600 }}>₪{monthRevB}</span>
+                      <span style={{ padding: '0.18rem 0.5rem', borderRadius: 999, fontSize: '0.6rem', fontWeight: 700, background: b.is_active ? 'rgba(34,197,94,0.12)' : 'rgba(107,114,128,0.12)', color: b.is_active ? '#22c55e' : '#6b7280', border: `1px solid ${b.is_active ? 'rgba(34,197,94,0.3)' : 'rgba(107,114,128,0.3)'}`, textAlign: 'center' }}>
+                        {b.is_active ? 'פעיל' : 'לא פעיל'}
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', justifyContent: 'flex-end' }}>
+                        <button
+                          onClick={e => { e.stopPropagation(); toggleBarber(b.id, !b.is_active); }}
+                          disabled={togglingBarber === b.id}
+                          style={{ padding: '0.28rem 0.55rem', background: B3, border: `1px solid ${BDR}`, borderRadius: 6, color: TM, fontSize: '0.65rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          {togglingBarber === b.id ? '...' : b.is_active ? 'השבת' : 'הפעל'}
+                        </button>
+                        <span style={{ color: TD, fontSize: '0.7rem' }}>{isExpanded ? '▲' : '▼'}</span>
+                      </div>
                     </div>
                   </div>
 
@@ -925,6 +929,8 @@ export default function ManagerPage() {
               </div>
             ) : (
               <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
+              <div style={{ minWidth: 680 }}>
                 {/* Table header */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 1.2fr 1fr 80px 1fr 60px', gap: '0.5rem', padding: '0.625rem 1rem', borderBottom: `1px solid ${BDR}`, background: B1 }}>
                   {[
@@ -982,6 +988,8 @@ export default function ManagerPage() {
                     </div>
                   );
                 })}
+              </div>
+              </div>
               </div>
             )}
           </div>
