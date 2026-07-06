@@ -56,14 +56,16 @@ function BarberCard({ barber, index }: { barber: Barber; index: number }) {
       )}
 
       <div>
-        <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', fontWeight: 600, color: 'var(--cream)', marginBottom: '0.4rem' }}>
+        <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', fontWeight: 600, color: 'var(--cream)' }}>
           {barber.name}
         </p>
+        {/* Hidden - specialty text is placeholder/generic and can mislead customers. Re-enable by uncommenting
         {barber.specialty && (
           <p style={{ fontSize: '0.78rem', color: 'var(--cream-dim)', lineHeight: 1.6 }}>
             {barber.specialty}
           </p>
         )}
+        */}
       </div>
 
       <Link
