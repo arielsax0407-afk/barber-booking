@@ -62,6 +62,10 @@ type BlockedSlot = {
   blocked_time: string; reason: string | null;
   barbers?: { name: string } | null;
 };
+type BarberService = {
+  id: string; barber_id: string; name: string; price: number;
+  duration: number; is_active: boolean; sort_order: number;
+};
 
 function svcName(id: string) { return SERVICES.find(s => s.id === id)?.name ?? id; }
 function apptPrice(a: { service: string; is_premium?: boolean; premium_price?: number | null }): number {
@@ -213,6 +217,117 @@ function LineChart({ appointments }: { appointments: Appointment[] }) {
   );
 }
 
+// ── Editable barber name cell (barbers tab) ────────────────────
+function BarberNameCell({
+  barber, specialty, onSave,
+}: {
+  barber: { id: string; name: string };
+  specialty: string | null;
+  onSave: (id: string, name: string) => Promise<boolean>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft]     = useState(barber.name);
+  const [saving, setSaving]   = useState(false);
+
+  if (!editing) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <div>
+          <p style={{ fontSize: '0.95rem', fontWeight: 600, color: T }}>{barber.name}</p>
+          {specialty && <p style={{ fontSize: '0.7rem', color: TD }}>{specialty}</p>}
+        </div>
+        <button
+          onClick={e => { e.stopPropagation(); setDraft(barber.name); setEditing(true); }}
+          title="ערוך שם"
+          style={{ background: 'none', border: 'none', color: TD, cursor: 'pointer', fontSize: '0.75rem', padding: '0.15rem 0.3rem' }}>
+          ✎
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+      <input
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        disabled={saving}
+        style={{ background: B3, border: `1px solid ${BDR}`, borderRadius: 6, padding: '0.3rem 0.5rem', color: T, fontSize: '0.85rem', width: 120, direction: 'rtl' }}
+      />
+      <button
+        disabled={saving || !draft.trim()}
+        onClick={async () => {
+          setSaving(true);
+          const ok = await onSave(barber.id, draft.trim());
+          setSaving(false);
+          if (ok) setEditing(false);
+        }}
+        style={{ background: GG, border: `1px solid ${BDRG}`, borderRadius: 6, color: GL, fontSize: '0.75rem', padding: '0.25rem 0.5rem', cursor: 'pointer' }}>
+        {saving ? '...' : '✓'}
+      </button>
+      <button
+        disabled={saving}
+        onClick={() => setEditing(false)}
+        style={{ background: 'none', border: `1px solid ${BDR}`, borderRadius: 6, color: TD, fontSize: '0.75rem', padding: '0.25rem 0.5rem', cursor: 'pointer' }}>
+        ✕
+      </button>
+    </div>
+  );
+}
+
+// ── Editable service row (services tab) ────────────────────────
+function ServiceRow({
+  service, busy, onSave, onToggleActive, onMoveUp, onMoveDown, canMoveUp, canMoveDown,
+}: {
+  service: BarberService;
+  busy: boolean;
+  onSave: (id: string, patch: { name?: string; price?: number; duration?: number }) => void;
+  onToggleActive: (id: string, is_active: boolean) => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+}) {
+  const [name, setName]         = useState(service.name);
+  const [price, setPrice]       = useState(String(service.price));
+  const [duration, setDuration] = useState(String(service.duration));
+
+  function commit() {
+    const p = parseInt(price, 10);
+    const d = parseInt(duration, 10);
+    const patch: { name?: string; price?: number; duration?: number } = {};
+    if (name.trim() && name.trim() !== service.name) patch.name = name.trim();
+    if (Number.isInteger(p) && p > 0 && p !== service.price) patch.price = p;
+    if (Number.isInteger(d) && d > 0 && d !== service.duration) patch.duration = d;
+    if (Object.keys(patch).length > 0) onSave(service.id, patch);
+  }
+
+  const inputStyle = { background: B3, border: `1px solid ${BDR}`, borderRadius: 6, padding: '0.4rem 0.6rem', color: T, fontSize: '0.82rem', width: '100%', boxSizing: 'border-box' as const, direction: 'rtl' as const };
+  const arrowStyle = (enabled: boolean) => ({ background: B3, border: `1px solid ${BDR}`, borderRadius: 5, color: enabled ? TM : TD, fontSize: '0.65rem', padding: '0.15rem 0.4rem', cursor: enabled ? 'pointer' : 'default', opacity: enabled ? 1 : 0.4 });
+
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: '2fr 100px 100px auto auto', gap: '0.5rem', alignItems: 'center',
+      padding: '0.625rem 0.875rem', background: service.is_active ? B2 : B1, border: `1px solid ${BDR}`, borderRadius: R,
+      opacity: service.is_active ? 1 : 0.55, minWidth: 560,
+    }}>
+      <input value={name} onChange={e => setName(e.target.value)} onBlur={commit} disabled={busy} style={inputStyle} />
+      <input value={price} onChange={e => setPrice(e.target.value)} onBlur={commit} disabled={busy} type="number" style={inputStyle} />
+      <input value={duration} onChange={e => setDuration(e.target.value)} onBlur={commit} disabled={busy} type="number" style={inputStyle} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <button disabled={!canMoveUp || busy} onClick={onMoveUp} style={arrowStyle(canMoveUp && !busy)}>▲</button>
+        <button disabled={!canMoveDown || busy} onClick={onMoveDown} style={arrowStyle(canMoveDown && !busy)}>▼</button>
+      </div>
+      <button
+        disabled={busy}
+        onClick={() => onToggleActive(service.id, !service.is_active)}
+        style={{ padding: '0.3rem 0.55rem', background: B3, border: `1px solid ${BDR}`, borderRadius: 6, color: TM, fontSize: '0.68rem', cursor: busy ? 'default' : 'pointer', whiteSpace: 'nowrap' }}>
+        {busy ? '...' : service.is_active ? 'השבת' : 'הפעל'}
+      </button>
+    </div>
+  );
+}
+
 // ── Main ──────────────────────────────────────────────────────
 export default function ManagerPage() {
   const [authed, setAuthed]         = useState(false);
@@ -221,8 +336,9 @@ export default function ManagerPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [barbers, setBarbers]       = useState<Barber[]>([]);
   const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([]);
+  const [barberServices, setBarberServices] = useState<BarberService[]>([]);
   const [loading, setLoading]       = useState(false);
-  const [tab, setTab] = useState<'overview' | 'barbers' | 'appointments' | 'blocked'>('overview');
+  const [tab, setTab] = useState<'overview' | 'barbers' | 'appointments' | 'blocked' | 'services'>('overview');
   const [chartMode, setChartMode]   = useState<'bar' | 'line'>('bar');
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
@@ -250,6 +366,24 @@ export default function ManagerPage() {
   // Barbers tab state
   const [expandedBarber, setExpandedBarber] = useState<string | null>(null);
   const [togglingBarber, setTogglingBarber] = useState<string | null>(null);
+  const [newBarberName, setNewBarberName]         = useState('');
+  const [newBarberPassword, setNewBarberPassword] = useState('');
+  const [addingBarber, setAddingBarber]           = useState(false);
+  const [addBarberError, setAddBarberError]       = useState('');
+
+  // Services tab state
+  const [svcBarberId, setSvcBarberId]         = useState('');
+  const [newSvcName, setNewSvcName]           = useState('');
+  const [newSvcPrice, setNewSvcPrice]         = useState('');
+  const [newSvcDuration, setNewSvcDuration]   = useState('');
+  const [addingSvc, setAddingSvc]             = useState(false);
+  const [addSvcError, setAddSvcError]         = useState('');
+  const [savingServiceId, setSavingServiceId] = useState<string | null>(null);
+
+  // Default the services-tab barber picker to the first barber once loaded
+  useEffect(() => {
+    if (!svcBarberId && barbers.length > 0) setSvcBarberId(barbers[0].id);
+  }, [barbers, svcBarberId]);
 
   // Blocked-slots tab: new-block form state
   const [newBlockBarber, setNewBlockBarber] = useState('all');
@@ -291,6 +425,7 @@ export default function ManagerPage() {
         setAppointments(json.appointments ?? []);
         setBarbers(json.barbers ?? []);
         setBlockedSlots(json.blocked_slots ?? []);
+        setBarberServices(json.barber_services ?? []);
       }
     } catch {
       // Network blip — keep showing the last known data instead of clearing it.
@@ -340,6 +475,110 @@ export default function ManagerPage() {
     } finally {
       setTogglingBarber(null);
     }
+  }
+
+  async function addBarber() {
+    setAddBarberError('');
+    if (!newBarberName.trim()) { setAddBarberError('הזן שם ספר'); return; }
+    if (newBarberPassword.length < 6) { setAddBarberError('הסיסמה חייבת להכיל לפחות 6 תווים'); return; }
+    setAddingBarber(true);
+    try {
+      const res = await fetch('/api/admin/manager/barbers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newBarberName.trim(), password: newBarberPassword }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'שגיאה בהוספת ספר');
+      setNewBarberName('');
+      setNewBarberPassword('');
+      await loadData();
+    } catch (e) {
+      setAddBarberError(e instanceof Error ? e.message : 'שגיאה בהוספת ספר');
+    } finally {
+      setAddingBarber(false);
+    }
+  }
+
+  async function renameBarber(id: string, name: string): Promise<boolean> {
+    try {
+      const res = await fetch('/api/admin/manager/barbers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name }),
+      });
+      if (!res.ok) return false;
+      await loadData();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function addService() {
+    setAddSvcError('');
+    const price = parseInt(newSvcPrice, 10);
+    const duration = parseInt(newSvcDuration, 10);
+    if (!svcBarberId) { setAddSvcError('בחר ספר'); return; }
+    if (!newSvcName.trim()) { setAddSvcError('הזן שם שירות'); return; }
+    if (!Number.isInteger(price) || price <= 0) { setAddSvcError('מחיר לא תקין'); return; }
+    if (!Number.isInteger(duration) || duration <= 0) { setAddSvcError('משך זמן לא תקין'); return; }
+    setAddingSvc(true);
+    try {
+      const res = await fetch('/api/admin/manager/services', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barber_id: svcBarberId, name: newSvcName.trim(), price, duration }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'שגיאה בהוספת שירות');
+      setNewSvcName('');
+      setNewSvcPrice('');
+      setNewSvcDuration('');
+      await loadData();
+    } catch (e) {
+      setAddSvcError(e instanceof Error ? e.message : 'שגיאה בהוספת שירות');
+    } finally {
+      setAddingSvc(false);
+    }
+  }
+
+  async function patchServiceRaw(id: string, patch: Partial<Pick<BarberService, 'name' | 'price' | 'duration' | 'is_active' | 'sort_order'>>): Promise<boolean> {
+    try {
+      const res = await fetch('/api/admin/manager/services', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, ...patch }),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  async function patchService(id: string, patch: Partial<Pick<BarberService, 'name' | 'price' | 'duration' | 'is_active' | 'sort_order'>>) {
+    setSavingServiceId(id);
+    const ok = await patchServiceRaw(id, patch);
+    if (!ok) alert('העדכון נכשל — נסה שוב 😕');
+    await loadData();
+    setSavingServiceId(null);
+  }
+
+  async function moveService(id: string, direction: 'up' | 'down') {
+    const list = barberServices.filter(s => s.barber_id === svcBarberId).sort((a, b) => a.sort_order - b.sort_order);
+    const idx = list.findIndex(s => s.id === id);
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (idx === -1 || swapIdx < 0 || swapIdx >= list.length) return;
+    const a = list[idx];
+    const b = list[swapIdx];
+    setSavingServiceId(id);
+    const [okA, okB] = await Promise.all([
+      patchServiceRaw(a.id, { sort_order: b.sort_order }),
+      patchServiceRaw(b.id, { sort_order: a.sort_order }),
+    ]);
+    if (!okA || !okB) alert('שינוי הסדר נכשל — נסה שוב 😕');
+    await loadData();
+    setSavingServiceId(null);
   }
 
   async function unblockSlot(id: string) {
@@ -635,6 +874,7 @@ export default function ManagerPage() {
   const navItems = [
     { id: 'overview'     as const, icon: '▦',  label: 'סקירה'    },
     { id: 'barbers'      as const, icon: '✂️', label: 'ספרים'    },
+    { id: 'services'     as const, icon: '💈', label: 'שירותים'  },
     { id: 'appointments' as const, icon: '≡',  label: 'תורים'    },
     { id: 'blocked'      as const, icon: '🔒', label: 'חסימות'   },
   ];
@@ -798,6 +1038,24 @@ export default function ManagerPage() {
               <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 500, color: T }}>הספרים</h1>
             </div>
 
+            {/* Add barber */}
+            <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, padding: '1.25rem', marginBottom: '1.25rem' }}>
+              <p style={{ fontSize: '0.7rem', color: G, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.875rem' }}>הוסף ספר חדש</p>
+              <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <input type="text" placeholder="שם הספר" value={newBarberName} onChange={e => setNewBarberName(e.target.value)}
+                  style={{ background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.5rem 0.75rem', color: T, fontSize: '0.8rem', direction: 'rtl', minWidth: 140 }} />
+                <input type="password" placeholder="סיסמה (6+ תווים)" value={newBarberPassword} onChange={e => setNewBarberPassword(e.target.value)}
+                  style={{ background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.5rem 0.75rem', color: T, fontSize: '0.8rem', direction: 'ltr', minWidth: 140 }} />
+                <button onClick={addBarber} disabled={addingBarber}
+                  style={{ padding: '0.5rem 1.25rem', background: `linear-gradient(135deg,${GD},${GL})`, border: 'none', borderRadius: R, color: '#080808', fontSize: '0.8rem', fontWeight: 700, cursor: addingBarber ? 'default' : 'pointer', opacity: addingBarber ? 0.6 : 1 }}>
+                  {addingBarber ? 'מוסיף...' : '+ הוסף ספר'}
+                </button>
+              </div>
+              {addBarberError && (
+                <p style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '0.625rem' }}>{addBarberError}</p>
+              )}
+            </div>
+
             {/* Table header */}
             <div style={{ overflowX: 'auto' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr 80px 80px', gap: '0.5rem', padding: '0.5rem 1.25rem', marginBottom: '0.5rem', minWidth: 640 }}>
@@ -828,10 +1086,7 @@ export default function ManagerPage() {
                       style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.2fr 80px 80px', gap: '0.5rem', padding: '1rem 1.25rem', cursor: 'pointer', alignItems: 'center', minWidth: 640 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         {rank && <span style={{ fontSize: '0.9rem' }}>{rank}</span>}
-                        <div>
-                          <p style={{ fontSize: '0.95rem', fontWeight: 600, color: T }}>{b.name}</p>
-                          {b.specialty && <p style={{ fontSize: '0.7rem', color: TD }}>{b.specialty}</p>}
-                        </div>
+                        <BarberNameCell barber={b} specialty={b.specialty} onSave={renameBarber} />
                       </div>
                       <span style={{ fontSize: '0.9rem', color: TM, fontWeight: 500 }}>{weekCnt}</span>
                       <span style={{ fontSize: '0.9rem', color: bUtilWeek >= 60 ? '#22c55e' : TM, fontWeight: 500 }}>{bUtilWeek}%</span>
@@ -876,6 +1131,81 @@ export default function ManagerPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* ══ SERVICES TAB ═════════════════════════════════════ */}
+        {tab === 'services' && (
+          <div>
+            <div style={{ marginBottom: '1.75rem' }}>
+              <p style={{ fontSize: '0.65rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: G, marginBottom: '0.25rem' }}>ניהול</p>
+              <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 500, color: T }}>שירותים ומחירים</h1>
+            </div>
+
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ display: 'block', fontSize: '0.68rem', color: TM, marginBottom: '0.4rem' }}>בחר ספר</label>
+              <select value={svcBarberId} onChange={e => setSvcBarberId(e.target.value)}
+                style={{ background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.5rem 0.75rem', color: T, fontSize: '0.85rem', cursor: 'pointer', direction: 'rtl', minWidth: 200 }}>
+                {barbers.map(b => <option key={b.id} value={b.id}>{b.name}{!b.is_active ? ' (לא פעיל)' : ''}</option>)}
+              </select>
+            </div>
+
+            {svcBarberId && (() => {
+              const list = barberServices.filter(s => s.barber_id === svcBarberId).sort((a, b) => a.sort_order - b.sort_order);
+              return (
+                <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, padding: '1.25rem', marginBottom: '1.25rem' }}>
+                  {list.length === 0 ? (
+                    <p style={{ color: TD, fontSize: '0.85rem', textAlign: 'center', padding: '1.5rem 0' }}>
+                      עדיין לא הוגדרו שירותים לספר זה 💈
+                    </p>
+                  ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 100px 100px auto auto', gap: '0.5rem', padding: '0 0.875rem 0.5rem', minWidth: 560 }}>
+                        {['שם השירות', 'מחיר ₪', 'משך (דק׳)', 'סדר', ''].map(h => (
+                          <span key={h} style={{ fontSize: '0.6rem', color: TD, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</span>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {list.map((s, i) => (
+                          <ServiceRow
+                            key={s.id}
+                            service={s}
+                            busy={savingServiceId === s.id}
+                            onSave={(id, patch) => patchService(id, patch)}
+                            onToggleActive={(id, is_active) => patchService(id, { is_active })}
+                            onMoveUp={() => moveService(s.id, 'up')}
+                            onMoveDown={() => moveService(s.id, 'down')}
+                            canMoveUp={i > 0}
+                            canMoveDown={i < list.length - 1}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {svcBarberId && (
+              <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, padding: '1.25rem' }}>
+                <p style={{ fontSize: '0.7rem', color: G, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.875rem' }}>הוסף שירות חדש</p>
+                <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <input type="text" placeholder="שם השירות (לדוגמה: תספורת)" value={newSvcName} onChange={e => setNewSvcName(e.target.value)}
+                    style={{ background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.5rem 0.75rem', color: T, fontSize: '0.8rem', direction: 'rtl', minWidth: 180 }} />
+                  <input type="number" placeholder="מחיר (₪)" value={newSvcPrice} onChange={e => setNewSvcPrice(e.target.value)}
+                    style={{ background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.5rem 0.75rem', color: T, fontSize: '0.8rem', direction: 'rtl', width: 110 }} />
+                  <input type="number" placeholder="משך (דקות)" value={newSvcDuration} onChange={e => setNewSvcDuration(e.target.value)}
+                    style={{ background: B3, border: `1px solid ${BDR}`, borderRadius: R, padding: '0.5rem 0.75rem', color: T, fontSize: '0.8rem', direction: 'rtl', width: 110 }} />
+                  <button onClick={addService} disabled={addingSvc}
+                    style={{ padding: '0.5rem 1.25rem', background: `linear-gradient(135deg,${GD},${GL})`, border: 'none', borderRadius: R, color: '#080808', fontSize: '0.8rem', fontWeight: 700, cursor: addingSvc ? 'default' : 'pointer', opacity: addingSvc ? 0.6 : 1 }}>
+                    {addingSvc ? 'מוסיף...' : '+ הוסף שירות'}
+                  </button>
+                </div>
+                {addSvcError && (
+                  <p style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '0.625rem' }}>{addSvcError}</p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
