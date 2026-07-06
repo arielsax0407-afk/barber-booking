@@ -632,7 +632,7 @@ export default function HomePage() {
         ))}
       </div>
 
-      {/* ── Services ─────────────────────────────────────── */}
+      {/* Hidden - services are now per-barber, this static list is outdated. Re-enable by uncommenting
       <section style={{ background: 'var(--g1)' }}>
         <div className="bph-section">
           <Reveal>
@@ -666,6 +666,7 @@ export default function HomePage() {
           </Reveal>
         </div>
       </section>
+      */}
 
       {/* ── Barbers ──────────────────────────────────────── */}
       <BarbersSection />
