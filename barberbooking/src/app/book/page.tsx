@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { SERVICES, TIME_SLOTS } from '@/lib/services';
+import { TIME_SLOTS } from '@/lib/services';
 
 type Step = 'barber' | 'service' | 'date' | 'time' | 'details' | 'confirm';
 const STEPS: Step[] = ['barber', 'service', 'date', 'time', 'details', 'confirm'];
@@ -12,6 +12,11 @@ const STEP_LABELS: Record<Step, string> = {
 };
 
 type Barber = { id: string; name: string; specialty: string | null; image_url: string | null };
+type BarberService = { id: string; name: string; price: number; duration: number };
+
+function fmtPrice(price: number) {
+  return `${price}₪`;
+}
 
 const LAST_BOOKING_KEY = 'bph_last_booking';
 const QUIET_FALLBACK = ['09:00', '09:30', '10:00', '13:00', '13:30', '14:00'];
@@ -89,6 +94,9 @@ function BookContent() {
   const [barbers, setBarbers]       = useState<Barber[]>([]);
   const [loadingBarbers, setLoadingBarbers] = useState(true);
   const [service, setService] = useState('');
+  const [services, setServices]             = useState<BarberService[]>([]);
+  const [loadingServices, setLoadingServices] = useState(false);
+  const [servicesError, setServicesError]   = useState('');
   const [date, setDate]       = useState('');
   const [time, setTime]       = useState('');
   const [name, setName]       = useState('');
@@ -101,7 +109,7 @@ function BookContent() {
   const [cancelToken, setCancelToken] = useState('');
   const [error, setError]         = useState('');
   const [dateError, setDateError] = useState('');
-  const [welcomeBack, setWelcomeBack] = useState<{ name: string; phone: string; service: string } | null>(null);
+  const [welcomeBack, setWelcomeBack] = useState<{ name: string; phone: string; service: string; barberId: string } | null>(null);
   const [showWelcome, setShowWelcome] = useState(true);
   const [timeStats, setTimeStats]     = useState<TimeStats | null>(null);
 
@@ -126,12 +134,15 @@ function BookContent() {
       })
       .catch(() => setLoadingBarbers(false));
 
-    // Welcome back
+    // Welcome back — shape-checked only here; whether the saved service still
+    // exists for this barber is checked once that barber's services load
+    // (see the welcomeBack render condition below), so an old/removed
+    // service just makes the banner not show instead of erroring.
     try {
       const raw = localStorage.getItem(LAST_BOOKING_KEY);
       if (raw) {
         const saved = JSON.parse(raw);
-        if (saved?.name && saved?.phone && SERVICES.some((s) => s.id === saved.service)) {
+        if (saved?.name && saved?.phone && saved?.service && saved?.barberId) {
           setWelcomeBack(saved);
         }
       }
@@ -142,6 +153,19 @@ function BookContent() {
       .then(json => setTimeStats(json))
       .catch(() => {});
   }, [preselectedBarberId]);
+
+  // Load the chosen barber's services once a barber is picked — services are
+  // per-barber now, so there's nothing to show until we know who was chosen.
+  useEffect(() => {
+    if (!barberId) { setServices([]); return; }
+    setLoadingServices(true);
+    setServicesError('');
+    fetch(`/api/barbers/${barberId}/services`)
+      .then(r => r.json())
+      .then(json => setServices(json.services ?? []))
+      .catch(() => setServicesError('שגיאה בטעינת השירותים — נסה שוב.'))
+      .finally(() => setLoadingServices(false));
+  }, [barberId]);
 
   const load = classifyLoad(timeStats);
 
@@ -224,7 +248,7 @@ function BookContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, phone, service, date, time }),
       }).catch(() => {});
-      try { localStorage.setItem(LAST_BOOKING_KEY, JSON.stringify({ name, phone, service })); } catch {}
+      try { localStorage.setItem(LAST_BOOKING_KEY, JSON.stringify({ name, phone, service, barberId })); } catch {}
       setAppointmentId(json.id);
       setCancelToken(json.cancel_token || '');
       setDone(true);
@@ -238,7 +262,7 @@ function BookContent() {
   /* ── Success screen ───────────────────────────────────────── */
   if (done) {
     void appointmentId;
-    const svcObj = SERVICES.find((s) => s.id === service);
+    const svcObj = services.find((s) => s.id === service);
     return (
       <div className="page-bg min-h-screen flex items-center justify-center px-6 py-12">
         <div className="text-center max-w-sm w-full animate-fade-up">
@@ -383,6 +407,7 @@ function BookContent() {
                   onClick={() => {
                     const b = barbers.find(x => x.id === barberId);
                     if (b) setBarberName(b.name);
+                    setService('');
                     setStep('service');
                   }}
                   style={{ flex: 2 }}
@@ -396,14 +421,14 @@ function BookContent() {
           {/* ── Service ── */}
           {step === 'service' && (
             <div>
-              {welcomeBack && showWelcome && (
+              {welcomeBack && showWelcome && barberId === welcomeBack.barberId && services.some((s) => s.id === welcomeBack.service) && (
                 <div className="glass-card-amber animate-fade-up" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem' }}>
                   <div style={{ minWidth: 0 }}>
                     <p style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)', marginBottom: 2 }}>
                       ברוך שובך, {welcomeBack.name}!
                     </p>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      להזמין שוב {SERVICES.find((s) => s.id === welcomeBack.service)?.name}?
+                      להזמין שוב {services.find((s) => s.id === welcomeBack.service)?.name}?
                     </p>
                   </div>
                   <div className="flex gap-2" style={{ flexShrink: 0 }}>
@@ -432,31 +457,49 @@ function BookContent() {
               )}
 
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>בחר את השירות הרצוי</p>
-              <div className="flex flex-col gap-3">
-                {SERVICES.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => setService(s.id)}
-                    className={`glass-card ${service === s.id ? 'card-selected' : ''}`}
-                    style={{ padding: '1.25rem 1.5rem', textAlign: 'right', width: '100%', cursor: 'pointer', background: service === s.id ? undefined : '#fff', border: '1px solid var(--glass-border)' }}
-                  >
-                    <div className="flex justify-between items-center" style={{ gap: '0.75rem' }}>
-                      <div style={{ textAlign: 'right', flex: 1, minWidth: 0 }}>
-                        <p style={{ fontSize: '1.05rem', fontFamily: 'var(--font-display)', fontWeight: 500, marginBottom: '0.25rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</p>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', letterSpacing: '0.05em' }}>{s.duration} דקות</p>
+
+              {loadingServices ? (
+                <div className="text-center py-12">
+                  <div style={{ width: 32, height: 32, border: '2.5px solid var(--amber)', borderTopColor: 'transparent', borderRadius: '50%', margin: '0 auto', animation: 'spin-slow 0.8s linear infinite' }} />
+                </div>
+              ) : servicesError ? (
+                <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 'var(--radius)', padding: '1rem 1.25rem', color: '#991B1B', fontSize: '0.875rem', textAlign: 'center', fontWeight: 500 }}>
+                  {servicesError}
+                </div>
+              ) : services.length === 0 ? (
+                <div className="glass-card" style={{ padding: '1.5rem', textAlign: 'center', background: '#fff' }}>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.7 }}>
+                    לספר זה עדיין לא הוגדרו שירותים, אנא בחר ספר אחר
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {services.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => setService(s.id)}
+                      className={`glass-card ${service === s.id ? 'card-selected' : ''}`}
+                      style={{ padding: '1.25rem 1.5rem', textAlign: 'right', width: '100%', cursor: 'pointer', background: service === s.id ? undefined : '#fff', border: '1px solid var(--glass-border)' }}
+                    >
+                      <div className="flex justify-between items-center" style={{ gap: '0.75rem' }}>
+                        <div style={{ textAlign: 'right', flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: '1.05rem', fontFamily: 'var(--font-display)', fontWeight: 500, marginBottom: '0.25rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</p>
+                          <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', letterSpacing: '0.05em' }}>{s.duration} דקות</p>
+                        </div>
+                        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                          <span className="serif" style={{ color: 'var(--amber)', fontSize: '1.375rem', fontWeight: 600, whiteSpace: 'nowrap' }}>{fmtPrice(s.price)}</span>
+                          {service === s.id && (
+                            <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--amber)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                        <span className="serif" style={{ color: 'var(--amber)', fontSize: '1.375rem', fontWeight: 600, whiteSpace: 'nowrap' }}>{s.price}</span>
-                        {service === s.id && (
-                          <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--amber)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="flex gap-3 mt-8">
                 <button className="btn-ghost" onClick={goBack} style={{ flex: 1 }}>חזור</button>
                 <button className="btn-primary" disabled={!service} onClick={() => setStep('date')} style={{ flex: 2 }}>המשך</button>
@@ -603,7 +646,7 @@ function BookContent() {
               <div className="glass-card p-6 mb-6" style={{ background: '#fff' }}>
                 {[
                   ['ספר', barberName || '—'],
-                  ['שירות', SERVICES.find((s) => s.id === service)?.name ?? ''],
+                  ['שירות', services.find((s) => s.id === service)?.name ?? ''],
                   ['תאריך', formatDate(date)],
                   ['שעה', time],
                   ['שם', name],
@@ -620,7 +663,9 @@ function BookContent() {
                 <div className="divider" style={{ margin: '0.75rem 0' }} />
                 <div className="flex justify-between items-center">
                   <span style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-dim)', fontWeight: 700 }}>מחיר</span>
-                  <span className="serif" style={{ color: 'var(--amber)', fontSize: '1.125rem', fontWeight: 600 }}>{SERVICES.find((s) => s.id === service)?.price}</span>
+                  <span className="serif" style={{ color: 'var(--amber)', fontSize: '1.125rem', fontWeight: 600 }}>
+                    {(() => { const p = services.find((s) => s.id === service)?.price; return p !== undefined ? fmtPrice(p) : ''; })()}
+                  </span>
                 </div>
               </div>
 

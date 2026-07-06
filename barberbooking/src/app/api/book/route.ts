@@ -2,14 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { generateCancelToken } from '@/lib/cancelToken';
 
-const SVC_NAMES: Record<string, string> = {
-  haircut: 'תספורת',
-  beard: 'עיצוב זקן',
-  'haircut-beard': 'תספורת + זקן',
-  kids: 'תספורת ילדים',
-  fade: 'פייד',
-};
-
 const MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
 function formatDate(d: string) {
@@ -50,13 +42,12 @@ async function sendEmail(to: string, subject: string, html: string) {
 async function sendBookingEmails(params: {
   name: string;
   phone: string;
-  service: string;
+  serviceName: string;
   date: string;
   time: string;
   barber_id?: string | null;
 }) {
-  const { name, phone, service, date, time, barber_id } = params;
-  const svc = SVC_NAMES[service] ?? service;
+  const { name, phone, serviceName: svc, date, time, barber_id } = params;
   const dateStr = formatDate(date);
 
   const html = `
@@ -94,7 +85,7 @@ export async function POST(req: NextRequest) {
   // regardless of whether they typed dashes/spaces when they booked.
   const cleanPhone = typeof phone === 'string' ? phone.replace(/\D/g, '') : '';
 
-  if (!name?.trim() || !cleanPhone || !service || !date || !time) {
+  if (!name?.trim() || !cleanPhone || !service || !date || !time || !barber_id) {
     return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
   }
 
@@ -109,19 +100,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'המספרה סגורה בשבת — בחר תאריך אחר' }, { status: 400 });
   }
 
+  const sb = supabaseAdmin();
+
+  // Services are per-barber now — the chosen service id must belong to THIS
+  // barber and still be active, or the price/name we'd snapshot below would
+  // be meaningless (or borrowed from an unrelated barber's service).
+  const { data: svc } = await sb
+    .from('barber_services')
+    .select('id, name, price, duration')
+    .eq('id', service)
+    .eq('barber_id', barber_id)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (!svc) {
+    return NextResponse.json({ error: 'השירות שנבחר אינו זמין עבור הספר הזה — אנא בחר שוב' }, { status: 400 });
+  }
+
   const cancelToken = generateCancelToken();
 
-  const sb = supabaseAdmin();
   const { data, error } = await sb
     .from('appointments')
     .insert({
       name: name.trim(),
       phone: cleanPhone,
       service,
+      price: svc.price,
+      service_name: svc.name,
+      service_duration: svc.duration,
       date,
       time,
       status: 'approved',
-      barber_id: barber_id || null,
+      barber_id,
       cancel_token: cancelToken,
     })
     .select('id')
@@ -135,7 +145,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Fire-and-forget email notifications
-  void sendBookingEmails({ name, phone, service, date, time, barber_id });
+  void sendBookingEmails({ name, phone, serviceName: svc.name, date, time, barber_id });
 
   return NextResponse.json({ id: data.id, cancel_token: cancelToken });
 }
