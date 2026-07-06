@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { SHOP_NAME } from '@/lib/siteConfig';
 
 const SVC_NAMES: Record<string, string> = {
   haircut: 'תספורת',
@@ -46,7 +47,7 @@ async function sendEmail(to: string, subject: string, html: string) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify({
-        from: 'ברבר פרמיום <onboarding@resend.dev>',
+        from: `${SHOP_NAME} <onboarding@resend.dev>`,
         to,
         subject,
         html,
@@ -80,7 +81,7 @@ async function sendCustomerCancelNotice(params: {
         <tr><td style="padding:8px 0;color:#ef4444;font-weight:bold">תאריך:</td><td style="padding:8px 0">${dateStr}</td></tr>
         <tr><td style="padding:8px 0;color:#ef4444;font-weight:bold">שעה:</td><td style="padding:8px 0">${time}</td></tr>
       </table>
-      <p style="margin-top:20px;font-size:12px;color:rgba(243,236,221,0.45)">ברבר פרמיום — מערכת ניהול תורים</p>
+      <p style="margin-top:20px;font-size:12px;color:rgba(243,236,221,0.45)">${SHOP_NAME} — מערכת ניהול תורים</p>
     </div>`;
 
   const subject = `❌ לקוח ביטל תור — ${name} · ${svc} · ${time}`;

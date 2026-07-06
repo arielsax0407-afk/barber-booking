@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { generateCancelToken } from '@/lib/cancelToken';
+import { SHOP_NAME } from '@/lib/siteConfig';
 
 const MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
@@ -28,7 +29,7 @@ async function sendEmail(to: string, subject: string, html: string) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify({
-        from: 'ברבר פרמיום <onboarding@resend.dev>',
+        from: `${SHOP_NAME} <onboarding@resend.dev>`,
         to,
         subject,
         html,
@@ -60,7 +61,7 @@ async function sendBookingEmails(params: {
         <tr><td style="padding:8px 0;color:#B266FF;font-weight:bold">תאריך:</td><td style="padding:8px 0">${dateStr}</td></tr>
         <tr><td style="padding:8px 0;color:#B266FF;font-weight:bold">שעה:</td><td style="padding:8px 0">${time}</td></tr>
       </table>
-      <p style="margin-top:20px;font-size:12px;color:rgba(243,236,221,0.45)">ברבר פרמיום — מערכת ניהול תורים</p>
+      <p style="margin-top:20px;font-size:12px;color:rgba(243,236,221,0.45)">${SHOP_NAME} — מערכת ניהול תורים</p>
     </div>`;
 
   const subject = `תור חדש נקבע! ✂️ — ${name} · ${svc} · ${time}`;

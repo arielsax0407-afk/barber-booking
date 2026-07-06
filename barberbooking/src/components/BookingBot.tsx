@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { SERVICES, TIME_SLOTS } from '@/lib/services';
+import { SHOP_NAME, BUSINESS_WHATSAPP_INTL } from '@/lib/siteConfig';
 import { matchFaq } from '@/lib/botFaq';
 import { parseService, parseBarber, parseDate, parseTime } from '@/lib/botParser';
 
@@ -27,7 +28,7 @@ const EMPTY_BOOKING: Booking = { service: null, barberId: null, date: null, time
 const PURPLE = '#B266FF';
 const PURPLE_DARK = '#7C3AED';
 const PURPLE_DEEP = '#3C096C';
-const WHATSAPP_FALLBACK = 'https://wa.me/972500000000';
+const WHATSAPP_FALLBACK = `https://wa.me/${BUSINESS_WHATSAPP_INTL}`;
 
 const HEBREW_WEEKDAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 
@@ -123,7 +124,7 @@ export default function BookingBot() {
     greetedRef.current = true;
     addMessage(
       'bot',
-      'היי! אני העוזר של ברבר פרמיום 💈 אפשר לקבוע לך תור — פשוט תכתוב משהו כמו "תספורת למוטי מחר בשבע", או תשאל אותי שאלה.'
+      `היי! אני העוזר של ${SHOP_NAME} 💈 אפשר לקבוע לך תור — פשוט תכתוב משהו כמו "תספורת למוטי מחר בשבע", או תשאל אותי שאלה.`
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -447,7 +448,7 @@ export default function BookingBot() {
         <div className="bbot-header">
           <div className="bbot-header-avatar">💈</div>
           <div>
-            <p className="bbot-header-title">העוזר של ברבר פרמיום</p>
+            <p className="bbot-header-title">העוזר של {SHOP_NAME}</p>
             <p className="bbot-header-sub">בדרך כלל עונה תוך כמה שניות</p>
           </div>
         </div>

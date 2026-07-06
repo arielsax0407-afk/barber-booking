@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { SERVICES, LOYALTY_THRESHOLD, LOYALTY_REWARD_LABEL } from '@/lib/services';
+import { SHOP_NAME } from '@/lib/siteConfig';
 import type { Appointment } from '@/lib/supabase';
 
 const MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
@@ -239,7 +240,7 @@ function MyAppointmentsInner() {
             </svg>
           </button>
           <p style={{ fontSize: '0.65rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--amber)', fontWeight: 700, marginBottom: '0.5rem' }}>
-            ברבר פרמיום
+            {SHOP_NAME}
           </p>
           <h1 className="serif" style={{ fontSize: '2rem', fontWeight: 400, color: 'var(--text)' }}>
             התורים שלי

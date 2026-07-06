@@ -1,3 +1,5 @@
+import { BUSINESS_ADDRESS } from './siteConfig';
+
 export type FaqEntry = {
   keywords: string[];
   answer: string;
@@ -15,7 +17,7 @@ export const BOT_FAQ: FaqEntry[] = [
   },
   {
     keywords: ['כתובת', 'איפה', 'מיקום', 'חניה', 'להגיע'],
-    answer: 'אנחנו בתל אביב. לפרטי הגעה מדויקים שלחו הודעה בוואטסאפ 💬',
+    answer: `אנחנו ב${BUSINESS_ADDRESS}. לפרטי הגעה מדויקים שלחו הודעה בוואטסאפ 💬`,
   },
   {
     keywords: ['ביטול', 'לבטל', 'לשנות', 'שינוי', 'לדחות'],

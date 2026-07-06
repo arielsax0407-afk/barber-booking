@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { SERVICES } from '@/lib/services';
+import { SHOP_NAME } from '@/lib/siteConfig';
 
 const MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
@@ -115,7 +116,7 @@ export default function CancelPage() {
       <div style={{ maxWidth: 420, margin: '0 auto' }}>
         <div style={{ marginBottom: '2rem', textAlign: 'center' }}>
           <p style={{ fontSize: '0.65rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--amber)', fontWeight: 700, marginBottom: '0.5rem' }}>
-            ברבר פרמיום
+            {SHOP_NAME}
           </p>
           <h1 className="serif" style={{ fontSize: '1.75rem', fontWeight: 400, color: 'var(--text)' }}>
             ביטול תור

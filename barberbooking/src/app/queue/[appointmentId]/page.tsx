@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { SERVICES } from '@/lib/services';
+import { SHOP_NAME } from '@/lib/siteConfig';
 import type { Appointment } from '@/lib/supabase';
 
 type QueueAppt = { id: string; time: string; service: string; status: Appointment['status']; service_duration?: number | null };
@@ -129,7 +130,7 @@ export default function QueuePage() {
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }} className="animate-fade-in">
           <p style={{ fontSize: '0.65rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--amber)', fontWeight: 700, marginBottom: '0.5rem' }}>
-            ברבר פרמיום
+            {SHOP_NAME}
           </p>
           <h1 className="serif" style={{ fontSize: '2rem', fontWeight: 400, color: 'var(--text)' }}>
             התור שלך

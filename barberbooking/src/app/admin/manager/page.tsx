@@ -1042,7 +1042,9 @@ export default function ManagerPage() {
               <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '1.75rem', fontWeight: 500, color: T }}>הספרים</h1>
             </div>
 
-            {/* Add barber */}
+            {/* Hidden - adding a barber sets a password with no reset/recovery flow, too
+            risky for manager self-serve; done manually when needed instead.
+            Re-enable by uncommenting
             <div style={{ background: B2, border: `1px solid ${BDR}`, borderRadius: RL, padding: '1.25rem', marginBottom: '1.25rem' }}>
               <p style={{ fontSize: '0.7rem', color: G, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '0.875rem' }}>הוסף ספר חדש</p>
               <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -1059,6 +1061,7 @@ export default function ManagerPage() {
                 <p style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '0.625rem' }}>{addBarberError}</p>
               )}
             </div>
+            */}
 
             {/* Table header */}
             <div style={{ overflowX: 'auto' }}>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { SERVICES } from '@/lib/services';
+import { SHOP_NAME } from '@/lib/siteConfig';
 
 const MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 const WEEKDAYS = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
@@ -175,7 +176,7 @@ export default function PremiumPage() {
             </svg>
           </button>
           <p style={{ fontSize: '0.65rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: '#B8932E', fontWeight: 700, marginBottom: '0.5rem' }}>
-            ⭐ ברבר פרמיום
+            ⭐ {SHOP_NAME}
           </p>
           <h1 className="serif" style={{ fontSize: '2rem', fontWeight: 400, color: 'var(--text)' }}>
             תורי פרמיום

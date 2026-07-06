@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import type { Appointment } from '@/lib/supabase';
 import { SERVICES, TIME_SLOTS } from '@/lib/services';
 import { DEFAULT_WA_TEMPLATES, WA_TEMPLATE_KEYS, WA_TEMPLATE_LABELS, WA_PLACEHOLDER_HELP, WaTemplateKey } from '@/lib/waTemplates';
+import { SHOP_NAME } from '@/lib/siteConfig';
 
 // ── Admin palette — theme-aware via CSS variables ─────────────
 // Defaults (dark) live in :root; [data-admin-theme="light"] overrides
@@ -365,7 +366,7 @@ export default function AdminPage() {
               <line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/>
             </svg>
           </div>
-          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 600, color: T }}>ברבר פרמיום</p>
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 600, color: T }}>{SHOP_NAME}</p>
           <p style={{ fontSize: '0.65rem', letterSpacing: '0.22em', textTransform: 'uppercase', color: G, marginTop: '0.25rem' }}>פאנל ניהול</p>
         </div>
         <div style={{ height: 1, background: `linear-gradient(90deg,transparent,${BDR},transparent)`, marginBottom: '1.5rem' }} />
@@ -453,7 +454,7 @@ function Sidebar({ tab, setTab, onLogout, onExport, theme, onToggleTheme }: {
       className="admin-sidebar">
       {/* Brand */}
       <div style={{ padding: '0 1.25rem 1.5rem', borderBottom: `1px solid ${BDR}` }}>
-        <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 600, color: T }}>ברבר</p>
+        <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 600, color: T }}>{SHOP_NAME}</p>
         <p style={{ fontSize: '0.6rem', letterSpacing: '0.2em', textTransform: 'uppercase', color: G, marginTop: '0.1rem' }}>Management</p>
       </div>
       {/* Nav */}

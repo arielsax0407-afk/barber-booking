@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { SHOP_NAME } from '@/lib/siteConfig';
 
 const SVC_NAMES: Record<string, string> = {
   haircut: 'תספורת',
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
   const { name, phone, service, date, time } = await req.json();
 
   const svcLabel = SVC_NAMES[service] ?? service;
-  const message = `✂️ תור חדש נקבע!\n\n👤 שם: ${name}\n📞 טלפון: ${phone}\n✂️ שירות: ${svcLabel}\n📅 תאריך: ${formatDate(date)}\n🕐 שעה: ${time}\n\nברבר פרמיום`;
+  const message = `✂️ תור חדש נקבע!\n\n👤 שם: ${name}\n📞 טלפון: ${phone}\n✂️ שירות: ${svcLabel}\n📅 תאריך: ${formatDate(date)}\n🕐 שעה: ${time}\n\n${SHOP_NAME}`;
 
   // WhatsApp via Twilio
   const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_WHATSAPP_FROM, ADMIN_WHATSAPP_NUMBER } = process.env;

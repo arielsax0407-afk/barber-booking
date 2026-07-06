@@ -4,6 +4,7 @@ import { useState, useEffect, useLayoutEffect, useRef, type ReactNode } from 're
 import Link from 'next/link';
 import { TIME_SLOTS, LOYALTY_THRESHOLD, LOYALTY_REWARD_LABEL } from '@/lib/services';
 import { PRODUCTS } from '@/lib/products';
+import { SHOP_NAME, SHOP_NAME_HERO_LINE1, SHOP_NAME_HERO_LINE2, BUSINESS_WHATSAPP_INTL, BUSINESS_ADDRESS, BUSINESS_CITY } from '@/lib/siteConfig';
 import CoursePopup from '@/components/CoursePopup';
 import Aurora from '@/components/ui/Aurora';
 
@@ -235,7 +236,7 @@ const GALLERY = [
 const TESTIMONIALS = [
   { name: 'דוד כהן', service: 'תספורת + עיצוב זקן', text: 'הכי טוב שהיה לי. הספר ידע בדיוק מה אני רוצה רק ממבט אחד. אני מגיע כל שבוע ולא מוכן לשנות.', stars: 5, initial: 'ד', color: '#7C3AED' },
   { name: 'יוסי לוי', service: 'פייד', text: 'כבר שנה שאני מגיע פעמיים בחודש. הצוות מקצועי, נעים ותמיד בדיוק לשעה. תספורת מושלמת כל פעם.', stars: 5, initial: 'י', color: '#C026D3' },
-  { name: 'אמיר חדד', service: 'עיצוב זקן', text: 'עיצוב הזקן שינה לי את המראה לגמרי. אנשים שואלים מה עשיתי, תמיד עונה: ברבר פרמיום. ממליץ בחום!', stars: 5, initial: 'א', color: '#5B21B6' },
+  { name: 'אמיר חדד', service: 'עיצוב זקן', text: `עיצוב הזקן שינה לי את המראה לגמרי. אנשים שואלים מה עשיתי, תמיד עונה: ${SHOP_NAME}. ממליץ בחום!`, stars: 5, initial: 'א', color: '#5B21B6' },
   { name: 'רון ביטון', service: 'תספורת ילדים', text: 'הבן שלי פחד מספרים, כאן הוא מתרגש לבוא. הצוות יודע לעבוד עם ילדים בצורה מדהימה. תודה רבה!', stars: 5, initial: 'ר', color: '#A855F7' },
   { name: 'עמית שלום', service: 'תספורת', text: 'קביעת תור אונליין זה שינוי משחק. 2 דקות ויש לי תור. תמיד יוצא מרוצה ומרגיש כמו מלך. 10/10.', stars: 5, initial: 'ע', color: '#7C3AED' },
 ];
@@ -464,7 +465,7 @@ export default function HomePage() {
           <div className="bph-intro2-grain" />
           <div className="bph-intro2-content">
             <h1 className="bph-intro2-title serif">
-              {Array.from('ברבר פרמיום').map((ch, i) => (
+              {Array.from(SHOP_NAME).map((ch, i) => (
                 <span key={i} className="bph-intro2-letter" style={{ animationDelay: `${0.5 + i * 0.045}s` }}>
                   {ch === ' ' ? ' ' : ch}
                 </span>
@@ -478,7 +479,7 @@ export default function HomePage() {
 
       {/* ── WhatsApp float ───────────────────────────────── */}
       <a
-        href="https://wa.me/972500000000"
+        href={`https://wa.me/${BUSINESS_WHATSAPP_INTL}`}
         target="_blank"
         rel="noopener noreferrer"
         aria-label="צור קשר בוואטסאפ"
@@ -556,11 +557,11 @@ export default function HomePage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
             <img
               src="/images/logo.png"
-              alt="לוגו ברבר פרמיום"
+              alt={`לוגו ${SHOP_NAME}`}
               style={{ height: 42, width: 42, borderRadius: '50%', filter: 'drop-shadow(0 2px 10px rgba(178,102,255,0.45))' }}
             />
             <span className="serif" style={{ color: 'var(--cream)', fontSize: '1.1rem', fontWeight: 600, letterSpacing: '0.04em' }}>
-              ברבר פרמיום
+              {SHOP_NAME}
             </span>
           </div>
           <OpenStatusBadge />
@@ -570,14 +571,14 @@ export default function HomePage() {
         <div className="bph-hero-content">
           <div className={heroAnim(0, 'flex items-center gap-3 mb-8')}>
             <div className="bph-eyebrow-line" />
-            <span className="bph-eyebrow-text">מספרה יוקרתית בתל אביב</span>
+            <span className="bph-eyebrow-text">מספרה יוקרתית ב{BUSINESS_CITY}</span>
             <div className="bph-eyebrow-line" />
           </div>
 
           <h1 className={`display display-xl ${heroAnim(1)}`} style={{ maxWidth: 760 }}>
-            <span className="bph-gold-text">ברבר</span>
+            <span className="bph-gold-text">{SHOP_NAME_HERO_LINE1}</span>
             <br />
-            <span style={{ color: 'var(--cream)', fontStyle: 'italic', fontWeight: 300 }}>פרמיום</span>
+            <span style={{ color: 'var(--cream)', fontStyle: 'italic', fontWeight: 300 }}>{SHOP_NAME_HERO_LINE2}</span>
           </h1>
 
           <p className={heroAnim(2)} style={{ fontSize: 'clamp(1rem, 2.5vw, 1.25rem)', color: 'var(--cream-dim)', marginTop: '1.5rem', maxWidth: 420, lineHeight: 1.8, fontWeight: 300 }}>
@@ -912,8 +913,8 @@ export default function HomePage() {
           className="bph-footer-pole"
           style={{ borderRadius: '50%' }}
         />
-        <p className="serif bph-gold-text" style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>ברבר פרמיום</p>
-        <p style={{ fontSize: '0.75rem', color: 'var(--cream-faint)', letterSpacing: '0.1em' }}>תל אביב · א׳–ו׳ 9:00–19:00</p>
+        <p className="serif bph-gold-text" style={{ fontSize: '1.4rem', marginBottom: '0.5rem' }}>{SHOP_NAME}</p>
+        <p style={{ fontSize: '0.75rem', color: 'var(--cream-faint)', letterSpacing: '0.1em' }}>{BUSINESS_ADDRESS} · א׳–ו׳ 9:00–19:00</p>
       </footer>
 
       {/* ── Gallery lightbox ─────────────────────────────── */}
