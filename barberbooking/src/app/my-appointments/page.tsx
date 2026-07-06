@@ -284,9 +284,11 @@ function MyAppointmentsInner() {
               </div>
             )}
 
+            {/* Hidden per client request - loyalty punch-card, re-enable by uncommenting
             {!loading && !error && appointments.length > 0 && (
               <LoyaltyCard appointments={appointments} />
             )}
+            */}
 
             {!loading && !error && appointments.length === 0 && (
               <div style={{ textAlign: 'center', padding: '3rem 0' }}>

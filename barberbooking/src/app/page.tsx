@@ -757,7 +757,7 @@ export default function HomePage() {
       {/* ── Testimonials ─────────────────────────────────── */}
       <TestimonialsSection />
 
-      {/* ── Loyalty club ─────────────────────────────────── */}
+      {/* Hidden per client request - loyalty punch-card, re-enable by uncommenting
       <section style={{ background: 'var(--g0)', position: 'relative', overflow: 'hidden' }}>
         <div className="bph-final-glow" aria-hidden="true" style={{ opacity: 0.6 }} />
         <div className="bph-section" style={{ position: 'relative', zIndex: 1 }}>
@@ -797,6 +797,7 @@ export default function HomePage() {
           </Reveal>
         </div>
       </section>
+      */}
 
       {/* ── Why us ───────────────────────────────────────── */}
       <section style={{ background: 'var(--g1)', borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)' }}>
