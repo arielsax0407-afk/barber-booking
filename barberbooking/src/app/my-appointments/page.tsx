@@ -14,12 +14,17 @@ function formatDate(d: string) {
   return `${parseInt(day)} ${MONTHS[parseInt(m) - 1]} ${y}`;
 }
 
-function svcName(id: string) {
-  return SERVICES.find(s => s.id === id)?.name ?? id;
+// Prefer the name/price snapshotted on the appointment at booking time — the
+// old static SERVICES lookup is only a fallback for legacy rows booked before
+// that snapshot existed, since service ids are per-barber (barber_services
+// UUIDs) and won't match it.
+function svcName(appt: { service: string; service_name?: string | null }) {
+  return appt.service_name || SERVICES.find(s => s.id === appt.service)?.name || appt.service;
 }
 
-function svcPrice(id: string) {
-  return SERVICES.find(s => s.id === id)?.price ?? '';
+function svcPrice(appt: { service: string; price?: number | null }) {
+  if (appt.price != null) return `${appt.price}₪`;
+  return SERVICES.find(s => s.id === appt.service)?.price ?? '';
 }
 
 // UX-only mirror of the server-side 3-hour rule in /api/cancel — this just
@@ -63,10 +68,10 @@ function AppointmentCard({ appt }: { appt: Appointment }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.875rem' }}>
         <div>
           <p className="serif" style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.2 }}>
-            {svcName(appt.service)}
+            {svcName(appt)}
           </p>
           <p style={{ fontSize: '0.78rem', color: 'var(--text-dim)', marginTop: '0.2rem' }}>
-            {svcPrice(appt.service)}
+            {svcPrice(appt)}
           </p>
         </div>
         <span style={{

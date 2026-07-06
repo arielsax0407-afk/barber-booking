@@ -39,11 +39,6 @@ const STATUS_LABELS: Record<string, string> = {
   approved: 'מאושר', completed: 'הושלם', cancelled: 'בוטל',
   pending: 'ממתין', in_progress: 'בטיפול', rejected: 'נדחה',
 };
-const SVC_LABELS: Record<string, string> = {
-  haircut: 'תספורת', beard: 'עיצוב זקן', 'haircut-beard': 'תספורת + זקן',
-  kids: 'תספורת ילדים', fade: 'פייד',
-};
-
 const MONTHS     = ['ינו','פבר','מרץ','אפר','מאי','יוני','יולי','אוג','ספט','אוק','נוב','דצמ'];
 
 type Appointment = {
@@ -52,6 +47,7 @@ type Appointment = {
   barber_id?: string | null;
   barbers?: { name: string; specialty: string | null } | null;
   is_premium?: boolean; premium_price?: number | null;
+  service_name?: string | null; price?: number | null;
 };
 type Barber = {
   id: string; name: string; specialty: string | null;
@@ -67,9 +63,17 @@ type BarberService = {
   duration: number; is_active: boolean; sort_order: number;
 };
 
-function svcName(id: string) { return SERVICES.find(s => s.id === id)?.name ?? id; }
-function apptPrice(a: { service: string; is_premium?: boolean; premium_price?: number | null }): number {
-  return a.is_premium && a.premium_price ? a.premium_price : (PRICE_MAP[a.service] ?? 0);
+// Prefer the name/price snapshotted on the appointment at booking time (see
+// service_name/price columns) — the old static SERVICES/PRICE_MAP lookup is
+// now only a fallback for legacy rows booked before that snapshot existed,
+// since service ids are per-barber (barber_services UUIDs) and won't match it.
+function svcName(a: { service: string; service_name?: string | null }): string {
+  return a.service_name || SERVICES.find(s => s.id === a.service)?.name || a.service;
+}
+function apptPrice(a: { service: string; price?: number | null; is_premium?: boolean; premium_price?: number | null }): number {
+  if (a.is_premium && a.premium_price) return a.premium_price;
+  if (a.price != null) return a.price;
+  return PRICE_MAP[a.service] ?? 0;
 }
 function getToday() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -125,9 +129,9 @@ const RECURRING_SKIP_LABELS: Record<string, string> = {
   past: 'תאריך עבר',
 };
 
-function cancelWaLink(a: { name: string; phone: string; service: string; date: string; time: string; is_premium?: boolean; premium_price?: number | null }): string {
+function cancelWaLink(a: { name: string; phone: string; service: string; date: string; time: string; is_premium?: boolean; premium_price?: number | null; service_name?: string | null; price?: number | null }): string {
   const msg = fillTemplate(DEFAULT_WA_TEMPLATES.cancel, {
-    name: a.name, service: svcName(a.service), date: fmtDate(a.date), time: a.time, price: apptPrice(a),
+    name: a.name, service: svcName(a), date: fmtDate(a.date), time: a.time, price: apptPrice(a),
   });
   return waLink(a.phone, msg);
 }
@@ -728,7 +732,7 @@ export default function ManagerPage() {
       const bName = barbers.find(b => b.id === a.barber_id)?.name ?? '—';
       return [
         a.date, a.time, a.name, a.phone,
-        (a.is_premium ? '⭐ ' : '') + (SVC_LABELS[a.service] || a.service),
+        (a.is_premium ? '⭐ ' : '') + svcName(a),
         bName,
         STATUS_LABELS[a.status] || a.status,
         apptPrice(a),
@@ -1117,7 +1121,7 @@ export default function ManagerPage() {
                           {upcoming.slice(0, 5).map(a => (
                             <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0.875rem', background: B2, borderRadius: R, border: `1px solid ${BDR}`, alignItems: 'center' }}>
                               <span style={{ fontSize: '0.85rem', color: T, fontWeight: 500 }}>{a.is_premium && '⭐ '}{a.name}</span>
-                              <span style={{ fontSize: '0.78rem', color: TM }}>{svcName(a.service)}</span>
+                              <span style={{ fontSize: '0.78rem', color: TM }}>{svcName(a)}</span>
                               <span style={{ fontSize: '0.78rem', color: G }}>{fmtDate(a.date)} {a.time}</span>
                             </div>
                           ))}
@@ -1293,7 +1297,7 @@ export default function ManagerPage() {
                         <a href={`tel:${a.phone}`} style={{ fontSize: '0.7rem', color: TD, textDecoration: 'none' }}>{a.phone}</a>
                       </div>
                       <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.9rem', color: G, fontWeight: 600 }}>{a.time}</span>
-                      <span style={{ fontSize: '0.82rem', color: TM }}>{a.is_premium && '⭐ '}{svcName(a.service)}</span>
+                      <span style={{ fontSize: '0.82rem', color: TM }}>{a.is_premium && '⭐ '}{svcName(a)}</span>
                       <span style={{ fontSize: '0.82rem', color: TM }}>{bName}</span>
                       <span style={{ fontFamily: 'var(--font-display)', fontSize: '0.9rem', color: G, fontWeight: 600 }}>₪{apptPrice(a)}</span>
                       <span style={{ fontSize: '0.78rem', color: TM }}>{fmtDate(a.date)}</span>
@@ -1495,7 +1499,7 @@ export default function ManagerPage() {
                         <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem', padding: '0.5rem 0.75rem', background: B2, borderRadius: R, border: `1px solid ${BDR}`, fontSize: '0.8rem' }}>
                           <span style={{ color: G, fontWeight: 600, flexShrink: 0 }}>{a.time}</span>
                           <span style={{ color: T, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.is_premium && '⭐ '}{a.name}</span>
-                          <span style={{ color: TD, flexShrink: 0 }}>{svcName(a.service)}</span>
+                          <span style={{ color: TD, flexShrink: 0 }}>{svcName(a)}</span>
                         </div>
                       ))}
                     </div>
@@ -1535,7 +1539,7 @@ export default function ManagerPage() {
                         <div key={a.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.625rem', padding: '0.625rem 0.875rem', background: B2, borderRadius: R, border: `1px solid ${BDR}` }}>
                           <div style={{ minWidth: 0 }}>
                             <p style={{ fontSize: '0.85rem', fontWeight: 600, color: T, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.is_premium && '⭐ '}{a.name}</p>
-                            <p style={{ fontSize: '0.72rem', color: TD }}>{a.time} · {svcName(a.service)}</p>
+                            <p style={{ fontSize: '0.72rem', color: TD }}>{a.time} · {svcName(a)}</p>
                           </div>
                           <a href={cancelWaLink(a)} target="_blank" rel="noopener noreferrer"
                             style={{ flexShrink: 0, padding: '0.4rem 0.75rem', background: 'rgba(37,211,102,0.10)', border: '1px solid rgba(37,211,102,0.30)', borderRadius: 7, color: '#25D366', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap' }}>

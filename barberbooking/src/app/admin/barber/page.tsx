@@ -66,14 +66,23 @@ type Appointment = {
   id: string; name: string; phone: string; service: string;
   date: string; time: string; status: string; created_at: string;
   is_premium?: boolean; premium_price?: number | null;
+  service_name?: string | null; price?: number | null;
 };
 type BlockedSlot = {
   id: string; blocked_date: string; blocked_time: string; reason: string | null; barber_id?: string | null;
 };
 
-function svcName(id: string) { return SERVICES.find(s => s.id === id)?.name ?? id; }
-function apptPrice(a: { service: string; is_premium?: boolean; premium_price?: number | null }): number {
-  return a.is_premium && a.premium_price ? a.premium_price : (PRICE_MAP[a.service] ?? 0);
+// Prefer the name/price snapshotted on the appointment at booking time (see
+// service_name/price columns) — the old static SERVICES/PRICE_MAP lookup is
+// now only a fallback for legacy rows booked before that snapshot existed,
+// since service ids are per-barber (barber_services UUIDs) and won't match it.
+function svcName(a: { service: string; service_name?: string | null }): string {
+  return a.service_name || SERVICES.find(s => s.id === a.service)?.name || a.service;
+}
+function apptPrice(a: { service: string; price?: number | null; is_premium?: boolean; premium_price?: number | null }): number {
+  if (a.is_premium && a.premium_price) return a.premium_price;
+  if (a.price != null) return a.price;
+  return PRICE_MAP[a.service] ?? 0;
 }
 function getToday() {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -98,9 +107,9 @@ function getWeekDays(ref: string): string[] {
 
 function normTime(t: string): string { return t ? t.slice(0, 5) : t; }
 
-function cancelWaLink(a: { name: string; phone: string; service: string; date: string; time: string; is_premium?: boolean; premium_price?: number | null }): string {
+function cancelWaLink(a: { name: string; phone: string; service: string; date: string; time: string; is_premium?: boolean; premium_price?: number | null; service_name?: string | null; price?: number | null }): string {
   const msg = fillTemplate(DEFAULT_WA_TEMPLATES.cancel, {
-    name: a.name, service: svcName(a.service), date: fmtDate(a.date), time: a.time, price: apptPrice(a),
+    name: a.name, service: svcName(a), date: fmtDate(a.date), time: a.time, price: apptPrice(a),
   });
   return waLink(a.phone, msg);
 }
@@ -385,7 +394,15 @@ export default function BarberAdminPage() {
   const monthRev  = monthAppts.filter(a => activeStatuses.includes(a.status)).reduce((s, a) => s + apptPrice(a), 0);
 
   const svcCount: Record<string, number> = {};
-  appointments.forEach(a => { if (activeStatuses.includes(a.status)) svcCount[a.service] = (svcCount[a.service] ?? 0) + 1; });
+  // Grouping by aggregates only has a raw service id to work with (no single
+  // appointment to read a snapshot off of) — this captures the first
+  // service_name/price snapshot seen for each id so svcName()/apptPrice()
+  // can resolve it the same way they resolve a single appointment.
+  const svcInfoById: Record<string, { name?: string | null; price?: number | null }> = {};
+  appointments.forEach(a => {
+    if (activeStatuses.includes(a.status)) svcCount[a.service] = (svcCount[a.service] ?? 0) + 1;
+    if (!svcInfoById[a.service]) svcInfoById[a.service] = { name: a.service_name, price: a.price };
+  });
   const topService = Object.entries(svcCount).sort((a, b) => b[1] - a[1])[0];
 
   const dayCount: Record<number, number> = {};
@@ -581,7 +598,7 @@ export default function BarberAdminPage() {
                                   </span>
                                 )}
                                 <p style={{ fontSize: '0.6rem', color: ac.txt, fontWeight: 700, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{appt.is_premium && '⭐ '}{appt.name}</p>
-                                <p style={{ fontSize: '0.55rem', color: TM, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svcName(appt.service)}</p>
+                                <p style={{ fontSize: '0.55rem', color: TM, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{svcName(appt)}</p>
                               </div>
                             </div>
                           );
@@ -657,7 +674,7 @@ export default function BarberAdminPage() {
                                 </p>
                               )}
                               <p style={{ fontSize: '0.95rem', fontWeight: 600, color: T }}>{appt.is_premium && '⭐ '}{appt.name}</p>
-                              <p style={{ fontSize: '0.75rem', color: TM }}>{svcName(appt.service)} · ₪{apptPrice(appt)}</p>
+                              <p style={{ fontSize: '0.75rem', color: TM }}>{svcName(appt)} · ₪{apptPrice(appt)}</p>
                               <a href={`tel:${appt.phone}`} style={{ fontSize: '0.72rem', color: TD, textDecoration: 'none' }}>📞 {appt.phone}</a>
                             </div>
                           </div>
@@ -751,9 +768,9 @@ export default function BarberAdminPage() {
                 <p style={{ fontSize: '0.65rem', letterSpacing: '0.15em', textTransform: 'uppercase', color: G, marginBottom: '1rem' }}>שירות פופולרי</p>
                 {topService ? (
                   <div>
-                    <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: GL, fontWeight: 600 }}>{svcName(topService[0])}</p>
+                    <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.4rem', color: GL, fontWeight: 600 }}>{svcName({ service: topService[0], service_name: svcInfoById[topService[0]]?.name })}</p>
                     <p style={{ fontSize: '0.8rem', color: TM, marginTop: '0.25rem' }}>{topService[1]} תורים</p>
-                    <p style={{ fontSize: '0.72rem', color: TD, marginTop: '0.125rem' }}>₪{PRICE_MAP[topService[0]] ?? 0} לתספורת</p>
+                    <p style={{ fontSize: '0.72rem', color: TD, marginTop: '0.125rem' }}>₪{apptPrice({ service: topService[0], price: svcInfoById[topService[0]]?.price })} לתספורת</p>
                   </div>
                 ) : <p style={{ color: TD, fontSize: '0.85rem' }}>אין נתונים</p>}
               </div>
@@ -786,7 +803,7 @@ export default function BarberAdminPage() {
                     return (
                       <div key={svc}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                          <span style={{ fontSize: '0.8rem', color: TM }}>{svcName(svc)}</span>
+                          <span style={{ fontSize: '0.8rem', color: TM }}>{svcName({ service: svc, service_name: svcInfoById[svc]?.name })}</span>
                           <span style={{ fontSize: '0.8rem', color: G, fontWeight: 600 }}>{cnt} ({pct}%)</span>
                         </div>
                         <div style={{ height: 5, background: B3, borderRadius: 99, overflow: 'hidden' }}>
@@ -1025,7 +1042,7 @@ function ApptCard({ appt: a, onUpdate }: { appt: Appointment; onUpdate: (id: str
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '0.75rem' }}>
-        <span style={{ fontSize: '0.8rem', color: TM }}>{svcName(a.service)}</span>
+        <span style={{ fontSize: '0.8rem', color: TM }}>{svcName(a)}</span>
         <span style={{ fontSize: '0.7rem', color: TD }}>· ₪{apptPrice(a)}</span>
       </div>
 

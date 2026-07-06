@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
       .or(`barber_id.eq.${barberId},barber_id.is.null`)
       .order('blocked_date')
       .order('blocked_time'),
-    sb.from('appointments').select('service, date, status'),
+    sb.from('appointments').select('service, date, status, price, is_premium, premium_price'),
     sb.from('barbers').select('id').eq('is_active', true),
   ]);
 
@@ -26,7 +26,12 @@ export async function GET(req: NextRequest) {
   const monthPfx = today.slice(0, 7);
   const activeStatuses = ['approved', 'in_progress', 'completed'];
   const monthAll = (allAppts ?? []).filter(a => a.date.startsWith(monthPfx) && activeStatuses.includes(a.status));
-  const shopMonthRevenue = monthAll.reduce((s, a) => s + (PRICE_MAP[a.service] ?? 0), 0);
+  // Prefer the price snapshotted on the row at booking time; PRICE_MAP is only
+  // a fallback for legacy rows booked before that snapshot existed.
+  const shopMonthRevenue = monthAll.reduce((s, a) => {
+    const price = a.is_premium && a.premium_price ? a.premium_price : (a.price ?? PRICE_MAP[a.service] ?? 0);
+    return s + price;
+  }, 0);
   const activeBarberCount = activeBarbers?.length || 1;
   const shopAvgMonthRevenuePerBarber = Math.round(shopMonthRevenue / activeBarberCount);
   const shopAvgRevenuePerAppt = monthAll.length > 0 ? Math.round(shopMonthRevenue / monthAll.length) : 0;

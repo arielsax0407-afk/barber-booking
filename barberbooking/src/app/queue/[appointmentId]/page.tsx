@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { SERVICES } from '@/lib/services';
 import type { Appointment } from '@/lib/supabase';
 
-type QueueAppt = { id: string; time: string; service: string; status: Appointment['status'] };
+type QueueAppt = { id: string; time: string; service: string; status: Appointment['status']; service_duration?: number | null };
 
 const MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
@@ -15,12 +15,19 @@ function formatDate(d: string) {
   return `${parseInt(day)} ${MONTHS[parseInt(m) - 1]}`;
 }
 
-function svcName(id: string) {
-  return SERVICES.find(s => s.id === id)?.name ?? id;
+// Prefer the name/duration snapshotted on the appointment at booking time —
+// the old static SERVICES lookup is only a fallback for legacy rows booked
+// before that snapshot existed, since service ids are per-barber
+// (barber_services UUIDs) and won't match it. Durations can also legitimately
+// differ per barber for "the same" service id, so a bare id lookup is no
+// longer reliable even for current bookings.
+function svcName(appt: { service: string; service_name?: string | null }) {
+  return appt.service_name || SERVICES.find(s => s.id === appt.service)?.name || appt.service;
 }
 
-function svcDuration(id: string) {
-  return SERVICES.find(s => s.id === id)?.duration ?? 30;
+function svcDuration(appt: { service: string; service_duration?: number | null }) {
+  if (appt.service_duration != null) return appt.service_duration;
+  return SERVICES.find(s => s.id === appt.service)?.duration ?? 30;
 }
 
 const STATUS_CFG = {
@@ -82,7 +89,7 @@ export default function QueuePage() {
   const position = myIndex + 1;
   const peopleAhead = Math.max(0, myIndex);
   const waitMinutes = appt
-    ? activeQueue.slice(0, myIndex).reduce((sum, a) => sum + svcDuration(a.service), 0)
+    ? activeQueue.slice(0, myIndex).reduce((sum, a) => sum + svcDuration(a), 0)
     : 0;
 
   /* ── Loading ─────────────────────────────────────── */
@@ -218,7 +225,7 @@ export default function QueuePage() {
           </p>
           {([
             ['שם', appt.name],
-            ['שירות', svcName(appt.service)],
+            ['שירות', svcName(appt)],
             ['תאריך', formatDate(appt.date)],
             ['שעה', appt.time],
           ] as [string, string][]).map(([label, value], i) => (

@@ -12,13 +12,18 @@ function formatDate(d: string) {
   return `${parseInt(day)} ${MONTHS[parseInt(m) - 1]}`;
 }
 
-function svcName(id: string) {
-  return SERVICES.find(s => s.id === id)?.name ?? id;
+// Prefer the name snapshotted on the appointment at booking time — the old
+// static SERVICES lookup is only a fallback for legacy rows booked before
+// that snapshot existed, since service ids are per-barber (barber_services
+// UUIDs) and won't match it.
+function svcName(appt: { service: string; service_name?: string | null }) {
+  return appt.service_name || SERVICES.find(s => s.id === appt.service)?.name || appt.service;
 }
 
 type CancelAppt = {
   name: string;
   service: string;
+  service_name?: string | null;
   date: string;
   time: string;
   status: string;
@@ -120,7 +125,7 @@ export default function CancelPage() {
         <div className="glass-card p-6 mb-6" style={{ background: '#fff', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {[
             ['ספר', appt.barber_name ?? '—'],
-            ['שירות', svcName(appt.service)],
+            ['שירות', svcName(appt)],
             ['תאריך', formatDate(appt.date)],
             ['שעה', appt.time],
             ['שם', appt.name],

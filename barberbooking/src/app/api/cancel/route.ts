@@ -60,14 +60,15 @@ async function sendEmail(to: string, subject: string, html: string) {
 async function sendCustomerCancelNotice(params: {
   name: string;
   service: string;
+  service_name?: string | null;
   date: string;
   time: string;
   barber_id: string | null;
 }) {
-  const { name, service, date, time, barber_id } = params;
+  const { name, service, service_name, date, time, barber_id } = params;
   if (!barber_id) return;
 
-  const svc = SVC_NAMES[service] ?? service;
+  const svc = service_name || SVC_NAMES[service] || service;
   const dateStr = formatDate(date);
 
   const html = `
@@ -96,7 +97,7 @@ export async function GET(req: NextRequest) {
   const sb = supabaseAdmin();
   const { data: appt } = await sb
     .from('appointments')
-    .select('name, service, date, time, status, barbers(name)')
+    .select('name, service, service_name, date, time, status, barbers(name)')
     .eq('cancel_token', token)
     .maybeSingle();
 
@@ -111,6 +112,7 @@ export async function GET(req: NextRequest) {
     appointment: {
       name: appt.name,
       service: appt.service,
+      service_name: appt.service_name,
       date: appt.date,
       time: appt.time,
       status: appt.status,
@@ -131,7 +133,7 @@ export async function POST(req: NextRequest) {
   const sb = supabaseAdmin();
   const { data: appt } = await sb
     .from('appointments')
-    .select('id, name, service, date, time, status, barber_id')
+    .select('id, name, service, service_name, date, time, status, barber_id')
     .eq('cancel_token', token)
     .maybeSingle();
 
@@ -154,6 +156,7 @@ export async function POST(req: NextRequest) {
   void sendCustomerCancelNotice({
     name: appt.name,
     service: appt.service,
+    service_name: appt.service_name,
     date: appt.date,
     time: appt.time,
     barber_id: appt.barber_id,

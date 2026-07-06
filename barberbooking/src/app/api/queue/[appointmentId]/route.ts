@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ appo
 
   const { data: dayAppts } = await sb
     .from('appointments')
-    .select('id,time,service,status')
+    .select('id,time,service,status,service_duration')
     .eq('date', appt.date)
     .order('time', { ascending: true });
 

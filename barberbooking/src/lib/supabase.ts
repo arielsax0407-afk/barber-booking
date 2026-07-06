@@ -26,6 +26,8 @@ export type Appointment = {
   barber_id?: string | null;
   barbers?: { name: string; specialty: string | null } | null;
   cancel_token?: string | null;
+  service_name?: string | null;
+  price?: number | null;
 };
 
 export type Barber = {
